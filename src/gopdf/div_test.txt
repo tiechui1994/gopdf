@@ -1,0 +1,67 @@
+P|mm|A4|P
+v|PAGE|1
+F|IPAexG||10
+C1|20.00|80.00|13.2.10 Subquery Syntax 
+C1|20.00|85.95|13.2.10.1 The Subquery as Scalar Operand 
+C1|20.00|91.91|13.2.10.2 Comparisons Using Subqueries
+C1|20.00|97.86|13.2.10.3 Subqueries with ANY, IN, or SOME
+C1|20.00|103.81|13.2.10.4 Subqueries with ALL
+C1|20.00|109.76|13.2.10.5 Row Subqueries
+C1|20.00|115.72|13.2.10.6 Subqueries with EXISTS or NOT EXISTS
+C1|20.00|121.67|13.2.10.7 Correlated Subqueries
+C1|20.00|127.62|13.2.10.8 Derived Tables
+C1|20.00|133.57|13.2.10.9 Subquery Errors
+C1|20.00|139.53|13.2.10.10 Optimizing Subqueries
+C1|20.00|145.48|13.2.10.11 Rewriting Subqueries as Joins
+C1|20.00|151.43|A subquery is a SELECT statement within another statement.
+C1|20.00|157.39|All subquery forms and operations that the SQL standard requires are s
+C1|20.00|163.34|upported, as well as a few features that are MySQL-specific.
+C1|20.00|169.29|Here is an example of a subquery:
+C1|20.00|175.24|SELECT * FROM t1 WHERE column1 = (SELECT column1 FROM t2);
+C1|20.00|181.20|In this example, SELECT * FROM t1 ... is the outer query (or outer statem
+C1|20.00|187.15|ent), and (SELECT column1 FROM t2) is the subquery. We say that the s
+C1|20.00|193.10|ubquery is nested within the outer query, and in fact it is possible to ne
+C1|20.00|199.06|st subqueries within other subqueries, to a considerable depth. A subqu
+C1|20.00|205.01|ery must always appear within parentheses.
+C1|20.00|210.96|The main advantages of subqueries are:
+C1|20.00|216.91|They allow queries that are structured so that it is possible to isolate ea
+C1|20.00|222.87|ch part of a statement.
+C1|20.00|228.82|They provide alternative ways to perform operations that would otherw
+C1|20.00|234.77|ise require complex joins and unions.
+C1|20.00|240.72|Many people find subqueries more readable than complex joins or unio
+C1|20.00|246.68|ns. Indeed, it was the innovation of subqueries that gave people the ori
+C1|20.00|252.63|ginal idea of calling the early SQL “Structured Query Language.”
+C1|20.00|258.58|Here is an example statement that shows the major points about subqu
+C1|20.00|264.54|ery syntax as specified by the SQL standard and supported in MySQL:
+C1|20.00|270.49|DELETE FROM t1
+NP
+v|PAGE|2
+C1|20.00|10.00|DELETE FROM t1
+C1|20.00|15.95|WHERE s11 > ANY
+C1|20.00|21.91| (SELECT COUNT(*) /* no hint */ FROM t2
+C1|20.00|27.86|  WHERE NOT EXISTS
+C1|20.00|33.81|   (SELECT * FROM t3
+C1|20.00|39.76|    WHERE ROW(5*t2.s1,77)=
+C1|20.00|45.72|     (SELECT 50,11*s1 FROM t4 UNION SELECT 50,77 FROM
+C1|20.00|51.67|      (SELECT * FROM t5) AS t5)));
+C1|20.00|57.62|A subquery can return a scalar (a single value), a single row, a single col
+C1|20.00|63.57|umn, or a table (one or more rows of one or more columns). These are c
+C1|20.00|69.53|alled scalar, column, row, and table subqueries. Subqueries that return 
+C1|20.00|75.48|a particular kind of result often can be used only in certain contexts, as 
+C1|20.00|81.43|described in the following sections.
+C1|20.00|87.39|There are few restrictions on the type of statements in which subquerie
+C1|20.00|93.34|s can be used. A subquery can contain many of the keywords or clauses
+C1|20.00|99.29| that an ordinary SELECT can contain: DISTINCT, GROUP BY, ORDER B
+C1|20.00|105.24|Y, LIMIT, joins, index hints, UNION constructs, comments, functions, an
+C1|20.00|111.20|d so on.
+C1|20.00|117.15|A subquery's outer statement can be any one of: SELECT, INSERT, UPD
+C1|20.00|123.10|ATE, DELETE, SET, or DO.
+C1|20.00|129.06|In MySQL, you cannot modify a table and select from the same table in 
+C1|20.00|135.01|a subquery. This applies to statements such as DELETE, INSERT, REPLA
+C1|20.00|140.96|CE, UPDATE, and (because subqueries can be used in the SET clause) L
+C1|20.00|146.91|OAD DATA INFILE.
+C1|20.00|152.87|For information about how the optimizer handles subqueries, see Secti
+C1|20.00|158.82|on 8.2.2, “Optimizing Subqueries, Derived Tables, and View Reference
+C1|20.00|164.77|s”. For a discussion of restrictions on subquery use, including perform
+C1|20.00|170.72|ance issues for certain forms of subquery syntax, see Section C.4, “Res
+C1|20.00|176.68|trictions on Subqueries”.
