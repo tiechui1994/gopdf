@@ -288,7 +288,7 @@ func (div *Div) GenerateAtomicCellWithAutoWarp() error {
 	}
 
 	if !isEmpty(div.fontColor) {
-		div.pdf.TextColor(getRGB(div.fontColor))
+		div.pdf.TextColor(getColorRGB(div.fontColor))
 	}
 	div.pdf.SetXY(0, y+div.lineHeight) // 定格最终的位置
 	return nil
@@ -346,7 +346,7 @@ func (div *Div) GenerateAtomicCell() error {
 
 		// 当前页
 		if !isEmpty(div.fontColor) {
-			div.pdf.TextColor(getRGB(div.fontColor))
+			div.pdf.TextColor(getColorRGB(div.fontColor))
 		}
 		div.pdf.Cell(x, y, div.contents[i])
 

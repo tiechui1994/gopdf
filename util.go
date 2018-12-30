@@ -47,10 +47,10 @@ func checkColor(color string) {
 	}
 }
 
-func getRGB(color string) (r, g, b int) {
+func getColorRGB(color string) (r, g, b int) {
 	checkColor(color)
 	rgb := strings.Split(color, ",")
-	return Atoi(rgb[0]), Atoi(rgb[1]), Atoi(rgb[2])
+	return atoi(rgb[0]), atoi(rgb[1]), atoi(rgb[2])
 }
 
 func replaceBorder(border *Scope) {
@@ -68,7 +68,7 @@ func replaceBorder(border *Scope) {
 	}
 }
 
-func Atoi(s string) int {
+func atoi(s string) int {
 	v, _ := strconv.Atoi(s)
 	return v
 }
