@@ -18,11 +18,11 @@ type Converter struct {
 	GoPdf       *gopdf.GoPdf
 	AtomicCells []string // 原子单元, 多个单元格最终汇总成PDF文件
 	Fonts       []*FontMap
-	ConvPt      float64
+	Unit      float64
 	LineW       float64
 }
 
-// var p.ConvPt float64 = 2.834645669
+// var p.Unit float64 = 2.834645669
 
 func (p *Converter) AddAtomicCell(cell string) {
 	p.AtomicCells = append(p.AtomicCells, cell)
@@ -129,7 +129,7 @@ func (p *Converter) Page(line string, elements []string) {
 	case "P1":
 		CheckLength(line, elements, 4)
 		p.SetConv(elements[1])
-		p.Start(ParseFloatPanic(elements[2], line)*p.ConvPt, ParseFloatPanic(elements[3], line)*p.ConvPt)
+		p.Start(ParseFloatPanic(elements[2], line)*p.Unit, ParseFloatPanic(elements[3], line)*p.Unit)
 	}
 	p.AddFont()
 	p.GoPdf.AddPage()
@@ -140,11 +140,11 @@ func (p *Converter) SetConv(ut string) {
 	// 1mm ~ 2.8pt 1in ~ 72pt
 	switch ut {
 	case "mm":
-		p.ConvPt = 2.834645669
+		p.Unit = 2.834645669
 	case "pt":
-		p.ConvPt = 1
+		p.Unit = 1
 	case "in":
-		p.ConvPt = 72
+		p.Unit = 72
 	default:
 		panic("This unit is not specified :" + ut)
 	}
@@ -206,40 +206,40 @@ func (p *Converter) StrokeColor(line string, elements []string) {
 // ["", x1, y1, x2, y2]
 func (p *Converter) Oval(line string, elements []string) {
 	CheckLength(line, elements, 5)
-	p.GoPdf.Oval(ParseFloatPanic(elements[1], line)*p.ConvPt,
-		ParseFloatPanic(elements[2], line)*p.ConvPt,
-		ParseFloatPanic(elements[3], line)*p.ConvPt,
-		ParseFloatPanic(elements[4], line)*p.ConvPt)
+	p.GoPdf.Oval(ParseFloatPanic(elements[1], line)*p.Unit,
+		ParseFloatPanic(elements[2], line)*p.Unit,
+		ParseFloatPanic(elements[3], line)*p.Unit,
+		ParseFloatPanic(elements[4], line)*p.Unit)
 }
 
 // 长方形
 // ["R", x1, y1, x2, y2]
 func (p *Converter) Rect(line string, eles []string) {
 	CheckLength(line, eles, 5)
-	adj := p.LineW * p.ConvPt * 0.5
+	adj := p.LineW * p.Unit * 0.5
 	p.GoPdf.Line(
-		ParseFloatPanic(eles[1], line)*p.ConvPt,
-		ParseFloatPanic(eles[2], line)*p.ConvPt+adj,
-		ParseFloatPanic(eles[3], line)*p.ConvPt+adj*2,
-		ParseFloatPanic(eles[2], line)*p.ConvPt+adj)
+		ParseFloatPanic(eles[1], line)*p.Unit,
+		ParseFloatPanic(eles[2], line)*p.Unit+adj,
+		ParseFloatPanic(eles[3], line)*p.Unit+adj*2,
+		ParseFloatPanic(eles[2], line)*p.Unit+adj)
 
 	p.GoPdf.Line(
-		ParseFloatPanic(eles[1], line)*p.ConvPt+adj,
-		ParseFloatPanic(eles[2], line)*p.ConvPt,
-		ParseFloatPanic(eles[1], line)*p.ConvPt+adj,
-		ParseFloatPanic(eles[4], line)*p.ConvPt+adj*2)
+		ParseFloatPanic(eles[1], line)*p.Unit+adj,
+		ParseFloatPanic(eles[2], line)*p.Unit,
+		ParseFloatPanic(eles[1], line)*p.Unit+adj,
+		ParseFloatPanic(eles[4], line)*p.Unit+adj*2)
 
 	p.GoPdf.Line(
-		ParseFloatPanic(eles[1], line)*p.ConvPt,
-		ParseFloatPanic(eles[4], line)*p.ConvPt+adj,
-		ParseFloatPanic(eles[3], line)*p.ConvPt+adj*2,
-		ParseFloatPanic(eles[4], line)*p.ConvPt+adj)
+		ParseFloatPanic(eles[1], line)*p.Unit,
+		ParseFloatPanic(eles[4], line)*p.Unit+adj,
+		ParseFloatPanic(eles[3], line)*p.Unit+adj*2,
+		ParseFloatPanic(eles[4], line)*p.Unit+adj)
 
 	p.GoPdf.Line(
-		ParseFloatPanic(eles[3], line)*p.ConvPt+adj,
-		ParseFloatPanic(eles[2], line)*p.ConvPt,
-		ParseFloatPanic(eles[3], line)*p.ConvPt+adj,
-		ParseFloatPanic(eles[4], line)*p.ConvPt+adj*2)
+		ParseFloatPanic(eles[3], line)*p.Unit+adj,
+		ParseFloatPanic(eles[2], line)*p.Unit,
+		ParseFloatPanic(eles[3], line)*p.Unit+adj,
+		ParseFloatPanic(eles[4], line)*p.Unit+adj*2)
 }
 
 // 图片
@@ -247,13 +247,13 @@ func (p *Converter) Rect(line string, eles []string) {
 func (p *Converter) Image(line string, elements []string) {
 	CheckLength(line, elements, 6)
 	r := new(gopdf.Rect)
-	r.W = ParseFloatPanic(elements[4], line)*p.ConvPt - ParseFloatPanic(elements[2], line)*p.ConvPt
-	r.H = ParseFloatPanic(elements[5], line)*p.ConvPt - ParseFloatPanic(elements[3], line)*p.ConvPt
+	r.W = ParseFloatPanic(elements[4], line)*p.Unit - ParseFloatPanic(elements[2], line)*p.Unit
+	r.H = ParseFloatPanic(elements[5], line)*p.Unit - ParseFloatPanic(elements[3], line)*p.Unit
 
 	p.GoPdf.Image(
 		elements[1],
-		ParseFloatPanic(elements[2], line)*p.ConvPt,
-		ParseFloatPanic(elements[3], line)*p.ConvPt,
+		ParseFloatPanic(elements[2], line)*p.Unit,
+		ParseFloatPanic(elements[3], line)*p.Unit,
 		r,
 	)
 }
@@ -268,26 +268,26 @@ func (p *Converter) Line(line string, elements []string) {
 	case "L":
 		CheckLength(line, elements, 5)
 		p.GoPdf.Line(
-			ParseFloatPanic(elements[1], line)*p.ConvPt,
-			ParseFloatPanic(elements[2], line)*p.ConvPt,
-			ParseFloatPanic(elements[3], line)*p.ConvPt,
-			ParseFloatPanic(elements[4], line)*p.ConvPt,
+			ParseFloatPanic(elements[1], line)*p.Unit,
+			ParseFloatPanic(elements[2], line)*p.Unit,
+			ParseFloatPanic(elements[3], line)*p.Unit,
+			ParseFloatPanic(elements[4], line)*p.Unit,
 		)
 	case "LH":
 		CheckLength(line, elements, 4)
 		p.GoPdf.Line(
-			ParseFloatPanic(elements[1], line)*p.ConvPt,
-			ParseFloatPanic(elements[2], line)*p.ConvPt,
-			ParseFloatPanic(elements[3], line)*p.ConvPt,
-			ParseFloatPanic(elements[2], line)*p.ConvPt,
+			ParseFloatPanic(elements[1], line)*p.Unit,
+			ParseFloatPanic(elements[2], line)*p.Unit,
+			ParseFloatPanic(elements[3], line)*p.Unit,
+			ParseFloatPanic(elements[2], line)*p.Unit,
 		)
 	case "LV":
 		CheckLength(line, elements, 4)
 		p.GoPdf.Line(
-			ParseFloatPanic(elements[1], line)*p.ConvPt,
-			ParseFloatPanic(elements[2], line)*p.ConvPt,
-			ParseFloatPanic(elements[1], line)*p.ConvPt,
-			ParseFloatPanic(elements[3], line)*p.ConvPt,
+			ParseFloatPanic(elements[1], line)*p.Unit,
+			ParseFloatPanic(elements[2], line)*p.Unit,
+			ParseFloatPanic(elements[1], line)*p.Unit,
+			ParseFloatPanic(elements[3], line)*p.Unit,
 		)
 	case "LT":
 		CheckLength(line, elements, 3)
@@ -297,7 +297,7 @@ func (p *Converter) Line(line string, elements []string) {
 		}
 		p.GoPdf.SetLineType(lineType)
 		p.LineW = ParseFloatPanic(elements[2], line)
-		p.GoPdf.SetLineWidth(p.LineW * p.ConvPt)
+		p.GoPdf.SetLineWidth(p.LineW * p.Unit)
 	}
 }
 
@@ -325,9 +325,9 @@ func (p *Converter) Cell(line string, elements []string) {
 		if err != nil {
 			panic(err.Error() + " line;" + line)
 		}
-		x := ParseFloatPanic(elements[1], line) * p.ConvPt
-		y := ParseFloatPanic(elements[2], line) * p.ConvPt
-		w := ParseFloatPanic(elements[3], line) * p.ConvPt
+		x := ParseFloatPanic(elements[1], line) * p.Unit
+		y := ParseFloatPanic(elements[2], line) * p.Unit
+		w := ParseFloatPanic(elements[3], line) * p.Unit
 		finalx := x + w - tw
 		p.GoPdf.SetX(finalx)
 		p.GoPdf.SetY(y)
@@ -355,8 +355,8 @@ func (p *Converter) Margin(line string, eles []string) {
 }
 
 func (p *Converter) setPosition(x string, y string, line string) {
-	p.GoPdf.SetX(ParseFloatPanic(x, line) * p.ConvPt)
-	p.GoPdf.SetY(ParseFloatPanic(y, line) * p.ConvPt)
+	p.GoPdf.SetX(ParseFloatPanic(x, line) * p.Unit)
+	p.GoPdf.SetY(ParseFloatPanic(y, line) * p.Unit)
 }
 
 func CheckLength(line string, eles []string, no int) {
