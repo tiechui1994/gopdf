@@ -124,6 +124,7 @@ func (image *Image) GenerateAtomicCell() error {
 	}
 
 	image.pdf.Image(image.path, x, y, x+float64(image.width), y+float64(image.height))
+	sx, _ = image.pdf.GetPageStartXY()
 	image.pdf.SetXY(sx, y+float64(image.height))
 	return nil
 }

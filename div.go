@@ -111,7 +111,6 @@ func (div *Div) SetFontColor(color string) *Div {
 // 注册字体
 func (div *Div) SetFont(font Font) *Div {
 	div.font = font
-	div.pdf.Font(font.Family, font.Size, font.Style) // 可以多次注册
 	return div
 }
 
@@ -164,7 +163,7 @@ func (div *Div) SetRightAlign() *Div {
 func (div *Div) SetContent(s string) *Div {
 	var (
 		convertStr   = strings.Replace(s, "|", `\|`, -1)
-		conPt        = div.pdf.GetUnit()
+		unit         = div.pdf.GetUnit()
 		blocks       = strings.Split(convertStr, "\n") // 分行
 		contentWidth = div.width - math.Abs(div.border.Left) - math.Abs(div.border.Right)
 	)
@@ -174,9 +173,10 @@ func (div *Div) SetContent(s string) *Div {
 	}
 
 	// 必须先进行注册, 才能设置
+	div.pdf.Font(div.font.Family, div.font.Size, div.font.Style)
 	div.pdf.SetFontWithStyle(div.font.Family, div.font.Style, div.font.Size)
 	if len(blocks) == 1 {
-		if div.pdf.MeasureTextWidth(convertStr)/conPt < contentWidth {
+		if div.pdf.MeasureTextWidth(convertStr)/unit < contentWidth {
 			div.contents = []string{convertStr}
 			div.height = math.Abs(div.border.Top) + math.Abs(div.border.Bottom) + div.lineHeight
 			return div
@@ -185,7 +185,7 @@ func (div *Div) SetContent(s string) *Div {
 
 	for i := range blocks {
 		// 单独的一行
-		if div.pdf.MeasureTextWidth(convertStr)/conPt < contentWidth {
+		if div.pdf.MeasureTextWidth(convertStr)/unit < contentWidth {
 			div.contents = append(div.contents, blocks[i])
 			continue
 		}
@@ -197,8 +197,8 @@ func (div *Div) SetContent(s string) *Div {
 		for _, r := range []rune(blocks[i]) {
 			line = append(line, r)
 			lineLength := div.pdf.MeasureTextWidth(string(line))
-			if lineLength/conPt >= contentWidth {
-				if lineLength-contentWidth/conPt > conPt*2 {
+			if lineLength/unit >= contentWidth {
+				if lineLength-contentWidth/unit > unit*2 {
 					div.contents = append(div.contents, string(line[0:len(line)-1]))
 					line = line[len(line)-1:]
 				} else {
@@ -293,7 +293,7 @@ func (div *Div) GenerateAtomicCellWithAutoWarp() error {
 		x, y = div.getContentPosition(sx, sy, i)
 
 		// todo: 换页的依据
-		if y < pageEndY && y+div.lineHeight > pageEndY {
+		if (y < pageEndY || y >= pageEndY) && y+div.lineHeight > pageEndY {
 			div.SetMarign(Scope{div.margin.Left, 0, div.margin.Right, 0})
 			div.SetBorder(Scope{div.border.Left, 0, div.border.Right, 0})
 			div.contents = div.contents[i:]
@@ -303,6 +303,7 @@ func (div *Div) GenerateAtomicCellWithAutoWarp() error {
 		}
 
 		// todo: 不需要换页, 只需要增加数据
+		div.pdf.Font(div.font.Family, div.font.Size, div.font.Style) // 添加设置
 		div.pdf.Cell(x, y, div.contents[i])
 
 		if div.horizontalCentered || div.rightAlign {
@@ -318,7 +319,8 @@ func (div *Div) GenerateAtomicCellWithAutoWarp() error {
 	if !isEmpty(div.fontColor) {
 		div.pdf.TextColor(getColorRGB(div.fontColor))
 	}
-	div.pdf.SetXY(0, y+div.lineHeight) // 定格最终的位置
+	x, _ = div.pdf.GetPageStartXY()
+	div.pdf.SetXY(x, y+div.lineHeight) // 定格最终的位置
 	return nil
 }
 
@@ -373,11 +375,15 @@ func (div *Div) GenerateAtomicCell() error {
 		}
 
 		x, y = div.getContentPosition(sx, sy, i)
-		// 换页的依据
-		if y < pageEndY && y+div.lineHeight > pageEndY {
+
+		// 换页的依据, 添加 y >= pageEndY的原因:
+		// 避免特殊情况:
+		// 当i=2时, y < pageEndY,  y+div.lineHeight < pageEndY
+		// 当i=3时, y > pageEndY
+		if (y < pageEndY || y >= pageEndY) && y+div.lineHeight >= pageEndY {
 			div.contents = div.contents[i:]
 			div.replaceHeight()
-			div.margin.Left = 0
+			div.margin.Top = 0
 			return nil
 		}
 
@@ -385,6 +391,7 @@ func (div *Div) GenerateAtomicCell() error {
 		if !isEmpty(div.fontColor) {
 			div.pdf.TextColor(getColorRGB(div.fontColor))
 		}
+		div.pdf.Font(div.font.Family, div.font.Size, div.font.Style) // 添加设置
 		div.pdf.Cell(x, y, div.contents[i])
 
 		if div.horizontalCentered || div.rightAlign {
@@ -402,16 +409,18 @@ func (div *Div) GenerateAtomicCell() error {
 
 // 重新设置div的高度
 func (div *Div) replaceHeight() {
+	if len(div.contents) == 0 {
+		div.height = 0
+	}
 	length := float64(len(div.contents))
-	div.height = div.lineHeight*length + div.lineSpace*(length-1) + div.border.Top
+	div.height = div.lineHeight*length + div.lineSpace*(length-1) + div.border.Top + div.border.Bottom
 }
 
 func (div *Div) getContentPosition(sx, sy float64, index int) (x, y float64) {
 	x = sx + div.margin.Left + div.border.Left
 	y = sy + div.margin.Top + div.border.Top
 
-	if index > 0 {
-		y += float64(index) * (div.lineHeight + div.lineSpace)
-	}
+	y += float64(index) * (div.lineHeight + div.lineSpace)
+
 	return x, y
 }

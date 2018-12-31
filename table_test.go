@@ -54,11 +54,11 @@ func (h TableDetailWithData) Execute(report *core.Report) {
 	c03 := table.NewCellByRange(2, 2)
 	c10 := table.NewCellByRange(3, 1)
 
-	f1 := Font{Family: TABLE_MY, Size: 15}
+	f1 := Font{Family: TABLE_MY, Size: 15, Style: ""}
 	c00.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 0), lineHeight, lineSpace, report).SetFont(f1).SetHorizontalCentered().SetContent("0-0"))
-	c01.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 1), lineHeight, lineSpace, report).SetFont(f1).SetHorizontalCentered().SetContent("0-1"))
-	c03.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 3), lineHeight, lineSpace, report).SetFont(f1).SetVerticalCentered().SetContent("0-3"))
-	c10.SetElement(NewDivWithWidth(table.GetColWithByIndex(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetRightAlign().SetContent("1-0-212182182189999999999999999999999999999999"))
+	c01.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 1), lineHeight, lineSpace, report).SetFont(f1).SetRightAlign().SetContent("0-1"))
+	c03.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 3), lineHeight, lineSpace, report).SetFont(f1).SetRightAlign().SetContent("0-3-近日，江苏苏州市姑苏区市场监督管理局向苏州定园旅游服务有限公司送达行政处罚决定书，对定园进行处罚，吊销其营业执照，此举开创了我国旅游景点因虚假宣传被吊销营业执照的先河"))
+	c10.SetElement(NewDivWithWidth(table.GetColWithByIndex(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent("1-0-近日，江苏苏州市姑苏区市场监督管理局向苏州定园旅游服务有限公司送达行政处罚决定书了我国旅游景点因虚假宣传被吊销营业执照的先河"))
 
 	f1 = Font{Family: TABLE_MY, Size: 10}
 	border := Scope{0.5 * unit, 0.5 * unit, 0, 0}
@@ -70,9 +70,7 @@ func (h TableDetailWithData) Execute(report *core.Report) {
 		}
 
 		for j := 0; j < 5; j++ {
-			str := `31.79938889215716 25.400000002610557
-31.79938889215716 25.400000002610557
-31.79938889215716 25.400000002610557`
+			str := `有限公司送达行政处罚决定书`
 			s := fmt.Sprintf("%v-%v", i+2, str)
 			w := table.GetColWithByIndex(i+2, j)
 			e := NewDivWithWidth(w, lineHeight, lineSpace, report)
