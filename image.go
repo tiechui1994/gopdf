@@ -47,6 +47,14 @@ func NewImage(path string, pdf *core.Report) *Image {
 }
 
 func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Report) *Image {
+	contentWidth, contentHeight := pdf.GetContentWidthAndHeight()
+	if width > contentWidth {
+		width = contentWidth
+	}
+	if height > contentHeight {
+		height = contentHeight
+	}
+
 	if _, err := os.Stat(path); err != nil {
 		panic("the path error")
 	}

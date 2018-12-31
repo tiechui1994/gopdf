@@ -12,9 +12,6 @@ const (
 
 func ComplexImageReport() {
 	r := core.CreateReport()
-	r.SetPageEndY(281.0)
-	r.SetPageStartXY(2.83, 2.83)
-	r.IsMutiPage = true
 	font1 := core.FontMap{
 		FontName: IMAGE_IG,
 		FileName: "ttf//ipaexg.ttf",
@@ -23,13 +20,12 @@ func ComplexImageReport() {
 		FontName: IMAGE_MD,
 		FileName: "ttf//mplus-1p-bold.ttf",
 	}
-	fonts := []*core.FontMap{&font1, &font2}
-	r.SetFonts(fonts)
+	r.SetFonts([]*core.FontMap{&font1, &font2})
+	r.SetPage("A4", "mm", "P")
+
 	d := new(ImageDetail)
 	r.RegisterBand(core.Band(*d), core.Detail)
 
-	r.SetPage("A4", "mm", "P")
-	r.SetFooterY(265)
 	r.Execute("image_test.pdf")
 	r.SaveAtomicCellText("image_test.txt")
 }
@@ -41,7 +37,6 @@ func (h ImageDetail) GetHeight(report *core.Report) float64 {
 	return 6
 }
 func (h ImageDetail) Execute(report *core.Report) {
-	report.SetXY(10, 10)
 
 	report.Font(DIV_MD, 10, "")
 	report.SetFont(DIV_MD, 10)

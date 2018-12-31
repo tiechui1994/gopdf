@@ -35,6 +35,12 @@ type Div struct {
 }
 
 func NewDivWithWidth(width, lineHeight, lineSpace float64, pdf *core.Report) *Div {
+	// 最大宽度控制
+	contentWidth, _ := pdf.GetContentWidthAndHeight()
+	if width > contentWidth {
+		width = contentWidth
+	}
+
 	div := &Div{
 		width:            width,
 		height:           0,

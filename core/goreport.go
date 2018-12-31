@@ -40,14 +40,39 @@ type Report struct {
 	pageNo    int     // 记录当前的 Page 的页数
 	converter *Converter
 
-	pageWidth, pageHeight  float64
-	pageStartX, pageStartY float64
-	pageEndX, pageEndY     float64
-	callbacks              []CallBack // 在PDF生成之后执行
+	pageWidth, pageHeight       float64
+	contentWidth, contentHeight float64
+	pageStartX, pageStartY      float64
+	pageEndX, pageEndY          float64
+
+	callbacks []CallBack // 在PDF生成之后执行
+	config    *Config
+}
+
+func CreateReport() *Report {
+	report := new(Report)
+	report.converter = new(Converter)
+
+	report.Vars = make(map[string]string)
+	report.bands = make(map[string]*Band)
+	report.sumWork = make(map[string]float64)
+	report.callbacks = make([]CallBack, 0)
+	report.flags = make(map[string]bool)
+
+	report.IsMutiPage = true
+	report.sumWork["__ft__"] = 0.0 // FooterY
+	report.flags[Flag_AutoAddNewPage] = false
+	report.flags[Flag_ResetPageNo] = false
+
+	return report
 }
 
 // 写入PDF文件
 func (r *Report) Execute(filename string) {
+	if r.config == nil {
+		panic("please set page config")
+	}
+
 	r.execute(true)
 	r.converter.GoPdf.WritePdf(filename)
 
@@ -58,6 +83,10 @@ func (r *Report) Execute(filename string) {
 
 // 获取PDF内容
 func (r *Report) GetBytesPdf() (ret []byte) {
+	if r.config == nil {
+		panic("please set page config")
+	}
+
 	r.execute(true)
 	ret = r.converter.GoPdf.GetBytesPdf()
 	return
@@ -66,11 +95,8 @@ func (r *Report) GetBytesPdf() (ret []byte) {
 // 转换, 内容 -> PDF文件
 func (r *Report) execute(exec bool) {
 	if exec {
-		if r.sumWork["__ft__"] == 0 {
-			panic("footerY not set yet.")
-		}
 		r.pageNo = 1
-		r.currY = 0
+		r.currX, r.currY = r.GetPageStartXY()
 
 		r.addAtomicCell("v|PAGE|" + strconv.Itoa(r.pageNo))
 		r.ExecuteDetail()
@@ -144,27 +170,9 @@ func (r *Report) getpageNoBylineNo(lineNo int, list *List) int {
 	return page
 }
 
-// 设置页脚的Y值
-func (r *Report) SetFooterYbyFooterHeight(footerHeight float64) {
-	if r.pageHeight == 0 {
-		panic("Page size not yet specified")
-	}
-	r.sumWork["__ft__"] = r.pageHeight - footerHeight
-}
-
-func (r *Report) SetFooterY(footerY float64) {
-	r.sumWork["__ft__"] = footerY
-}
-
 // 设置可用字体
 func (r *Report) SetFonts(fmap []*FontMap) {
 	r.converter.Fonts = fmap
-}
-
-// 构建新的PAGE
-func (r *Report) SetAutoAddNewPage(resetpageNo bool) {
-	r.flags[Flag_AutoAddNewPage] = true
-	r.flags[Flag_ResetPageNo] = resetpageNo
 }
 
 // 获取当前页面编号
@@ -175,47 +183,37 @@ func (r *Report) GetCurrentPageNo() int {
 // 添加新的页面
 func (r *Report) AddNewPage(resetpageNo bool) {
 	r.ExecutePageFooter()
+
 	r.addAtomicCell("NP") // 构建新的页面
 	if resetpageNo {
 		r.pageNo = 1
 	} else {
 		r.pageNo++
 	}
-	r.currY = 0
 	r.ExecutePageHeader()
+
 	r.addAtomicCell("v|PAGE|" + strconv.Itoa(r.pageNo))
 }
 
-func (r *Report) AddNewPageCheck(height float64) {
-	if r.currY+height > r.sumWork["__ft__"] {
-		r.AddNewPage(false)
-	}
-}
-
 func (r *Report) ExecutePageFooter() {
-	r.currY = r.sumWork["__ft__"]
+	r.currY = r.config.endY / r.unit
+	r.currX = r.config.startX / r.unit
 
 	h := r.bands[Footer]
 	if h != nil {
-		height := (*h).GetHeight(r)
 		(*h).Execute(r)
-		r.currY += height
 	}
 }
-
 func (r *Report) ExecutePageHeader() {
+	r.currX, r.currY = r.GetPageStartXY()
 	h := r.bands[Header]
 	if h != nil {
-		height := (*h).GetHeight(r)
 		(*h).Execute(r)
-		r.currY += height
 	}
 }
-
 func (r *Report) ExecuteDetail() {
 	h := r.bands[Detail]
 	if h != nil {
-		//fmt.Printf("report.NewPage flag %v\n", r.flags["NewPageForce"])
 		if r.flags[Flag_AutoAddNewPage] {
 			r.AddNewPage(r.flags[Flag_ResetPageNo])
 			r.flags[Flag_AutoAddNewPage] = false
@@ -229,10 +227,7 @@ func (r *Report) ExecuteDetail() {
 			r.currX, r.currY = currX, currY
 		}
 
-		height := (*h).GetHeight(r)
-		r.AddNewPageCheck(height)
 		(*h).Execute(r)
-		r.currY += height
 	}
 }
 
@@ -241,20 +236,17 @@ func (r *Report) RegisterBand(band Band, name string) {
 }
 
 // 换页坐标
-func (r *Report) SetPageEndY(y float64) {
-	r.pageEndY = y
-}
 func (r *Report) GetPageEndY() float64 {
-	return r.pageEndY
+	return r.pageEndY / r.unit
 }
 
 // 页面开始坐标
-func (r *Report) SetPageStartXY(x, y float64) {
-	r.pageStartX = x
-	r.pageStartY = y
-}
 func (r *Report) GetPageStartXY() (x, y float64) {
-	return r.pageStartX, r.pageStartY
+	return r.pageStartX / r.unit, r.pageStartY / r.unit
+}
+
+func (r *Report) GetContentWidthAndHeight() (width, height float64) {
+	return r.contentWidth / r.unit, r.contentHeight / r.unit
 }
 
 // currX, currY, 坐标
@@ -274,45 +266,47 @@ func (r *Report) GetXY() (x, y float64) {
 // 设置页面的尺寸, unit: mm pt in  size: A4 LTR, 目前支持常用的两种方式
 func (r *Report) SetPage(size string, unit string, orientation string) {
 	r.setUnit(unit)
+	config, ok := defaultConfigs[size]
+	if !ok {
+		panic("the config not exists, please add config")
+	}
+
 	switch size {
 	case "A4":
 		switch orientation {
 		case "P":
 			r.addAtomicCell("P|" + unit + "|A4|P")
-			r.pageWidth = 595.28 / r.unit
-			r.pageHeight = 841.89 / r.unit
+			r.pageWidth = config.width / r.unit
+			r.pageHeight = config.height / r.unit
 		case "L":
 			r.addAtomicCell("P|" + unit + "|A4|L")
-			r.pageWidth = 841.89 / r.unit
-			r.pageHeight = 595.28 / r.unit
+			r.pageWidth = config.height / r.unit
+			r.pageHeight = config.width / r.unit
 		}
 	case "LTR":
 		switch orientation {
 		case "P":
-			r.pageWidth = 612 / r.unit
-			r.pageHeight = 792 / r.unit
+			r.pageWidth = config.width / r.unit
+			r.pageHeight = config.height / r.unit
 			r.addAtomicCell("P1|" + unit + "|" + strconv.FormatFloat(r.pageWidth, 'f', 4, 64) +
 				"|" + strconv.FormatFloat(r.pageHeight, 'f', 4, 64))
 		case "L":
-			r.pageWidth = 792 / r.unit
-			r.pageHeight = 612 / r.unit
+			r.pageWidth = config.height / r.unit
+			r.pageHeight = config.width / r.unit
 			r.addAtomicCell("P1|" + unit + "|" + strconv.FormatFloat(r.pageWidth, 'f', 4, 64) +
 				"|" + strconv.FormatFloat(r.pageHeight, 'f', 4, 64))
 		}
 	}
 
-	if r.pageEndY == 0 {
-		r.pageEndY = r.pageHeight
-	}
+	r.contentWidth = config.contentWidth
+	r.contentHeight = config.contentHeight
 
-	r.execute(false)
-}
-func (r *Report) SetPageByDimension(unit string, width float64, height float64) {
-	r.setUnit(unit)
-	r.pageWidth = width
-	r.pageHeight = height
-	r.addAtomicCell("P1|" + unit + "|" + strconv.FormatFloat(width, 'f', 4, 64) +
-		"|" + strconv.FormatFloat(height, 'f', 4, 64))
+	r.pageStartX = config.startX
+	r.pageStartY = config.startY
+	r.pageEndX = config.endX
+	r.pageEndY = config.endY
+	r.config = config
+
 	r.execute(false)
 }
 
@@ -445,32 +439,11 @@ func (r *Report) Var(name string, val string) {
 }
 
 type Band interface {
-	GetHeight(report *Report) float64
 	Execute(report *Report)
-}
-
-func CreateReport() *Report {
-	report := new(Report)
-	report.converter = new(Converter)
-
-	report.Vars = make(map[string]string)
-	report.bands = make(map[string]*Band)
-	report.sumWork = make(map[string]float64)
-	report.callbacks = make([]CallBack, 0)
-	report.flags = make(map[string]bool)
-
-	report.sumWork["__ft__"] = 0.0 // FooterY
-	report.flags[Flag_AutoAddNewPage] = false
-	report.flags[Flag_ResetPageNo] = false
-
-	return report
 }
 
 type TemplateDetail struct {
 }
 
-func (h TemplateDetail) GetHeight() float64 {
-	return 10
-}
 func (h TemplateDetail) Execute(report *Report) {
 }

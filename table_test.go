@@ -14,7 +14,6 @@ const (
 
 func ComplexTableReportWithData() {
 	r := core.CreateReport()
-	r.IsMutiPage = true
 	font1 := core.FontMap{
 		FontName: TABLE_IG,
 		FileName: "ttf//ipaexg.ttf",
@@ -27,15 +26,12 @@ func ComplexTableReportWithData() {
 		FontName: TABLE_MY,
 		FileName: "ttf//microsoft.ttf",
 	}
-	fonts := []*core.FontMap{&font1, &font2, &font3}
-	r.SetFonts(fonts)
+	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
+	r.SetPage("A4", "mm", "P")
+
 	d := new(TableDetailWithData)
 	r.RegisterBand(core.Band(*d), core.Detail)
-	r.SetPage("A4", "mm", "P")
-	conPt := r.GetUnit()
-	r.SetFooterY(265)
-	r.SetPageEndY(285.0)
-	r.SetPageStartXY(0, 4*conPt)
+
 	r.Execute("table_test_data.pdf")
 	r.SaveAtomicCellText("table_test_data.txt")
 }
@@ -43,19 +39,14 @@ func ComplexTableReportWithData() {
 type TableDetailWithData struct {
 }
 
-func (h TableDetailWithData) GetHeight(report *core.Report) float64 {
-	return 0
-}
-
 func (h TableDetailWithData) Execute(report *core.Report) {
-	conPt := report.GetUnit()
-	report.SetXY(conPt, conPt)
+	unit := report.GetUnit()
 
-	lineSpace := 0.01 * conPt
-	lineHeight := 4 * conPt
+	lineSpace := 0.01 * unit
+	lineHeight := 4 * unit
 
-	table := NewTable(5, 100, 30*conPt, lineHeight, report)
-	table.SetMargin(Scope{2 * conPt, 5 * conPt, 0, 0})
+	table := NewTable(5, 100, 80*unit, lineHeight, report)
+	table.SetMargin(Scope{0, 0, 0, 0})
 
 	// 先把当前的行设置完毕, 然后才能添加单元格内容.
 	c00 := table.NewCellByRange(1, 1)
@@ -70,7 +61,7 @@ func (h TableDetailWithData) Execute(report *core.Report) {
 	c10.SetElement(NewDivWithWidth(table.GetColWithByIndex(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent("1-0"))
 
 	f1 = Font{Family: TABLE_MY, Size: 10}
-	border := Scope{0.5 * conPt, 0.5 * conPt, 0, 0}
+	border := Scope{0.5 * unit, 0.5 * unit, 0, 0}
 
 	for i := 0; i < 98; i++ {
 		cells := make([]*TableCell, 5)
@@ -96,9 +87,7 @@ func (h TableDetailWithData) Execute(report *core.Report) {
 
 func ComplexTableReport() {
 	r := core.CreateReport()
-	r.SetPageEndY(281.0)
-	//r.SetPageStartXY(2.83, 2.83)
-	r.IsMutiPage = true
+
 	font1 := core.FontMap{
 		FontName: TABLE_IG,
 		FileName: "ttf//ipaexg.ttf",
@@ -111,12 +100,12 @@ func ComplexTableReport() {
 		FontName: TABLE_MY,
 		FileName: "ttf//microsoft.ttf",
 	}
-	fonts := []*core.FontMap{&font1, &font2, &font3}
-	r.SetFonts(fonts)
+	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
+	r.SetPage("A4", "mm", "P")
+
 	d := new(TableDetail)
 	r.RegisterBand(core.Band(*d), core.Detail)
-	r.SetPage("A4", "mm", "P")
-	r.SetFooterY(265)
+
 	r.Execute("table_test.pdf")
 	r.SaveAtomicCellText("table_test.txt")
 }
@@ -124,17 +113,13 @@ func ComplexTableReport() {
 type TableDetail struct {
 }
 
-func (h TableDetail) GetHeight(report *core.Report) float64 {
-	return 6
-}
 func (h TableDetail) Execute(report *core.Report) {
-	conPt := report.GetUnit()
-	lineSpace := 0.01 * conPt
-	lineHeight := 2 * conPt
+	unit := report.GetUnit()
+	lineSpace := 0.01 * unit
+	lineHeight := 2 * unit
 
-	report.SetXY(conPt, conPt)
-	table := NewTable(5, 100, 50*conPt, lineHeight, report)
-	table.SetMargin(Scope{2 * conPt, 5 * conPt, 0, 0})
+	table := NewTable(5, 100, 50*unit, lineHeight, report)
+	table.SetMargin(Scope{0 * unit, 0* unit, 0, 0})
 
 	// todo: 先把当前的行设置完毕, 然后才能添加单元格内容.
 	c00 := table.NewCellByRange(1, 1)
@@ -149,7 +134,7 @@ func (h TableDetail) Execute(report *core.Report) {
 	c10.SetElement(NewDivWithWidth(table.GetColWithByIndex(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent(""))
 
 	f1 = Font{Family: TABLE_MY, Size: 10}
-	border := Scope{0.5 * conPt, 0.5 * conPt, 0, 0}
+	border := Scope{0.5 * unit, 0.5 * unit, 0, 0}
 
 	for i := 0; i < 98; i++ {
 		cells := make([]*TableCell, 5)

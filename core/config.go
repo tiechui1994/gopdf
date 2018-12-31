@@ -28,12 +28,12 @@ func (c *Config) checkConfig() {
 	}
 }
 
-var defaultConfigs map[string]Config // page -> config
+var defaultConfigs map[string]*Config // page -> config
 
 func init() {
-	defaultConfigs = make(map[string]Config)
+	defaultConfigs = make(map[string]*Config)
 
-	defaultConfigs["A4"] = Config{
+	defaultConfigs["A4"] = &Config{
 		startX:        90.14,
 		startY:        72.00,
 		endX:          505.14,
@@ -44,7 +44,7 @@ func init() {
 		contentHeight: 697.89,
 	}
 
-	defaultConfigs["LTR"] = Config{
+	defaultConfigs["LTR"] = &Config{
 		startX:        90.14,
 		startY:        72.00,
 		endX:          505.14,
@@ -56,7 +56,7 @@ func init() {
 	}
 }
 
-func Register(size string, config Config) {
+func Register(size string, config *Config) {
 	if _, ok := defaultConfigs[size]; ok {
 		return
 	}

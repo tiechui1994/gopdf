@@ -12,9 +12,6 @@ const (
 
 func ComplexDivReport() {
 	r := core.CreateReport()
-	r.SetPageEndY(281.0)
-	r.SetPageStartXY(2.83, 2.83)
-	r.IsMutiPage = true
 	font1 := core.FontMap{
 		FontName: DIV_IG,
 		FileName: "ttf//ipaexg.ttf",
@@ -23,13 +20,12 @@ func ComplexDivReport() {
 		FontName: DIV_MD,
 		FileName: "ttf//mplus-1p-bold.ttf",
 	}
-	fonts := []*core.FontMap{&font1, &font2}
-	r.SetFonts(fonts)
+	r.SetFonts([]*core.FontMap{&font1, &font2})
+	r.SetPage("A4", "mm", "P")
+
 	d := new(DivDetail)
 	r.RegisterBand(core.Band(*d), core.Detail)
 
-	r.SetPage("A4", "mm", "P")
-	r.SetFooterY(265)
 	r.Execute("div_test.pdf")
 	r.SaveAtomicCellText("div_test.txt")
 }

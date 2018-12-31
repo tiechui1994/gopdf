@@ -2,6 +2,7 @@ package gopdf
 
 import (
 	"github.com/tiechui1994/gopdf/core"
+	"fmt"
 )
 
 // 构建表格
@@ -33,6 +34,11 @@ type Table struct {
 
 // row行, col列
 func NewTable(cols, rows int, width, lineHeight float64, pdf *core.Report) *Table {
+	contentWidth, _ := pdf.GetContentWidthAndHeight()
+	if width > contentWidth {
+		width = contentWidth
+	}
+
 	pdf.LineType("straight", 0.1)
 	pdf.GrayStroke(0)
 
@@ -270,17 +276,14 @@ func (table *Table) getTableHeight() float64 {
 // 自动换行生成
 func (table *Table) GenerateAtomicCell() (error) {
 	var (
-		sx, sy   = table.pdf.GetXY()
-		pageEndY = table.pdf.GetPageEndY()
-	)
-
-	// 重新计算行高
-	table.replaceCellHeight()
-
-	// 线段坐标
-	var (
+		sx, sy         = table.pdf.GetXY()
+		pageEndY       = table.pdf.GetPageEndY()
 		x1, y1, x2, y2 float64
 	)
+
+	fmt.Println(sx, sy)
+	// 重新计算行高
+	table.replaceCellHeight()
 
 	for i := 0; i < table.rows; i++ {
 		x1, y1, x2, y2 = table.getVLinePosition(sx, sy, 0, i)
@@ -438,6 +441,10 @@ func (table *Table) NewCellByRange(w, h int) *TableCell {
 	}
 
 	curRow, curCol := table.nextRow, table.nextCol
+	if w >= table.cols-curCol {
+		w = table.cols - curCol
+	}
+
 	cell := &TableCell{
 		row:     curRow,
 		col:     curCol,

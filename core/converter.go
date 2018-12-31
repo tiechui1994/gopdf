@@ -18,7 +18,7 @@ type Converter struct {
 	GoPdf       *gopdf.GoPdf
 	AtomicCells []string // 原子单元, 多个单元格最终汇总成PDF文件
 	Fonts       []*FontMap
-	Unit      float64
+	Unit        float64
 	LineW       float64
 }
 
@@ -115,6 +115,7 @@ func (p *Converter) Page(line string, elements []string) {
       		'A5': [419.53, 595.28],
 		*/
 		case "A4":
+			p.setUnit(elements[1])
 			if elements[3] == "P" {
 				p.Start(595.28, 841.89) // 像素
 			} else if elements[3] == "L" {
@@ -122,13 +123,12 @@ func (p *Converter) Page(line string, elements []string) {
 			} else {
 				panic("Page Orientation accept P or L")
 			}
-			p.SetConv(elements[1])
 		default:
 			panic("This size not supported yet:" + elements[2])
 		}
 	case "P1":
 		CheckLength(line, elements, 4)
-		p.SetConv(elements[1])
+		p.setUnit(elements[1])
 		p.Start(ParseFloatPanic(elements[2], line)*p.Unit, ParseFloatPanic(elements[3], line)*p.Unit)
 	}
 	p.AddFont()
@@ -136,9 +136,9 @@ func (p *Converter) Page(line string, elements []string) {
 }
 
 // 单位转换率设置, 基准的像素Pt
-func (p *Converter) SetConv(ut string) {
+func (p *Converter) setUnit(unit string) {
 	// 1mm ~ 2.8pt 1in ~ 72pt
-	switch ut {
+	switch unit {
 	case "mm":
 		p.Unit = 2.834645669
 	case "pt":
@@ -146,7 +146,7 @@ func (p *Converter) SetConv(ut string) {
 	case "in":
 		p.Unit = 72
 	default:
-		panic("This unit is not specified :" + ut)
+		panic("This unit is not specified :" + unit)
 	}
 }
 
@@ -157,7 +157,10 @@ func (p *Converter) NewPage(line string, elements []string) {
 
 // 设置PDF文件基本信息(单位,页面大小)
 func (p *Converter) Start(w float64, h float64) {
-	p.GoPdf.Start(gopdf.Config{Unit: "pt", PageSize: gopdf.Rect{W: w, H: h}}) // 595.28, 841.89 = A4
+	p.GoPdf.Start(gopdf.Config{
+		Unit:     "pt",
+		PageSize: gopdf.Rect{W: w, H: h},
+	}) // 595.28, 841.89 = A4
 }
 
 // 设置当前文本使用的字体
