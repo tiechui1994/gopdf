@@ -5,46 +5,17 @@ import (
 	"github.com/tiechui1994/gopdf/core"
 	"path/filepath"
 	"strings"
-	"math"
+	"fmt"
 )
 
 type Image struct {
 	pdf           *core.Report
 	path          string
-	width, height int
+	width, height float64
 	margin        Scope
 }
 
-func NewImage(width, height float64, path string, pdf *core.Report) *Image {
-	if _, err := os.Stat(path); err != nil {
-		panic("the path error")
-	}
-
-	picturePath, _ := filepath.Abs(path)
-	imageType, _ := GetImageType(picturePath)
-	if imageType == "png" {
-		index := strings.LastIndex(picturePath, ".")
-		jpegPath := picturePath[0:index] + ".jpeg"
-		err := ConvertPNG2JPEG(picturePath, jpegPath)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	w := int(math.Trunc(width))
-	h := int(math.Trunc(height))
-	picturePath = ImageCompress(picturePath, w, h)
-	image := &Image{
-		pdf:    pdf,
-		path:   picturePath,
-		width:  w,
-		height: h,
-	}
-
-	return image
-}
-
-func NewImageWithOutCompress(path string, pdf *core.Report) *Image {
+func NewImage(path string, pdf *core.Report) *Image {
 	if _, err := os.Stat(path); err != nil {
 		panic("the path error")
 	}
@@ -61,18 +32,55 @@ func NewImageWithOutCompress(path string, pdf *core.Report) *Image {
 	}
 
 	w, h := GetImageWidthAndHeight(picturePath)
+	fmt.Println(w, h)
 	image := &Image{
 		pdf:    pdf,
 		path:   picturePath,
-		width:  w,
-		height: h,
+		width:  float64(w / 10),
+		height: float64(h / 10),
+	}
+
+	return image
+}
+
+func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Report) *Image {
+	if _, err := os.Stat(path); err != nil {
+		panic("the path error")
+	}
+
+	picturePath, _ := filepath.Abs(path)
+	imageType, _ := GetImageType(picturePath)
+	if imageType == "png" {
+		index := strings.LastIndex(picturePath, ".")
+		jpegPath := picturePath[0:index] + ".jpeg"
+		err := ConvertPNG2JPEG(picturePath, jpegPath)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	w, h := GetImageWidthAndHeight(picturePath)
+	if float64(h)*width/float64(w) > height {
+		width = float64(w) * height / float64(h)
+	} else {
+		height = float64(h) * width / float64(w)
+	}
+	image := &Image{
+		pdf:    pdf,
+		path:   picturePath,
+		width:  width,
+		height: height,
 	}
 
 	return image
 }
 
 func (image *Image) GetHeight() float64 {
-	return float64(image.height)
+	return image.height
+}
+
+func (image *Image) GetWidth() float64 {
+	return image.width
 }
 
 func (image *Image) SetMargin(margin Scope) *Image {

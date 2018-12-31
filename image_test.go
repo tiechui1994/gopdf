@@ -31,7 +31,7 @@ func ComplexImageReport() {
 	r.SetPage("A4", "mm", "P")
 	r.SetFooterY(265)
 	r.Execute("image_test.pdf")
-	r.SaveText("image_test.txt")
+	r.SaveAtomicCellText("image_test.txt")
 }
 
 type ImageDetail struct {
@@ -41,17 +41,18 @@ func (h ImageDetail) GetHeight(report *core.Report) float64 {
 	return 6
 }
 func (h ImageDetail) Execute(report *core.Report) {
-	//conPt := report.GetConvPt()
 	report.SetXY(10, 10)
 
 	report.Font(DIV_MD, 10, "")
 	report.SetFont(DIV_MD, 10)
 	cat := "example//pictures/cat.jpg"
-	rand := "example//pictures/rand.png"
-	i1 := NewImage(20, 40, rand, report)
+	rand := "example//pictures/rand.jpeg"
+	i1 := NewImage(rand, report)
 	i1.GenerateAtomicCell()
-	i2 := NewImageWithOutCompress(cat, report)
+	i2 := NewImage(cat, report)
 	i2.GenerateAtomicCell()
+	i3 := NewImageWithWidthAndHeight(cat, 20, 40, report)
+	i3.GenerateAtomicCell()
 }
 
 func TestImage(t *testing.T) {

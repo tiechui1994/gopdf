@@ -145,7 +145,7 @@ func (div *Div) SetVerticalCentered() *Div {
 func (div *Div) SetContent(s string) *Div {
 	var (
 		convertStr   = strings.Replace(s, "|", `\|`, -1)
-		conPt        = div.pdf.GetConvPt()
+		conPt        = div.pdf.GetUnit()
 		blocks       = strings.Split(convertStr, "\n") // 分行
 		contentWidth = div.width - math.Abs(div.border.Left) - math.Abs(div.border.Right)
 	)
@@ -242,7 +242,7 @@ func (div *Div) GenerateAtomicCellWithAutoWarp() error {
 		if div.horizontalCentered {
 			div.pdf.SetFontWithStyle(div.font.Family, div.font.Style, div.font.Size)
 			hOriginBorder = div.border
-			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetConvPt()
+			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
 			if width < div.width {
 				m := (div.width - width) / 2
 				div.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}
@@ -315,7 +315,7 @@ func (div *Div) GenerateAtomicCell() error {
 		if div.horizontalCentered {
 			div.pdf.SetFontWithStyle(div.font.Family, div.font.Style, div.font.Size)
 			hOriginBorder = div.border
-			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetConvPt()
+			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
 			if width < div.width {
 				m := (div.width - width) / 2
 				div.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}

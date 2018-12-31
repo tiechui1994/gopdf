@@ -31,7 +31,7 @@ func ComplexDivReport() {
 	r.SetPage("A4", "mm", "P")
 	r.SetFooterY(265)
 	r.Execute("div_test.pdf")
-	r.SaveText("div_test.txt")
+	r.SaveAtomicCellText("div_test.txt")
 }
 
 type DivDetail struct {
@@ -41,7 +41,7 @@ func (h DivDetail) GetHeight(report *core.Report) float64 {
 	return 6
 }
 func (h DivDetail) Execute(report *core.Report) {
-	conPt := report.GetConvPt()
+	conPt := report.GetUnit()
 	font := Font{Family: DIV_MD, Size: 10}
 	report.SetXY(10, 10)
 

@@ -4,6 +4,7 @@ import (
 	//"fmt"
 	"io/ioutil"
 	"strings"
+	"strconv"
 )
 
 func AddComma(s string) string {
@@ -25,7 +26,7 @@ func addCommaSub(s string) string {
 		res += s[0:pos] + ","
 	}
 	for i := pos; i < len(s); i += 3 {
-		res += s[i : i+3]
+		res += s[i: i+3]
 		//fmt.Printf("pos %v \n", i)
 		if i < len(s)-3 {
 			res += ","
@@ -33,6 +34,7 @@ func addCommaSub(s string) string {
 	}
 	return res
 }
+
 func ReadTextFile(filename string, colno int) []interface{} {
 	res, _ := ioutil.ReadFile(filename)
 	lines := strings.Split(string(res), "\n")
@@ -46,4 +48,8 @@ func ReadTextFile(filename string, colno int) []interface{} {
 		list = append(list, cols)
 	}
 	return list
+}
+
+func Ftoa(f float64) string {
+	return strconv.FormatFloat(f, 'f', 2, 64)
 }

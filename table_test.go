@@ -32,12 +32,12 @@ func ComplexTableReportWithData() {
 	d := new(TableDetailWithData)
 	r.RegisterBand(core.Band(*d), core.Detail)
 	r.SetPage("A4", "mm", "P")
-	conPt := r.GetConvPt()
+	conPt := r.GetUnit()
 	r.SetFooterY(265)
 	r.SetPageEndY(285.0)
 	r.SetPageStartXY(0, 4*conPt)
 	r.Execute("table_test_data.pdf")
-	r.SaveText("table_test_data.txt")
+	r.SaveAtomicCellText("table_test_data.txt")
 }
 
 type TableDetailWithData struct {
@@ -48,7 +48,7 @@ func (h TableDetailWithData) GetHeight(report *core.Report) float64 {
 }
 
 func (h TableDetailWithData) Execute(report *core.Report) {
-	conPt := report.GetConvPt()
+	conPt := report.GetUnit()
 	report.SetXY(conPt, conPt)
 
 	lineSpace := 0.01 * conPt
@@ -118,7 +118,7 @@ func ComplexTableReport() {
 	r.SetPage("A4", "mm", "P")
 	r.SetFooterY(265)
 	r.Execute("table_test.pdf")
-	r.SaveText("table_test.txt")
+	r.SaveAtomicCellText("table_test.txt")
 }
 
 type TableDetail struct {
@@ -128,7 +128,7 @@ func (h TableDetail) GetHeight(report *core.Report) float64 {
 	return 6
 }
 func (h TableDetail) Execute(report *core.Report) {
-	conPt := report.GetConvPt()
+	conPt := report.GetUnit()
 	lineSpace := 0.01 * conPt
 	lineHeight := 2 * conPt
 

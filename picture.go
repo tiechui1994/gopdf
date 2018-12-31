@@ -7,11 +7,7 @@ import (
 	"image/png"
 	"image/jpeg"
 	"image/color"
-
 	"github.com/nfnt/resize"
-	"time"
-	"fmt"
-	"path/filepath"
 )
 
 type imageCompress struct {
@@ -130,31 +126,6 @@ func GetImageWidthAndHeight(inPath string) (w, h int) {
 }
 func GetImageType(inPath string) (imageType string, err error) {
 	return compress.getPictureType(inPath)
-}
-
-func ImageCompress(inPath string, width, height int) (outPath string) {
-	iw, ih, err := compress.getWidthAndHeight(inPath)
-	if err != nil {
-		panic(err)
-	}
-	if int(height*iw/ih) < width {
-		width = int(height * iw / ih)
-	}
-
-	pType, err := compress.getPictureType(inPath)
-	if err != nil {
-		panic(err)
-	}
-
-	timstamp := fmt.Sprintf("%v", time.Now().UnixNano())
-	out := filepath.Join(filepath.Dir(inPath), timstamp+"."+pType)
-	err = compress.compress(inPath, out, width)
-	if err != nil {
-		os.Remove(out)
-		panic(err)
-	}
-
-	return out
 }
 
 func ConvertPNG2JPEG(srcPath, dstPath string) (err error) {
