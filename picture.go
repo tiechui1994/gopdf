@@ -166,7 +166,8 @@ func DrawPNG(srcPath string) {
 	pngImage := image.NewRGBA(image.Rect(0, 0, width, height))
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			pngImage.Set(x, y, color.RGBA{uint8(x % 256), uint8(y % 256), uint8((x ^ y) % 256), uint8((x ^ y) % 256)})
+
+			pngImage.Set(x, y, color.RGBA{uint8(256 % (x + 1)), uint8(y % 256), uint8((x ^ y) % 256), uint8((x ^ y) % 256)})
 		}
 	}
 

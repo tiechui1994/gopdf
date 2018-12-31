@@ -5,7 +5,6 @@ import (
 	"github.com/tiechui1994/gopdf/core"
 	"path/filepath"
 	"strings"
-	"fmt"
 )
 
 type Image struct {
@@ -13,6 +12,7 @@ type Image struct {
 	path          string
 	width, height float64
 	margin        Scope
+	tempFilePath  string
 }
 
 func NewImage(path string, pdf *core.Report) *Image {
@@ -20,25 +20,28 @@ func NewImage(path string, pdf *core.Report) *Image {
 		panic("the path error")
 	}
 
+	var tempFilePath string
 	picturePath, _ := filepath.Abs(path)
 	imageType, _ := GetImageType(picturePath)
 	if imageType == "png" {
 		index := strings.LastIndex(picturePath, ".")
-		jpegPath := picturePath[0:index] + ".jpeg"
-		err := ConvertPNG2JPEG(picturePath, jpegPath)
+		tempFilePath = picturePath[0:index] + ".jpeg"
+		err := ConvertPNG2JPEG(picturePath, tempFilePath)
 		if err != nil {
 			panic(err)
 		}
 	}
 
 	w, h := GetImageWidthAndHeight(picturePath)
-	fmt.Println(w, h)
 	image := &Image{
-		pdf:    pdf,
-		path:   picturePath,
-		width:  float64(w / 10),
-		height: float64(h / 10),
+		pdf:          pdf,
+		path:         picturePath,
+		width:        float64(w / 10),
+		height:       float64(h / 10),
+		tempFilePath: tempFilePath,
 	}
+
+	pdf.AddCallBack(image.deleteTempImage)
 
 	return image
 }
@@ -48,12 +51,13 @@ func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Re
 		panic("the path error")
 	}
 
+	var tempFilePath string
 	picturePath, _ := filepath.Abs(path)
 	imageType, _ := GetImageType(picturePath)
 	if imageType == "png" {
 		index := strings.LastIndex(picturePath, ".")
-		jpegPath := picturePath[0:index] + ".jpeg"
-		err := ConvertPNG2JPEG(picturePath, jpegPath)
+		tempFilePath = picturePath[0:index] + ".jpeg"
+		err := ConvertPNG2JPEG(picturePath, tempFilePath)
 		if err != nil {
 			panic(err)
 		}
@@ -66,11 +70,14 @@ func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Re
 		height = float64(h) * width / float64(w)
 	}
 	image := &Image{
-		pdf:    pdf,
-		path:   picturePath,
-		width:  width,
-		height: height,
+		pdf:          pdf,
+		path:         picturePath,
+		width:        width,
+		height:       height,
+		tempFilePath: tempFilePath,
 	}
+
+	pdf.AddCallBack(image.deleteTempImage)
 
 	return image
 }
@@ -111,4 +118,16 @@ func (image *Image) GenerateAtomicCell() error {
 	image.pdf.Image(image.path, x, y, x+float64(image.width), y+float64(image.height))
 	image.pdf.SetXY(sx, y+float64(image.height))
 	return nil
+}
+
+func (image *Image) deleteTempImage(report *core.Report) {
+	if image.tempFilePath == "" {
+		return
+	}
+
+	if _, err := os.Stat(image.tempFilePath); err != nil {
+		return
+	}
+
+	os.Remove(image.tempFilePath)
 }

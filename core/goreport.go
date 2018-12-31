@@ -24,7 +24,7 @@ type pageMark struct {
 	pageNo int
 }
 
-type CallBack func(*Report) (interface{}, error)
+type CallBack func(report *Report)
 
 type Report struct {
 	IsMutiPage      bool
@@ -51,6 +51,10 @@ type Report struct {
 func (r *Report) Execute(filename string) {
 	r.execute(true)
 	r.converter.GoPdf.WritePdf(filename)
+
+	for i := range r.callbacks {
+		r.callbacks[i](r)
+	}
 }
 
 // 获取PDF内容

@@ -53,6 +53,7 @@ func (h ImageDetail) Execute(report *core.Report) {
 	i2.GenerateAtomicCell()
 	i3 := NewImageWithWidthAndHeight(cat, 20, 40, report)
 	i3.GenerateAtomicCell()
+	DrawPNG("example//pictures/random.png")
 }
 
 func TestImage(t *testing.T) {
