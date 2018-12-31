@@ -43,7 +43,7 @@ func (h TableDetailWithData) Execute(report *core.Report) {
 	unit := report.GetUnit()
 
 	lineSpace := 0.01 * unit
-	lineHeight := 4 * unit
+	lineHeight := 2 * unit
 
 	table := NewTable(5, 100, 80*unit, lineHeight, report)
 	table.SetMargin(Scope{0, 0, 0, 0})
@@ -58,7 +58,7 @@ func (h TableDetailWithData) Execute(report *core.Report) {
 	c00.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 0), lineHeight, lineSpace, report).SetFont(f1).SetHorizontalCentered().SetContent("0-0"))
 	c01.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 1), lineHeight, lineSpace, report).SetFont(f1).SetHorizontalCentered().SetContent("0-1"))
 	c03.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 3), lineHeight, lineSpace, report).SetFont(f1).SetVerticalCentered().SetContent("0-3"))
-	c10.SetElement(NewDivWithWidth(table.GetColWithByIndex(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent("1-0"))
+	c10.SetElement(NewDivWithWidth(table.GetColWithByIndex(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetRightAlign().SetContent("1-0-212182182189999999999999999999999999999999"))
 
 	f1 = Font{Family: TABLE_MY, Size: 10}
 	border := Scope{0.5 * unit, 0.5 * unit, 0, 0}
@@ -70,7 +70,9 @@ func (h TableDetailWithData) Execute(report *core.Report) {
 		}
 
 		for j := 0; j < 5; j++ {
-			str := ``
+			str := `31.79938889215716 25.400000002610557
+31.79938889215716 25.400000002610557
+31.79938889215716 25.400000002610557`
 			s := fmt.Sprintf("%v-%v", i+2, str)
 			w := table.GetColWithByIndex(i+2, j)
 			e := NewDivWithWidth(w, lineHeight, lineSpace, report)
@@ -119,7 +121,7 @@ func (h TableDetail) Execute(report *core.Report) {
 	lineHeight := 2 * unit
 
 	table := NewTable(5, 100, 50*unit, lineHeight, report)
-	table.SetMargin(Scope{0 * unit, 0* unit, 0, 0})
+	table.SetMargin(Scope{0 * unit, 0 * unit, 0, 0})
 
 	// todo: 先把当前的行设置完毕, 然后才能添加单元格内容.
 	c00 := table.NewCellByRange(1, 1)

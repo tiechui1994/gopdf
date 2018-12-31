@@ -2,7 +2,6 @@ package gopdf
 
 import (
 	"github.com/tiechui1994/gopdf/core"
-	"fmt"
 )
 
 // 构建表格
@@ -281,7 +280,6 @@ func (table *Table) GenerateAtomicCell() (error) {
 		x1, y1, x2, y2 float64
 	)
 
-	fmt.Println(sx, sy)
 	// 重新计算行高
 	table.replaceCellHeight()
 
@@ -295,6 +293,7 @@ func (table *Table) GenerateAtomicCell() (error) {
 			for k := 0; k < table.cols; k++ {
 				cell := table.cells[i][k]
 				cellOriginHeight := cell.height
+
 				x1, y1, _, _ := table.getHLinePosition(sx, sy, k, i)
 				cell.table.pdf.SetXY(x1, y1)
 				cell.element.GenerateAtomicCell()      // 会修改element的高度

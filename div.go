@@ -32,6 +32,7 @@ type Div struct {
 	// 居中
 	horizontalCentered bool
 	verticalCentered   bool
+	rightAlign         bool
 }
 
 func NewDivWithWidth(width, lineHeight, lineSpace float64, pdf *core.Report) *Div {
@@ -134,6 +135,7 @@ func (div *Div) SetHorizontalCentered() *Div {
 	}
 
 	div.horizontalCentered = true
+	div.rightAlign = false
 	return div
 }
 
@@ -144,6 +146,17 @@ func (div *Div) SetVerticalCentered() *Div {
 	}
 
 	div.verticalCentered = true
+	return div
+}
+
+// 居右
+func (div *Div) SetRightAlign() *Div {
+	if isEmpty(div.font) {
+		panic("must set font")
+	}
+
+	div.rightAlign = true
+	div.horizontalCentered = false
 	return div
 }
 
@@ -255,6 +268,15 @@ func (div *Div) GenerateAtomicCellWithAutoWarp() error {
 			}
 		}
 
+		// todo: 水平居右, 只是对当前的行设置新的 Border
+		if div.rightAlign {
+			div.pdf.SetFontWithStyle(div.font.Family, div.font.Style, div.font.Size)
+			hOriginBorder = div.border
+			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
+			m := div.width - width
+			div.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}
+		}
+
 		// todo: 垂直居中, 只能操作一次
 		if i == 0 && div.verticalCentered {
 			isFirstSetVerticalCentered = true
@@ -283,7 +305,7 @@ func (div *Div) GenerateAtomicCellWithAutoWarp() error {
 		// todo: 不需要换页, 只需要增加数据
 		div.pdf.Cell(x, y, div.contents[i])
 
-		if div.horizontalCentered {
+		if div.horizontalCentered || div.rightAlign {
 			div.border = hOriginBorder
 		}
 
@@ -328,6 +350,15 @@ func (div *Div) GenerateAtomicCell() error {
 			}
 		}
 
+		// todo: 水平居右, 只是对当前的行设置新的 Border
+		if div.rightAlign {
+			div.pdf.SetFontWithStyle(div.font.Family, div.font.Style, div.font.Size)
+			hOriginBorder = div.border
+			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
+			m := div.width - width
+			div.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}
+		}
+
 		// todo: 垂直居中, 只能操作一次, 只对第1行设置 Border
 		if i == 0 && div.verticalCentered {
 			isFirstSetVerticalCentered = true
@@ -356,7 +387,7 @@ func (div *Div) GenerateAtomicCell() error {
 		}
 		div.pdf.Cell(x, y, div.contents[i])
 
-		if div.horizontalCentered {
+		if div.horizontalCentered || div.rightAlign {
 			div.border = hOriginBorder
 		}
 

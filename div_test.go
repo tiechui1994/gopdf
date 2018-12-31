@@ -37,19 +37,18 @@ func (h DivDetail) GetHeight(report *core.Report) float64 {
 	return 6
 }
 func (h DivDetail) Execute(report *core.Report) {
-	conPt := report.GetUnit()
+	unit := report.GetUnit()
 	font := Font{Family: DIV_MD, Size: 10}
-	report.SetXY(10, 10)
 
 	report.Font(DIV_MD, 10, "")
 	report.SetFont(DIV_MD, 10)
 
-	lineSpace := 0.1 * conPt
-	lineHeight := report.MeasureTextWidth("中") / conPt
+	lineSpace := 0.1 * unit
+	lineHeight := report.MeasureTextWidth("中") / unit
 
-	div := NewDivWithWidth(48*conPt, lineHeight, lineSpace, report)
+	div := NewDivWithWidth(48*unit, lineHeight, lineSpace, report)
 	div.SetFont(font)
-	div.SetHorizontalCentered()
+	div.SetRightAlign()
 	div.SetMarign(Scope{10, 20, 0, 0})
 
 	div.SetBorder(Scope{10, 50, 0, 0})
