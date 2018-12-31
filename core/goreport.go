@@ -31,19 +31,18 @@ type Report struct {
 	FisrtPageNeedFH bool // 首页需要执行页眉和页脚
 	Vars            map[string]string
 
-	currX      float64
-	currY      float64
-	bands      map[string]*Band
-	flags      map[string]bool
-	sumWork    map[string]float64
-	unit       float64 // 转换单位
-	pageNo     int     // 记录当前的 Page 的页数
-	converter  *Converter
-	pageWidth  float64
-	pageHeight float64
+	currX     float64
+	currY     float64
+	bands     map[string]*Band
+	flags     map[string]bool
+	sumWork   map[string]float64
+	unit      float64 // 转换单位
+	pageNo    int     // 记录当前的 Page 的页数
+	converter *Converter
 
+	pageWidth, pageHeight  float64
 	pageStartX, pageStartY float64
-	pageEndY               float64
+	pageEndX, pageEndY     float64
 	callbacks              []CallBack // 在PDF生成之后执行
 }
 
