@@ -288,12 +288,12 @@ func (r *Report) SetPage(size string, unit string, orientation string) {
 		case "P":
 			r.pageWidth = config.width / r.unit
 			r.pageHeight = config.height / r.unit
-			r.addAtomicCell("P1|" + unit + "|" + strconv.FormatFloat(r.pageWidth, 'f', 4, 64) +
+			r.addAtomicCell("P|" + unit + "|" + strconv.FormatFloat(r.pageWidth, 'f', 4, 64) +
 				"|" + strconv.FormatFloat(r.pageHeight, 'f', 4, 64))
 		case "L":
 			r.pageWidth = config.height / r.unit
 			r.pageHeight = config.width / r.unit
-			r.addAtomicCell("P1|" + unit + "|" + strconv.FormatFloat(r.pageWidth, 'f', 4, 64) +
+			r.addAtomicCell("P  |" + unit + "|" + strconv.FormatFloat(r.pageWidth, 'f', 4, 64) +
 				"|" + strconv.FormatFloat(r.pageHeight, 'f', 4, 64))
 		}
 	}

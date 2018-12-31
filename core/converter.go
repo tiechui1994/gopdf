@@ -51,7 +51,7 @@ func (p *Converter) Execute() {
 		elements := strings.Split(line, "|")
 		//fmt.Printf("eles[0]:%v     len: %v    line:%v\n", eles[0], len(eles[0]), line)
 		switch elements[0] {
-		case "P", "P1":
+		case "P":
 			p.Page(line, elements) // PDF开始, P是标准的格式, P1属于自定义的格式
 		case "NP":
 			p.NewPage(line, elements) // 新页面
@@ -99,37 +99,51 @@ func (p *Converter) AddFont() {
 // [P, mm|pt|in, A4, P|L]
 // mm|pt|in 表示的尺寸单位, 毫米,像素,英尺
 // P|L 表示Portait, Landscape, 表示布局
-// [P1, mm|pt|in, width, height]
 func (p *Converter) Page(line string, elements []string) {
 	p.GoPdf = new(gopdf.GoPdf)
-	switch elements[0] {
-	case "P":
-		CheckLength(line, elements, 4)
-		switch elements[2] {
-		/* A0 ~ A5 纸张像素表示
-			'A0': [2383.94, 3370.39],
-      		'A1': [1683.78, 2383.94],
-      		'A2': [1190.55, 1683.78],
-      		'A3': [841.89, 1190.55],
-      		'A4': [595.28, 841.89],
-      		'A5': [419.53, 595.28],
-		*/
-		case "A4":
-			p.setUnit(elements[1])
-			if elements[3] == "P" {
-				p.Start(595.28, 841.89) // 像素
-			} else if elements[3] == "L" {
-				p.Start(841.89, 595.28)
-			} else {
-				panic("Page Orientation accept P or L")
-			}
-		default:
-			panic("This size not supported yet:" + elements[2])
-		}
-	case "P1":
-		CheckLength(line, elements, 4)
+
+	CheckLength(line, elements, 4)
+	switch elements[2] {
+	/* A0 ~ A5 纸张像素表示
+		'A0': [2383.94, 3370.39],
+		'A1': [1683.78, 2383.94],
+		'A2': [1190.55, 1683.78],
+		'A3': [841.89, 1190.55],
+		'A4': [595.28, 841.89],
+		'A5': [419.53, 595.28],
+	*/
+	case "A3":
+		config := defaultConfigs["A3"]
 		p.setUnit(elements[1])
-		p.Start(ParseFloatPanic(elements[2], line)*p.Unit, ParseFloatPanic(elements[3], line)*p.Unit)
+		if elements[3] == "P" {
+			p.Start(config.width, config.height) // 像素
+		} else if elements[3] == "L" {
+			p.Start(config.height, config.width)
+		} else {
+			panic("Page Orientation accept P or L")
+		}
+	case "A4":
+		config := defaultConfigs["A4"]
+		p.setUnit(elements[1])
+		if elements[3] == "P" {
+			p.Start(config.width, config.height) // 像素
+		} else if elements[3] == "L" {
+			p.Start(config.height, config.width)
+		} else {
+			panic("Page Orientation accept P or L")
+		}
+	case "LTR":
+		config := defaultConfigs["LTR"]
+		p.setUnit(elements[1])
+		if elements[3] == "P" {
+			p.Start(config.width, config.height) // 像素
+		} else if elements[3] == "L" {
+			p.Start(config.height, config.width)
+		} else {
+			panic("Page Orientation accept P or L")
+		}
+	default:
+		panic("This size not supported yet:" + elements[2])
 	}
 	p.AddFont()
 	p.GoPdf.AddPage()
