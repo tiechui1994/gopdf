@@ -68,6 +68,22 @@ func CreateReport() *Report {
 	return report
 }
 
+func (r *Report) NoCompression() {
+	r.converter.GoPdf.SetNoCompression()
+}
+
+/****************************************************************
+压缩级别:
+	-2 只使用哈夫曼压缩,
+	-1 默认值, 压缩级别的6
+	0  不进行压缩,
+	1  最快的压缩, 但是压缩比率不是最好的
+	9  最大限度的压缩, 但是执行效率也是最慢的
+****************************************************************/
+func (r *Report) CompressLevel(level int) {
+	r.converter.GoPdf.SetCompressLevel(level)
+}
+
 // 写入PDF文件
 func (r *Report) Execute(filename string) {
 	if r.config == nil {
