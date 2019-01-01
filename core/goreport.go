@@ -24,6 +24,7 @@ type pageMark struct {
 	pageNo int
 }
 
+type Executor func(report *Report)
 type CallBack func(report *Report)
 
 type Report struct {
@@ -33,7 +34,7 @@ type Report struct {
 
 	currX     float64
 	currY     float64
-	bands     map[string]*Band
+	executors map[string]*Executor
 	flags     map[string]bool
 	sumWork   map[string]float64
 	unit      float64 // 转换单位
@@ -54,7 +55,7 @@ func CreateReport() *Report {
 	report.converter = new(Converter)
 
 	report.Vars = make(map[string]string)
-	report.bands = make(map[string]*Band)
+	report.executors = make(map[string]*Executor)
 	report.sumWork = make(map[string]float64)
 	report.callbacks = make([]CallBack, 0)
 	report.flags = make(map[string]bool)
@@ -199,20 +200,20 @@ func (r *Report) ExecutePageFooter() {
 	r.currY = r.config.endY / r.unit
 	r.currX = r.config.startX / r.unit
 
-	h := r.bands[Footer]
+	h := r.executors[Footer]
 	if h != nil {
-		(*h).Execute(r)
+		(*h)(r)
 	}
 }
 func (r *Report) ExecutePageHeader() {
 	r.currX, r.currY = r.GetPageStartXY()
-	h := r.bands[Header]
+	h := r.executors[Header]
 	if h != nil {
-		(*h).Execute(r)
+		(*h)(r)
 	}
 }
 func (r *Report) ExecuteDetail() {
-	h := r.bands[Detail]
+	h := r.executors[Detail]
 	if h != nil {
 		if r.flags[Flag_AutoAddNewPage] {
 			r.AddNewPage(r.flags[Flag_ResetPageNo])
@@ -227,12 +228,12 @@ func (r *Report) ExecuteDetail() {
 			r.currX, r.currY = currX, currY
 		}
 
-		(*h).Execute(r)
+		(*h)(r)
 	}
 }
 
-func (r *Report) RegisterBand(band Band, name string) {
-	r.bands[name] = &band
+func (r *Report) RegisterExecutor(execuror Executor, name string) {
+	r.executors[name] = &execuror
 }
 
 // 换页坐标
@@ -452,14 +453,4 @@ func (r *Report) Image(path string, x1 float64, y1 float64, x2 float64, y2 float
 // 添加变量
 func (r *Report) Var(name string, val string) {
 	r.addAtomicCell("V|" + name + "|" + val)
-}
-
-type Band interface {
-	Execute(report *Report)
-}
-
-type TemplateDetail struct {
-}
-
-func (h TemplateDetail) Execute(report *Report) {
 }

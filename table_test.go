@@ -29,17 +29,12 @@ func ComplexTableReportWithData() {
 	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
 	r.SetPage("A4", "mm", "P")
 
-	d := new(TableDetailWithData)
-	r.RegisterBand(core.Band(*d), core.Detail)
+	r.RegisterExecutor(core.Executor(TableReportWithDataExecutor), core.Detail)
 
 	r.Execute("table_test_data.pdf")
 	r.SaveAtomicCellText("table_test_data.txt")
 }
-
-type TableDetailWithData struct {
-}
-
-func (h TableDetailWithData) Execute(report *core.Report) {
+func TableReportWithDataExecutor(report *core.Report) {
 	unit := report.GetUnit()
 
 	lineSpace := 0.01 * unit
@@ -103,17 +98,12 @@ func ComplexTableReport() {
 	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
 	r.SetPage("A4", "mm", "P")
 
-	d := new(TableDetail)
-	r.RegisterBand(core.Band(*d), core.Detail)
+	r.RegisterExecutor(core.Executor(TableReportExecutor), core.Detail)
 
 	r.Execute("table_test.pdf")
 	r.SaveAtomicCellText("table_test.txt")
 }
-
-type TableDetail struct {
-}
-
-func (h TableDetail) Execute(report *core.Report) {
+func TableReportExecutor(report *core.Report) {
 	unit := report.GetUnit()
 	lineSpace := 0.01 * unit
 	lineHeight := 2 * unit

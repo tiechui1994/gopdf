@@ -23,21 +23,12 @@ func ComplexImageReport() {
 	r.SetFonts([]*core.FontMap{&font1, &font2})
 	r.SetPage("A4", "mm", "P")
 
-	d := new(ImageDetail)
-	r.RegisterBand(core.Band(*d), core.Detail)
+	r.RegisterExecutor(core.Executor(ImageReportExecutor), core.Detail)
 
 	r.Execute("image_test.pdf")
 	r.SaveAtomicCellText("image_test.txt")
 }
-
-type ImageDetail struct {
-}
-
-func (h ImageDetail) GetHeight(report *core.Report) float64 {
-	return 6
-}
-func (h ImageDetail) Execute(report *core.Report) {
-
+func ImageReportExecutor(report *core.Report) {
 	report.Font(DIV_MD, 10, "")
 	report.SetFont(DIV_MD, 10)
 	cat := "example//pictures/cat.jpg"

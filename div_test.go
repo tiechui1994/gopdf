@@ -23,17 +23,12 @@ func ComplexDivReport() {
 	r.SetFonts([]*core.FontMap{&font1, &font2})
 	r.SetPage("A4", "mm", "P")
 
-	d := new(DivDetail)
-	r.RegisterBand(core.Band(*d), core.Detail)
+	r.RegisterExecutor(core.Executor(DivReportExecutor), core.Detail)
 
 	r.Execute("div_test.pdf")
 	r.SaveAtomicCellText("div_test.txt")
 }
-
-type DivDetail struct {
-}
-
-func (h DivDetail) Execute(report *core.Report) {
+func DivReportExecutor(report *core.Report) {
 	unit := report.GetUnit()
 	font := Font{Family: DIV_MD, Size: 10}
 
@@ -100,7 +95,7 @@ For information about how the optimizer handles subqueries, see Section 8.2.2, â
 	div.GenerateAtomicCellWithAutoWarp()
 }
 
-func ComplexFillReport() {
+func ComplexFillColorReport() {
 	r := core.CreateReport()
 	font1 := core.FontMap{
 		FontName: DIV_IG,
@@ -113,17 +108,12 @@ func ComplexFillReport() {
 	r.SetFonts([]*core.FontMap{&font1, &font2})
 	r.SetPage("A4", "mm", "P")
 
-	d := new(FillDetail)
-	r.RegisterBand(core.Band(*d), core.Detail)
+	r.RegisterExecutor(core.Executor(FillColorReportExecutor), core.Detail)
 
 	r.Execute("fill_test.pdf")
 	r.SaveAtomicCellText("fill_test.txt")
 }
-
-type FillDetail struct {
-}
-
-func (h FillDetail) Execute(report *core.Report) {
+func FillColorReportExecutor(report *core.Report) {
 	x, y := report.GetPageStartXY()
 
 	report.Font(DIV_IG, 10, "")
@@ -139,5 +129,5 @@ func TestDiv(t *testing.T) {
 }
 
 func TestFill(t *testing.T) {
-	ComplexFillReport()
+	ComplexFillColorReport()
 }
