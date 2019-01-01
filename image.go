@@ -30,6 +30,7 @@ func NewImage(path string, pdf *core.Report) *Image {
 		if err != nil {
 			panic(err)
 		}
+		picturePath = tempFilePath
 	}
 
 	w, h := GetImageWidthAndHeight(picturePath)
@@ -63,13 +64,15 @@ func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Re
 	var tempFilePath string
 	picturePath, _ := filepath.Abs(path)
 	imageType, _ := GetImageType(picturePath)
+
 	if imageType == "png" {
 		index := strings.LastIndex(picturePath, ".")
 		tempFilePath = picturePath[0:index] + ".jpeg"
 		err := ConvertPNG2JPEG(picturePath, tempFilePath)
 		if err != nil {
-			panic(err)
+			panic(err.Error())
 		}
+		picturePath = tempFilePath
 	}
 
 	w, h := GetImageWidthAndHeight(picturePath)
@@ -86,7 +89,9 @@ func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Re
 		tempFilePath: tempFilePath,
 	}
 
-	pdf.AddCallBack(image.deleteTempImage)
+	if tempFilePath != "" {
+		pdf.AddCallBack(image.deleteTempImage)
+	}
 
 	return image
 }

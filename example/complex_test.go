@@ -7,6 +7,7 @@ import (
 	"github.com/skip2/go-qrcode"
 	"github.com/tiechui1994/gopdf"
 	"github.com/tiechui1994/gopdf/core"
+	"path/filepath"
 )
 
 const (
@@ -57,27 +58,28 @@ func JobDetailReportExecutor(report *core.Report) {
 		}{ret: ret, errStr: errStr})
 	}
 
+	dir, _ := filepath.Abs("pictures")
+	qrcodeFile := fmt.Sprintf("%v/qrcode.png", dir)
+	ret, errStr = generateQrcode(qrcodeFile, "https://www.baidu.com")
+	if ret != 0 {
+		panic(struct {
+			ret    int
+			errStr string
+		}{ret: ret, errStr: errStr})
+	}
+
 	// todo: 任务详情
 	div := gopdf.NewDivWithWidth(20*unit, lineHight, lineSpace, report)
 	div.SetFont(largeFont)
 	div.SetContent("任务详情").GenerateAtomicCellWithAutoWarp()
 
 	// 二维码
-	//dir, _ := filepath.Abs("temp//")
-	//qrcodeFile := fmt.Sprintf("%v/qrcode-%s.png", dir, report.Vars["JobId"])
-	//ret, errStr = generateQrcode(qrcodeFile, "https://www.baidu.com")
-	//if ret != 0 {
-	//	panic(struct {
-	//		ret    int
-	//		errStr string
-	//	}{ret: ret, errStr: errStr})
-	//}
-	//
-	//im := gopdf.NewImage(qrcodeFile, report)
-	//im.GenerateAtomicCell()
+	im := gopdf.NewImageWithWidthAndHeight(qrcodeFile, 10*unit, 10*unit, report)
+	im.SetMargin(gopdf.Scope{Left: 40 * unit, Top: -6 * unit})
+	im.GenerateAtomicCell()
 
 	// 基本信息
-	report.SetMargin(2*unit, 1*unit)
+	report.SetMargin(2*unit, -2.4*unit)
 	baseInfoDiv := gopdf.NewDivWithWidth(20*unit, lineHight, lineSpace, report)
 	baseInfoDiv.SetFont(headFont)
 	baseInfoDiv.SetContent("基本信息")
@@ -257,6 +259,7 @@ func generateQrcode(src, content string) (ret int, errStr string) {
 	if err != nil {
 		return ErrFile, err.Error()
 	}
+
 	return ret, errStr
 }
 
