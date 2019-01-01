@@ -14,11 +14,11 @@ func ComplexDivReport() {
 	r := core.CreateReport()
 	font1 := core.FontMap{
 		FontName: DIV_IG,
-		FileName: "ttf//ipaexg.ttf",
+		FileName: "example//ttf/ipaexg.ttf",
 	}
 	font2 := core.FontMap{
 		FontName: DIV_MD,
-		FileName: "ttf//mplus-1p-bold.ttf",
+		FileName: "example//ttf/mplus-1p-bold.ttf",
 	}
 	r.SetFonts([]*core.FontMap{&font1, &font2})
 	r.SetPage("A4", "mm", "P")
@@ -99,11 +99,11 @@ func ComplexFillColorReport() {
 	r := core.CreateReport()
 	font1 := core.FontMap{
 		FontName: DIV_IG,
-		FileName: "ttf//ipaexg.ttf",
+		FileName: "example//ttf/ipaexg.ttf",
 	}
 	font2 := core.FontMap{
 		FontName: DIV_MD,
-		FileName: "ttf//mplus-1p-bold.ttf",
+		FileName: "example//ttf/mplus-1p-bold.ttf",
 	}
 	r.SetFonts([]*core.FontMap{&font1, &font2})
 	r.SetPage("A4", "mm", "P")

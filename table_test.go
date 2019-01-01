@@ -16,15 +16,15 @@ func ComplexTableReportWithData() {
 	r := core.CreateReport()
 	font1 := core.FontMap{
 		FontName: TABLE_IG,
-		FileName: "ttf//ipaexg.ttf",
+		FileName: "example//ttf/ipaexg.ttf",
 	}
 	font2 := core.FontMap{
 		FontName: TABLE_MD,
-		FileName: "ttf//mplus-1p-bold.ttf",
+		FileName: "example//ttf/mplus-1p-bold.ttf",
 	}
 	font3 := core.FontMap{
 		FontName: TABLE_MY,
-		FileName: "ttf//microsoft.ttf",
+		FileName: "example//ttf/microsoft.ttf",
 	}
 	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
 	r.SetPage("A4", "mm", "P")
@@ -85,15 +85,15 @@ func ComplexTableReport() {
 
 	font1 := core.FontMap{
 		FontName: TABLE_IG,
-		FileName: "ttf//ipaexg.ttf",
+		FileName: "example//ttf/ipaexg.ttf",
 	}
 	font2 := core.FontMap{
 		FontName: TABLE_MD,
-		FileName: "ttf//mplus-1p-bold.ttf",
+		FileName: "example//ttf/mplus-1p-bold.ttf",
 	}
 	font3 := core.FontMap{
 		FontName: TABLE_MY,
-		FileName: "ttf//microsoft.ttf",
+		FileName: "example//ttf/microsoft.ttf",
 	}
 	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
 	r.SetPage("A4", "mm", "P")
