@@ -17,5 +17,4 @@ type Element interface {
 	GenerateAtomicCell() error
 	GetHeight() float64
 	SetHeight(height float64)
-	SetBorder(border Scope)
 }
