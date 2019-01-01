@@ -25,6 +25,7 @@ type Div struct {
 	// 颜色控制
 	font      Font
 	fontColor string
+	backColor float64
 
 	// 辅助作用
 	isFirstSetHeight bool
@@ -303,6 +304,16 @@ func (div *Div) GenerateAtomicCellWithAutoWarp() error {
 		}
 
 		// todo: 不需要换页, 只需要增加数据
+
+		if !isEmpty(div.fontColor) {
+			div.pdf.TextColor(getColorRGB(div.fontColor))
+		}
+
+		if !isEmpty(div.backColor) {
+			x1 := x - div.border.Left
+			y1 := y
+			div.pdf.GrayColor(x1, y1, div.width, div.lineHeight+div.lineSpace, div.backColor)
+		}
 		div.pdf.Font(div.font.Family, div.font.Size, div.font.Style) // 添加设置
 		div.pdf.Cell(x, y, div.contents[i])
 
@@ -383,6 +394,12 @@ func (div *Div) GenerateAtomicCell() error {
 		if (y < pageEndY || y >= pageEndY) && y+div.lineHeight >= pageEndY {
 			div.contents = div.contents[i:]
 			div.replaceHeight()
+			if !isEmpty(div.backColor) {
+				x1 := x - div.border.Left
+				y1 := y - div.border.Top
+				h := pageEndY - y1
+				div.pdf.GrayColor(x1, y1, div.width, h, div.backColor)
+			}
 			div.margin.Top = 0
 			return nil
 		}
@@ -390,6 +407,22 @@ func (div *Div) GenerateAtomicCell() error {
 		// 当前页
 		if !isEmpty(div.fontColor) {
 			div.pdf.TextColor(getColorRGB(div.fontColor))
+		}
+
+		if !isEmpty(div.backColor) {
+			x1 := x - div.border.Left
+			y1 := y - div.border.Top
+			h := div.lineHeight + div.lineSpace
+			// 最后一行
+			if i == len(div.contents)-1 {
+				h += div.border.Top
+			}
+			// 最后一行
+			if i == len(div.contents)-1 {
+				originHeight := float64(len(div.contents))*div.lineHeight + div.border.Top + float64(len(div.contents)-1)*div.lineSpace
+				h += div.height - originHeight
+			}
+			div.pdf.GrayColor(x1, y1, div.width, h, div.backColor)
 		}
 		div.pdf.Font(div.font.Family, div.font.Size, div.font.Style) // 添加设置
 		div.pdf.Cell(x, y, div.contents[i])

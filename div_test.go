@@ -33,9 +33,6 @@ func ComplexDivReport() {
 type DivDetail struct {
 }
 
-func (h DivDetail) GetHeight(report *core.Report) float64 {
-	return 6
-}
 func (h DivDetail) Execute(report *core.Report) {
 	unit := report.GetUnit()
 	font := Font{Family: DIV_MD, Size: 10}
@@ -103,6 +100,44 @@ For information about how the optimizer handles subqueries, see Section 8.2.2, â
 	div.GenerateAtomicCellWithAutoWarp()
 }
 
+func ComplexFillReport() {
+	r := core.CreateReport()
+	font1 := core.FontMap{
+		FontName: DIV_IG,
+		FileName: "ttf//ipaexg.ttf",
+	}
+	font2 := core.FontMap{
+		FontName: DIV_MD,
+		FileName: "ttf//mplus-1p-bold.ttf",
+	}
+	r.SetFonts([]*core.FontMap{&font1, &font2})
+	r.SetPage("A4", "mm", "P")
+
+	d := new(FillDetail)
+	r.RegisterBand(core.Band(*d), core.Detail)
+
+	r.Execute("fill_test.pdf")
+	r.SaveAtomicCellText("fill_test.txt")
+}
+
+type FillDetail struct {
+}
+
+func (h FillDetail) Execute(report *core.Report) {
+	x, y := report.GetPageStartXY()
+
+	report.Font(DIV_IG, 10, "")
+	report.SetFont(DIV_IG, 10)
+
+	report.GrayColor(x, y, 160, 5, 0.85)
+
+	report.Cell(x, y, "Java----------")
+}
+
 func TestDiv(t *testing.T) {
 	ComplexDivReport()
+}
+
+func TestFill(t *testing.T) {
+	ComplexFillReport()
 }

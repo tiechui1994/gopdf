@@ -415,9 +415,25 @@ func (r *Report) TextColor(red int, green int, blue int) {
 	r.addAtomicCell("TC|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) +
 		"|" + strconv.Itoa(blue))
 }
-func (r *Report) StrokeColor(red int, green int, blue int) {
-	r.addAtomicCell("SC|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) +
+func (r *Report) LineColor(red int, green int, blue int) {
+	r.addAtomicCell("LC|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) +
 		"|" + strconv.Itoa(blue))
+}
+
+func (r *Report) FillColor(red int, green int, blue int) {
+	r.addAtomicCell("FC|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) +
+		"|" + strconv.Itoa(blue))
+}
+
+func (r *Report) GrayColor(x, y float64, w, h float64, gray float64) {
+	if gray < 0 || gray > 1 {
+		gray = 0.85
+	}
+	r.LineType("straight", h)
+	r.GrayStroke(gray)
+	r.LineH(x, y, x+w)
+	r.LineType("straight", 0.01)
+	r.GrayStroke(0)
 }
 
 func (r *Report) GrayFill(grayScale float64) {
