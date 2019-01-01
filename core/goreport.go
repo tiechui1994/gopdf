@@ -280,6 +280,11 @@ func (r *Report) GetXY() (x, y float64) {
 	return r.currX, r.currY
 }
 
+func (r *Report) SetMargin(dx, dy float64) {
+	x, y := r.GetXY()
+	r.SetXY(x+dx, y+dy)
+}
+
 // 设置页面的尺寸, unit: mm pt in  size: A4 LTR, 目前支持常用的两种方式
 func (r *Report) SetPage(size string, unit string, orientation string) {
 	r.setUnit(unit)

@@ -40,8 +40,9 @@ func NewImage(path string, pdf *core.Report) *Image {
 		height:       float64(h / 10),
 		tempFilePath: tempFilePath,
 	}
-
-	pdf.AddCallBack(image.deleteTempImage)
+	if tempFilePath != "" {
+		pdf.AddCallBack(image.deleteTempImage)
+	}
 
 	return image
 }

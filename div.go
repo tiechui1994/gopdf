@@ -59,7 +59,8 @@ func NewDivWithWidth(width, lineHeight, lineSpace float64, pdf *core.Report) *Di
 func (div *Div) CopyWithContent(content string) *Div {
 	d := div.Copy()
 	d.SetContent(content)
-	return div
+
+	return d
 }
 
 func (div *Div) Copy() *Div {
@@ -75,6 +76,7 @@ func (div *Div) Copy() *Div {
 		isFirstSetHeight: true,
 	}
 
+	d.contents = nil
 	d.SetFont(div.font)
 	return d
 }
@@ -112,6 +114,9 @@ func (div *Div) SetFontColor(color string) *Div {
 // 注册字体
 func (div *Div) SetFont(font Font) *Div {
 	div.font = font
+	// 注册, 启动
+	div.pdf.Font(font.Family, font.Size, font.Style)
+	div.pdf.SetFontWithStyle(font.Family, font.Style, font.Size)
 	return div
 }
 
@@ -162,8 +167,9 @@ func (div *Div) SetRightAlign() *Div {
 
 // todo: 使用注册的字体进行分行计算
 func (div *Div) SetContent(s string) *Div {
+	convertStr := strings.Replace(s, "\t", "    ", -1)
+
 	var (
-		convertStr   = strings.Replace(s, "|", `\|`, -1)
 		unit         = div.pdf.GetUnit()
 		blocks       = strings.Split(convertStr, "\n") // 分行
 		contentWidth = div.width - math.Abs(div.border.Left) - math.Abs(div.border.Right)
