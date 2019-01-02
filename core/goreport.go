@@ -257,6 +257,10 @@ func (r *Report) GetPageEndY() float64 {
 	return r.pageEndY / r.unit
 }
 
+func (r *Report) GetPageEndX() float64 {
+	return r.pageEndX / r.unit
+}
+
 // 页面开始坐标
 func (r *Report) GetPageStartXY() (x, y float64) {
 	return r.pageStartX / r.unit, r.pageStartY / r.unit

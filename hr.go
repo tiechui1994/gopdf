@@ -28,7 +28,7 @@ func NewHLine(pdf *core.Report) *HLine {
 
 func (h *HLine) SetColor(color float64) *HLine {
 	if color < 0 || color > 1.0 {
-		color = 1.0
+		color = 0
 	}
 
 	h.color = color
@@ -65,5 +65,5 @@ func (h *HLine) GenerateAtomicCell() {
 	h.pdf.GrayColor(x, y, cw, h.width, h.color)
 
 	x, _ = h.pdf.GetPageStartXY()
-	h.pdf.SetXY(x, y+h.margin.Bottom)
+	h.pdf.SetXY(x, y+h.margin.Bottom+h.width)
 }
