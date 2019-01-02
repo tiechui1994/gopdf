@@ -1,8 +1,9 @@
 package gopdf
 
 import (
-	"github.com/tiechui1994/gopdf/core"
 	"testing"
+
+	"github.com/tiechui1994/gopdf/core"
 )
 
 func ComplexHLineReport() {

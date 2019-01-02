@@ -1,12 +1,13 @@
 package example
 
 import (
-	"reflect"
-	"github.com/tiechui1994/gopdf/core"
-	"github.com/tiechui1994/gopdf"
 	"fmt"
 	"testing"
+	"reflect"
 	"encoding/json"
+
+	"github.com/tiechui1994/gopdf"
+	"github.com/tiechui1994/gopdf/core"
 )
 
 type Template struct {
@@ -27,7 +28,7 @@ type Template struct {
 	TbodyArray [][]struct {
 		ColumnsType    string      `json:"columnsType"` // 当前TableCell类型
 		ColumnsName    string      `json:"columnsName"` // 当前TableCell对应列的名称
-		RowName        string      `json:"rowsName"`     // 当前TableCell对于的行名称
+		RowName        string      `json:"rowsName"`    // 当前TableCell对于的行名称
 		Content        interface{} `json:"content"`     // 内容
 		SelectedOption string      `json:"selectedOption"`
 	} `json:"tbodyArray"`

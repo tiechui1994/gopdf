@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"time"
 	"testing"
+	"path/filepath"
+
 	"github.com/skip2/go-qrcode"
 	"github.com/tiechui1994/gopdf"
 	"github.com/tiechui1994/gopdf/core"
-	"path/filepath"
 )
 
 const (
@@ -86,7 +87,7 @@ func JobDetailReportExecutor(report *core.Report) {
 	baseInfoDiv.SetFont(headFont)
 	baseInfoDiv.SetContent("基本信息").GenerateAtomicCellWithAutoWarp()
 
-	baseInfo := gopdf.NewDivWithWidth(20*unit, lineHight, lineSpace, report)
+	baseInfo := gopdf.NewDivWithWidth(80*unit, lineHight, lineSpace, report)
 	baseInfo.SetMarign(gopdf.Scope{Left: 4 * unit, Top: 1 * unit})
 	baseInfo.SetFont(textFont).SetContent(fmt.Sprintf("任务名称: %s", data.JobName)).GenerateAtomicCellWithAutoWarp()
 	baseInfo.CopyWithContent(fmt.Sprintf("创建人: %s", data.CreatUserName)).GenerateAtomicCellWithAutoWarp()
@@ -96,8 +97,7 @@ func JobDetailReportExecutor(report *core.Report) {
 
 	// 模板
 	report.SetMargin(2*unit, 1*unit)
-	templateDiv := baseInfoDiv.CopyWithContent("模板信息")
-	templateDiv.GenerateAtomicCellWithAutoWarp()
+	baseInfoDiv.CopyWithContent("模板信息").GenerateAtomicCellWithAutoWarp()
 	report.SetMargin(0, 1*unit)
 	ComplexTableExecutor(report)
 
@@ -107,13 +107,13 @@ func JobDetailReportExecutor(report *core.Report) {
 	line.GenerateAtomicCell()
 
 	if len(data.Contents) == 0 {
-		nodataDiv := gopdf.NewDivWithWidth(50*unit, lineHight, lineSpace, report)
+		nodataDiv := gopdf.NewDivWithWidth(80*unit, lineHight, lineSpace, report)
 		nodataDiv.SetFont(textFont).SetContent("\t没有回复记录").GenerateAtomicCellWithAutoWarp()
 		report.SetMargin(0, 1*unit)
 	}
 	for _, content := range data.Contents {
 		cellStr := fmt.Sprintf("\t%s    %s    %s", content.Time, content.Msg, content.CreateUser)
-		comment := gopdf.NewDivWithWidth(50*unit, lineHight, lineSpace, report)
+		comment := gopdf.NewDivWithWidth(80*unit, lineHight, lineSpace, report)
 		comment.SetFont(textFont).SetContent(cellStr).GenerateAtomicCellWithAutoWarp()
 		report.SetMargin(0, 1*unit)
 	}
@@ -124,15 +124,15 @@ func JobDetailReportExecutor(report *core.Report) {
 	historyDiv.GenerateAtomicCellWithAutoWarp()
 	line.GenerateAtomicCell()
 
-	if len(data.Contents) == 0 {
-		nodataDiv := gopdf.NewDivWithWidth(50*unit, lineHight, lineSpace, report)
+	if len(data.History) == 0 {
+		nodataDiv := gopdf.NewDivWithWidth(80*unit, lineHight, lineSpace, report)
 		nodataDiv.SetFont(textFont).SetContent("\t没有历史记录").GenerateAtomicCellWithAutoWarp()
 		report.SetMargin(0, 1*unit)
 	}
 
 	for _, content := range data.History {
 		cellStr := fmt.Sprintf("\t%s    %s    %s", content.Time, content.Msg, content.CreateUser)
-		comment := gopdf.NewDivWithWidth(50*unit, lineHight, lineSpace, report)
+		comment := gopdf.NewDivWithWidth(80*unit, lineHight, lineSpace, report)
 		comment.SetFont(textFont).SetContent(cellStr).GenerateAtomicCellWithAutoWarp()
 		report.SetMargin(0, 1*unit)
 	}

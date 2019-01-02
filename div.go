@@ -1,9 +1,10 @@
 package gopdf
 
 import (
-	"github.com/tiechui1994/gopdf/core"
-	"strings"
 	"math"
+	"strings"
+
+	"github.com/tiechui1994/gopdf/core"
 )
 
 type Div struct {

@@ -2,9 +2,10 @@ package core
 
 import (
 	"fmt"
-	"io/ioutil"
 	"strconv"
 	"strings"
+	"io/ioutil"
+
 	"github.com/signintech/gopdf"
 )
 

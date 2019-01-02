@@ -1,10 +1,10 @@
 package core
 
 import (
+	"os"
 	"strconv"
 	"strings"
 	"io/ioutil"
-	"os"
 )
 
 // 需要解决的问题: currY的控制权, 用户 -> 程序 -> 自动化操作

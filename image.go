@@ -2,9 +2,10 @@ package gopdf
 
 import (
 	"os"
-	"github.com/tiechui1994/gopdf/core"
-	"path/filepath"
 	"strings"
+	"path/filepath"
+
+	"github.com/tiechui1994/gopdf/core"
 )
 
 type Image struct {

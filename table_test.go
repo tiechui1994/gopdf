@@ -1,9 +1,10 @@
 package gopdf
 
 import (
-	"github.com/tiechui1994/gopdf/core"
-	"testing"
 	"fmt"
+	"testing"
+
+	"github.com/tiechui1994/gopdf/core"
 )
 
 const (
