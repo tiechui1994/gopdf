@@ -13,6 +13,7 @@ gopdf 是一个生成PDF文档的 Golang 库.
 - PDF 支持图片插入, 格式可以是PNG或者JPEG, 图片会进行适当压缩
 - PDF 支持文档压缩
 - PDF 转换单位内置处理
+- Executor 可以嵌套使用
 
 安装:
 

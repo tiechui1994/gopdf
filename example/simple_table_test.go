@@ -201,7 +201,7 @@ func handleTemplateRow(template Template) (isTable bool, key, value string) {
 	return template.Modeltype == "8", key, value
 }
 
-func ComplexTableExecutor(report *core.Report) {
+func SimpleTableReportExecutor(report *core.Report) {
 	var (
 		templates []Template
 		unit      = report.GetUnit()
@@ -252,7 +252,7 @@ func ComplexTableExecutor(report *core.Report) {
 	}
 }
 
-func ComplexTableReport() {
+func SimpleTableReport() {
 	r := core.CreateReport()
 	font1 := core.FontMap{
 		FontName: FONT_MY,
@@ -265,12 +265,12 @@ func ComplexTableReport() {
 	r.SetFonts([]*core.FontMap{&font1, &font2})
 	r.SetPage("A4", "mm", "P")
 
-	r.RegisterExecutor(core.Executor(ComplexTableExecutor), core.Detail)
+	r.RegisterExecutor(core.Executor(SimpleTableReportExecutor), core.Detail)
 
-	r.Execute("table.pdf")
-	r.SaveAtomicCellText("table.txt")
+	r.Execute("simple_table_test.pdf")
+	r.SaveAtomicCellText("simple_table_test.txt")
 }
 
 func TestComplexTableReport(t *testing.T) {
-	ComplexTableReport()
+	SimpleTableReport()
 }

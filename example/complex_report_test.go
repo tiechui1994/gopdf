@@ -24,7 +24,7 @@ var (
 	textFont  = gopdf.Font{Family: FONT_MY, Size: 10}
 )
 
-func JobDetailReport() {
+func ComplexReport() {
 	r := core.CreateReport()
 	font1 := core.FontMap{
 		FontName: FONT_MY,
@@ -37,13 +37,13 @@ func JobDetailReport() {
 	r.SetFonts([]*core.FontMap{&font1, &font2})
 	r.SetPage("A4", "mm", "P")
 
-	r.RegisterExecutor(core.Executor(JobDetailReportExecutor), core.Detail)
+	r.RegisterExecutor(core.Executor(ComplexReportExecutor), core.Detail)
 
-	r.Execute(fmt.Sprintf("example.pdf"))
-	r.SaveAtomicCellText("example.txt")
+	r.Execute(fmt.Sprintf("complex_report_test.pdf"))
+	r.SaveAtomicCellText("complex_report_test.txt")
 }
 
-func JobDetailReportExecutor(report *core.Report) {
+func ComplexReportExecutor(report *core.Report) {
 	var (
 		data      JobExportDetail
 		unit      = report.GetUnit()
@@ -99,7 +99,7 @@ func JobDetailReportExecutor(report *core.Report) {
 	report.SetMargin(2*unit, 1*unit)
 	baseInfoDiv.CopyWithContent("模板信息").GenerateAtomicCellWithAutoWarp()
 	report.SetMargin(0, 1*unit)
-	ComplexTableExecutor(report)
+	SimpleTableReportExecutor(report)
 
 	// todo: 评论
 	report.SetMargin(0, 1*unit)
@@ -269,5 +269,5 @@ func generateQrcode(src, content string) (ret int, errStr string) {
 }
 
 func TestJobExport(t *testing.T) {
-	JobDetailReport()
+	ComplexReport()
 }
