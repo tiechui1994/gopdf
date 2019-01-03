@@ -19,4 +19,5 @@ type Element interface {
 	GenerateAtomicCell() error
 	GetHeight() float64
 	setHeight(height float64)
+	clearContents()
 }

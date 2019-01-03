@@ -333,8 +333,16 @@ func (table *Table) GenerateAtomicCell() (error) {
 				cellOriginHeight := cell.height
 				x1, y1, _, _ := table.getHLinePosition(sx, sy, k, i)
 				cell.table.pdf.SetXY(x1, y1)
-				cell.element.GenerateAtomicCell()      // 会修改element的高度
-				cell.height = cell.element.GetHeight() // 将修改后的高度同步到本地的Cell当中, element -> table
+				cell.element.GenerateAtomicCell() // 会修改element的高度
+
+				// todo: 只能说明当前的cell已经写完,但是没有更新height, div的逻辑本身如此, 这里需要手动同步一下div当中的contents
+				if cellOriginHeight == cell.element.GetHeight() {
+					cell.height = 0
+					cell.element.clearContents()
+				} else {
+					cell.height = cell.element.GetHeight() // 将修改后的高度同步到本地的Cell当中, element -> table
+				}
+
 				if cell.rowspan == 1 {
 					cell.selfHeight = cell.height
 				}

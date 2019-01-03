@@ -224,11 +224,11 @@ func (div *Div) setHeight(height float64) {
 }
 
 func (div *Div) GetHeight() float64 {
-	if isEmpty(div.contents) {
-		panic("has no content")
-	}
-
 	return div.height
+}
+
+func (div *Div) clearContents() {
+	div.contents = nil
 }
 
 // 自动换行
