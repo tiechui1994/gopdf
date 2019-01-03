@@ -326,13 +326,12 @@ func (div *Div) GenerateAtomicCellWithAutoWarp() error {
 	return nil
 }
 
-// 非自动换行, 只写当前的页面
+// 非自动换行, 只写当前的页面, 不支持垂直居中
 func (div *Div) GenerateAtomicCell() error {
 	var (
-		isFirstSetVerticalCentered bool
-		x, y                       float64
-		sx, sy                     = div.pdf.GetXY()
-		pageEndY                   = div.pdf.GetPageEndY()
+		x, y     float64
+		sx, sy   = div.pdf.GetXY()
+		pageEndY = div.pdf.GetPageEndY()
 	)
 	if isEmpty(div.font) {
 		panic("no font")
@@ -341,7 +340,6 @@ func (div *Div) GenerateAtomicCell() error {
 	for i := 0; i < len(div.contents); i++ {
 		var (
 			hOriginBorder Scope
-			vOriginBorder Scope
 		)
 		// todo: 水平居中, 只是对当前的行设置新的 Border
 		if div.horizontalCentered {
@@ -361,19 +359,6 @@ func (div *Div) GenerateAtomicCell() error {
 			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
 			m := div.width - width
 			div.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}
-		}
-
-		// todo: 垂直居中, 只能操作一次, 只对第1行设置 Border
-		if i == 0 && div.verticalCentered {
-			isFirstSetVerticalCentered = true
-			div.verticalCentered = false
-			vOriginBorder = div.border
-			length := float64(len(div.contents))
-			height := (length-1)*div.lineSpace + length*div.lineHeight + div.border.Top
-			if height < div.height {
-				m := (div.height - height) / 2
-				div.border = Scope{vOriginBorder.Left, m, vOriginBorder.Right, 0}
-			}
 		}
 
 		x, y = div.getContentPosition(sx, sy, i)
@@ -420,11 +405,6 @@ func (div *Div) GenerateAtomicCell() error {
 
 		if div.horizontalCentered || div.rightAlign {
 			div.border = hOriginBorder
-		}
-
-		if isFirstSetVerticalCentered {
-			isFirstSetVerticalCentered = false
-			div.border = vOriginBorder
 		}
 	}
 
