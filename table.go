@@ -96,6 +96,7 @@ func (table *Table) SetLineHeight(lineHeight float64) {
 
 // 设置表的外
 func (table *Table) SetMargin(margin Scope) {
+	replaceMarign(&margin)
 	table.margin = margin
 }
 
@@ -194,7 +195,7 @@ func (table *Table) replaceCellHeight() {
 		for i := 0; i < table.rows; i++ {
 			for j := 0; j < table.cols; j++ {
 				if cells[i][j] != nil && cells[i][j].element != nil {
-					cells[i][j].element.SetHeight(cells[i][j].height)
+					cells[i][j].element.setHeight(cells[i][j].height)
 				}
 			}
 		}
@@ -425,7 +426,7 @@ func (table *Table) GenerateAtomicCell() (error) {
 	table.pdf.LineV(x1+table.width, y1, y1+height+table.margin.Top)
 
 	x1, _ = table.pdf.GetPageStartXY()
-	table.pdf.SetXY(x1, y1+height+table.margin.Top) // 定格最终的位置
+	table.pdf.SetXY(x1, y1+height+table.margin.Top+table.margin.Bottom) // 定格最终的位置
 
 	return nil
 }
@@ -531,8 +532,8 @@ type TableCell struct {
 
 	// 单元格内容
 	element    Element
-	selfHeight float64 // 当rowspan + colspan > 2 时有效, 其余情况下无效, 辅助计算
-	height     float64 // 单元格的实际高度, 计算: border.top + border.bottom + (lines-1) * lineSpace + lines * lineHeight
+	selfHeight float64 // 当前cell自身高度, 辅助计算
+	height     float64 // 当rowspan=1时, height = selfHeight
 	table      *Table
 }
 

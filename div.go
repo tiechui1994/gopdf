@@ -93,17 +93,19 @@ func (div *Div) SetLineHeight(lineHeight float64) *Div {
 	return div
 }
 
-// 注: left和right二者取其一, top和bottom二者取其一
+// 注: 当div使用为tablecell的时候, 禁止设置margin
+// margin的Right无法生效,而且Bottom必须大于0
 func (div *Div) SetMarign(marign Scope) *Div {
+	replaceMarign(&marign)
 	div.margin = marign
 
-	if marign.Left != 0 {
-		div.margin.Right = 0
+	// 重新设置div的宽度
+	endX := div.pdf.GetPageEndX()
+	curX, _ := div.pdf.GetXY()
+	if div.width > endX-(curX+div.margin.Left) {
+		div.width = endX - (curX + div.margin.Left)
 	}
 
-	if marign.Top != 0 {
-		div.margin.Bottom = 0
-	}
 	return div
 }
 
@@ -123,24 +125,12 @@ func (div *Div) SetFont(font Font) *Div {
 }
 
 func (div *Div) SetBorder(border Scope) {
-	if isEmpty(div.font) {
-		panic("must set font")
-	}
-
+	replaceBorder(&border)
 	div.border = border
-	replaceBorder(&div.border)
-
-	if border.Top != 0 {
-		div.border.Bottom = 0
-	}
 }
 
 // 水平居中
 func (div *Div) SetHorizontalCentered() *Div {
-	if isEmpty(div.font) {
-		panic("must set font")
-	}
-
 	div.horizontalCentered = true
 	div.rightAlign = false
 	return div
@@ -148,20 +138,12 @@ func (div *Div) SetHorizontalCentered() *Div {
 
 // 垂直居中
 func (div *Div) SetVerticalCentered() *Div {
-	if isEmpty(div.font) {
-		panic("must set font")
-	}
-
 	div.verticalCentered = true
 	return div
 }
 
 // 居右
 func (div *Div) SetRightAlign() *Div {
-	if isEmpty(div.font) {
-		panic("must set font")
-	}
-
 	div.rightAlign = true
 	div.horizontalCentered = false
 	return div
@@ -177,6 +159,7 @@ func (div *Div) SetContent(s string) *Div {
 		contentWidth = div.width - math.Abs(div.border.Left) - math.Abs(div.border.Right)
 	)
 
+	// 必须检查字体
 	if isEmpty(div.font) {
 		panic("there no avliable font")
 	}
@@ -225,12 +208,12 @@ func (div *Div) SetContent(s string) *Div {
 
 	// 重新计算 div 的高度
 	length := float64(len(div.contents))
-	div.height = div.border.Top + div.border.Bottom + div.lineHeight*length + div.lineSpace*(length-1)
+	div.height = div.border.Top + div.lineHeight*length + div.lineSpace*(length-1)
 	return div
 }
 
-// 同步操作, 只能操作一次
-func (div *Div) SetHeight(height float64) {
+// 同步操作, 只能操作一次, 操作要小心使用
+func (div *Div) setHeight(height float64) {
 	if div.isFirstSetHeight {
 		div.height = height
 		div.isFirstSetHeight = false
@@ -339,7 +322,7 @@ func (div *Div) GenerateAtomicCellWithAutoWarp() error {
 		div.pdf.TextColor(getColorRGB(div.fontColor))
 	}
 	x, _ = div.pdf.GetPageStartXY()
-	div.pdf.SetXY(x, y+div.lineHeight) // 定格最终的位置
+	div.pdf.SetXY(x, y+div.lineHeight+div.margin.Bottom) // 定格最终的位置
 	return nil
 }
 
@@ -454,7 +437,7 @@ func (div *Div) replaceHeight() {
 		div.height = 0
 	}
 	length := float64(len(div.contents))
-	div.height = div.lineHeight*length + div.lineSpace*(length-1) + div.border.Top + div.border.Bottom
+	div.height = div.lineHeight*length + div.lineSpace*(length-1) + div.border.Top
 }
 
 func (div *Div) getContentPosition(sx, sy float64, index int) (x, y float64) {

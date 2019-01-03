@@ -106,9 +106,8 @@ func (image *Image) GetWidth() float64 {
 }
 
 func (image *Image) SetMargin(margin Scope) *Image {
+	replaceMarign(&margin)
 	image.margin = margin
-	image.margin.Right = 0
-	image.margin.Bottom = 0
 	return image
 }
 
@@ -132,7 +131,7 @@ func (image *Image) GenerateAtomicCell() error {
 
 	image.pdf.Image(image.path, x, y, x+float64(image.width), y+float64(image.height))
 	sx, _ = image.pdf.GetPageStartXY()
-	image.pdf.SetXY(sx, y+float64(image.height))
+	image.pdf.SetXY(sx, y+float64(image.height)+image.margin.Bottom)
 	return nil
 }
 

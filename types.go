@@ -1,5 +1,7 @@
 package gopdf
 
+// 当作为Margin的时候, Right无法生效
+// 当作为Border的时候, Bottom无法生效
 type Scope struct {
 	Left   float64
 	Top    float64
@@ -16,5 +18,5 @@ type Font struct {
 type Element interface {
 	GenerateAtomicCell() error
 	GetHeight() float64
-	SetHeight(height float64)
+	setHeight(height float64)
 }

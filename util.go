@@ -63,8 +63,14 @@ func replaceBorder(border *Scope) {
 	if border.Top < 0 {
 		border.Top = 0
 	}
-	if border.Bottom < 0 {
-		border.Bottom = 0
+
+	border.Bottom = 0
+}
+
+func replaceMarign(margin *Scope) {
+	margin.Right = 0
+	if margin.Bottom < 0 {
+		margin.Bottom = 0
 	}
 }
 

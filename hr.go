@@ -36,8 +36,8 @@ func (h *HLine) SetColor(color float64) *HLine {
 }
 
 func (h *HLine) SetMargin(margin Scope) *HLine {
+	replaceMarign(&margin)
 	h.margin = margin
-	h.margin.Right = 0
 	return h
 }
 
