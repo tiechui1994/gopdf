@@ -7,33 +7,9 @@ import (
 	"image/png"
 	"image/jpeg"
 	"image/color"
-	"github.com/nfnt/resize"
 )
 
-type imageCompress struct {
-	quality int // 质量, 0-100
-}
-
-func (c *imageCompress) getWidthAndHeight(picturePath string) (w, h int, err error) {
-	_, err = os.Stat(picturePath)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	fd, err := os.Open(picturePath)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	config, _, err := image.DecodeConfig(fd)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	return config.Width, config.Height, nil
-}
-
-func (c *imageCompress) getPictureType(picturePath string) (pictureType string, err error) {
+func GetImageType(picturePath string) (pictureType string, err error) {
 	_, err = os.Stat(picturePath)
 	if err != nil {
 		return "", err
@@ -52,80 +28,24 @@ func (c *imageCompress) getPictureType(picturePath string) (pictureType string, 
 	return pictureType, nil
 }
 
-func (c *imageCompress) compress(in, out string, width int) (err error) {
-	if _, err = os.Stat(in); err != nil {
-		return err
-	}
-
-	var (
-		originImage image.Image
-		pictureType string
-		reader      *os.File
-	)
-
-	reader, err = os.Open(in)
-	defer reader.Close()
+func GetImageWidthAndHeight(picturePath string) (w, h int) {
+	var err error
+	_, err = os.Stat(picturePath)
 	if err != nil {
-		return err
+		panic("the image path: " + picturePath + " not exist")
 	}
 
-	if pictureType, err = c.getPictureType(in); err != nil {
-		return err
-	}
-
-	if pictureType == "jpeg" {
-		if originImage, err = jpeg.Decode(reader); err != nil {
-			return err
-		}
-	} else if pictureType == "png" {
-		if originImage, err = png.Decode(reader); err != nil {
-			return err
-		}
-	}
-
-	// 等比压缩
-	iw, ih, err := c.getWidthAndHeight(in)
+	fd, err := os.Open(picturePath)
 	if err != nil {
-		return err
+		panic("open image error")
 	}
 
-	w := uint(width)
-	h := uint(width * ih / iw)
-	canvas := resize.Thumbnail(w, h, originImage, resize.Lanczos3)
-
-	outFile, err := os.Create(out)
-	defer outFile.Close()
+	config, _, err := image.DecodeConfig(fd)
 	if err != nil {
-		return err
+		panic("decode image error")
 	}
 
-	if pictureType == "png" {
-		if err = png.Encode(outFile, canvas); err != nil {
-			return err
-		}
-	} else if pictureType == "jpeg" {
-		if err = jpeg.Encode(outFile, canvas, &jpeg.Options{Quality: c.quality}); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-var compress *imageCompress
-
-func init() {
-	compress = &imageCompress{
-		quality: 75,
-	}
-}
-
-func GetImageWidthAndHeight(inPath string) (w, h int) {
-	w, h, _ = compress.getWidthAndHeight(inPath)
-	return w, h
-}
-func GetImageType(inPath string) (imageType string, err error) {
-	return compress.getPictureType(inPath)
+	return config.Width, config.Height
 }
 
 func ConvertPNG2JPEG(srcPath, dstPath string) (err error) {

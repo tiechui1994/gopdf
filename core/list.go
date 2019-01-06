@@ -4,34 +4,37 @@ type List struct {
 	data []interface{}
 }
 
-func (s *List) Reset() {
-	s.data = make([]interface{}, 0, 100)
+func (list *List) Reset() {
+	list.data = make([]interface{}, 0, 100)
 }
 
-func (s *List) Add(value interface{}) {
-	if s.data == nil {
-		s.data = make([]interface{}, 0, 100)
+func (list *List) Add(value interface{}) {
+	if list.data == nil {
+		list.data = make([]interface{}, 0, 100)
 	}
-	if cap(s.data) < len(s.data)+1 {
-		newSlice := make([]interface{}, len(s.data), cap(s.data)*2)
-		copy(newSlice, s.data)
-		s.data = newSlice
+	if cap(list.data) < len(list.data)+1 {
+		newSlice := make([]interface{}, len(list.data), cap(list.data)*2)
+		copy(newSlice, list.data)
+		list.data = newSlice
 	}
-	s.data = append(s.data, value)
+	list.data = append(list.data, value)
 }
-func (s *List) Get(i int) interface{} {
-	if i < len(s.data) {
-		return s.data[i]
+
+func (list *List) Get(i int) interface{} {
+	if i < len(list.data) {
+		return list.data[i]
 	} else {
 		return nil
 	}
 }
-func (s *List) Size() int {
-	return len(s.data)
+
+func (list *List) Size() int {
+	return len(list.data)
 }
-func (s *List) GetAsArray() []interface{} {
-	if s.data == nil {
-		s.data = make([]interface{}, 0, 100)
+
+func (list *List) GetAsArray() []interface{} {
+	if list.data == nil {
+		list.data = make([]interface{}, 0, 100)
 	}
-	return s.data
+	return list.data
 }

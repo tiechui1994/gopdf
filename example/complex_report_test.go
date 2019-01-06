@@ -6,7 +6,6 @@ import (
 	"testing"
 	"path/filepath"
 
-	"github.com/skip2/go-qrcode"
 	"github.com/tiechui1994/gopdf"
 	"github.com/tiechui1994/gopdf/core"
 )
@@ -61,14 +60,6 @@ func ComplexReportExecutor(report *core.Report) {
 
 	dir, _ := filepath.Abs("pictures")
 	qrcodeFile := fmt.Sprintf("%v/qrcode.png", dir)
-	ret, errStr = generateQrcode(qrcodeFile, "https://www.baidu.com")
-	if ret != 0 {
-		panic(struct {
-			ret    int
-			errStr string
-		}{ret: ret, errStr: errStr})
-	}
-
 	line := gopdf.NewHLine(report).SetMargin(gopdf.Scope{Top: 1 * unit, Bottom: 1 * unit}).SetWidth(0.09)
 	// todo: 任务详情
 	div := gopdf.NewDivWithWidth(20*unit, lineHight, lineSpace, report)
@@ -256,15 +247,6 @@ func getExportJobData(data *JobExportDetail) (ret int, errStr string) {
 				"UTF8差,不过UTF8占用的数据库比GBD大",
 		},
 	}
-	return ret, errStr
-}
-
-func generateQrcode(src, content string) (ret int, errStr string) {
-	err := qrcode.WriteFile(content, qrcode.Medium, 256, src)
-	if err != nil {
-		return ErrFile, err.Error()
-	}
-
 	return ret, errStr
 }
 

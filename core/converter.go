@@ -36,7 +36,6 @@ func (p *Converter) ReadFile(fileName string) error {
 		return err
 	}
 	text := strings.Replace(string(buf), "\r", "", -1)
-	//fmt.Println("text:" + p.Text)
 	var UTF8_BOM = []byte{239, 187, 191}
 	if text[0:3] == string(UTF8_BOM) {
 		text = text[3:]
@@ -50,7 +49,6 @@ func (p *Converter) Execute() {
 	lines := p.AtomicCells
 	for _, line := range lines {
 		elements := strings.Split(line, "|")
-		//fmt.Printf("eles[0]:%v     len: %v    line:%v\n", eles[0], len(eles[0]), line)
 		switch elements[0] {
 		case "P":
 			p.Page(line, elements) // PDF开始, P是标准的格式, P1属于自定义的格式
