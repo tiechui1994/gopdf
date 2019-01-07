@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	FRAME_STRAIGHT = 1
-	FRAME_DASHED   = 2
-	FRAME_DOTTED   = 3
+	FRAME_STRAIGHT = 1 // 实线边框
+	FRAME_DASHED   = 2 // 虚线边框
+	FRAME_DOTTED   = 3 // 点状线的边框
+	FRAME_NONE     = 4 // 无边框
 )
 
 // 边框
@@ -44,7 +45,7 @@ func NewFrame(lineHeight, lineSpce float64, pdf *core.Report) *Frame {
 
 	f := &Frame{
 		pdf:        pdf,
-		frameType:  FRAME_STRAIGHT,
+		frameType:  FRAME_NONE,
 		width:      endX - currX,
 		height:     lineHeight,
 		lineHeight: lineHeight,
@@ -67,7 +68,7 @@ func NewFrameWithWidth(width float64, lineHeight, lineSpce float64, pdf *core.Re
 
 	f := &Frame{
 		pdf:        pdf,
-		frameType:  FRAME_STRAIGHT,
+		frameType:  FRAME_NONE,
 		width:      width,
 		height:     lineHeight,
 		lineHeight: lineHeight,
@@ -130,7 +131,7 @@ func (frame *Frame) SetBorder(border Scope) *Frame {
 }
 
 func (frame *Frame) SetFrameType(frameType int) *Frame {
-	if frameType < FRAME_STRAIGHT || frameType > FRAME_DOTTED {
+	if frameType < FRAME_STRAIGHT || frameType > FRAME_NONE {
 		return frame
 	}
 
@@ -309,10 +310,12 @@ func (frame *Frame) GenerateAtomicCell() error {
 			frame.replaceHeight()
 
 			// 两条竖线 + 一条横线
-			frame.pdf.LineV(sx+frame.margin.Left, y, y+frame.lineHeight+frame.lineSpace)
-			frame.pdf.LineV(sx+frame.margin.Left+frame.width, y, y+frame.lineHeight+frame.lineSpace)
-			frame.pdf.LineH(sx+frame.margin.Left, y+frame.lineHeight+frame.lineSpace,
-				sx+frame.margin.Left+frame.width)
+			if frame.frameType != FRAME_NONE {
+				frame.pdf.LineV(sx+frame.margin.Left, y, y+frame.lineHeight+frame.lineSpace)
+				frame.pdf.LineV(sx+frame.margin.Left+frame.width, y, y+frame.lineHeight+frame.lineSpace)
+				frame.pdf.LineH(sx+frame.margin.Left, y+frame.lineHeight+frame.lineSpace,
+					sx+frame.margin.Left+frame.width)
+			}
 
 			frame.pdf.AddNewPage(false)
 			frame.pdf.SetXY(frame.pdf.GetPageStartXY())
@@ -342,7 +345,7 @@ func (frame *Frame) GenerateAtomicCell() error {
 			frame.border = vOriginBorder
 		}
 
-		if i == 0 {
+		if i == 0 && frame.frameType != FRAME_NONE {
 			// 两条竖线 + 一条横线
 			frame.pdf.LineH(sx+frame.margin.Left, y-frame.margin.Top, sx+frame.margin.Left+frame.width)
 			frame.pdf.LineV(sx+frame.margin.Left, y-frame.margin.Top, y+frame.lineHeight+frame.lineSpace)
@@ -351,11 +354,13 @@ func (frame *Frame) GenerateAtomicCell() error {
 		}
 
 		// 两条竖线
-		frame.pdf.LineV(sx+frame.margin.Left, y, y+frame.lineHeight+frame.lineSpace)
-		frame.pdf.LineV(sx+frame.margin.Left+frame.width, y, y+frame.lineHeight+frame.lineSpace)
+		if frame.frameType != FRAME_NONE {
+			frame.pdf.LineV(sx+frame.margin.Left, y, y+frame.lineHeight+frame.lineSpace)
+			frame.pdf.LineV(sx+frame.margin.Left+frame.width, y, y+frame.lineHeight+frame.lineSpace)
+		}
 
 		// 一条横线
-		if i == len(frame.contents)-1 {
+		if i == len(frame.contents)-1 && frame.frameType != FRAME_NONE {
 			frame.pdf.LineH(sx+frame.margin.Left, y+frame.lineHeight+frame.lineSpace,
 				sx+frame.margin.Left+frame.width)
 		}
