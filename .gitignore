@@ -1,4 +1,4 @@
-*.pdf
+# *.pdf
 *.txt
 .idea/
 pkg/
