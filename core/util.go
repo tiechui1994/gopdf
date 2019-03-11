@@ -2,8 +2,8 @@ package core
 
 import (
 	"io/ioutil"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 func AddComma(s string) string {
@@ -25,7 +25,7 @@ func addCommaSub(s string) string {
 		res += s[0:pos] + ","
 	}
 	for i := pos; i < len(s); i += 3 {
-		res += s[i: i+3]
+		res += s[i : i+3]
 		//fmt.Printf("pos %v \n", i)
 		if i < len(s)-3 {
 			res += ","

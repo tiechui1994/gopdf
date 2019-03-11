@@ -1,12 +1,12 @@
 package gopdf
 
 import (
-	"os"
 	"image"
-	"image/draw"
-	"image/png"
-	"image/jpeg"
 	"image/color"
+	"image/draw"
+	"image/jpeg"
+	"image/png"
+	"os"
 )
 
 func GetImageType(picturePath string) (pictureType string, err error) {

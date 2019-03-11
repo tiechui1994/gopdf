@@ -1,10 +1,10 @@
 package example
 
 import (
-	"fmt"
-	"testing"
-	"reflect"
 	"encoding/json"
+	"fmt"
+	"reflect"
+	"testing"
 
 	"github.com/tiechui1994/gopdf"
 	"github.com/tiechui1994/gopdf/core"
@@ -21,7 +21,7 @@ type Template struct {
 	TableObj struct {
 		Columns []struct {
 			ColumnsName string `json:"columnsName"`
-		} `json:"columns"`          // 列名称
+		} `json:"columns"` // 列名称
 		Rows []string `json:"rows"` // 行名称, 从第2行开算, 第一行是Header,没有
 	} `json:"tableObj"`
 

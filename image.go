@@ -2,8 +2,8 @@ package gopdf
 
 import (
 	"os"
-	"strings"
 	"path/filepath"
+	"strings"
 
 	"github.com/tiechui1994/gopdf/core"
 )

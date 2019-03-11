@@ -2,8 +2,8 @@ package gopdf
 
 import (
 	"reflect"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 func isEmpty(object interface{}) bool {

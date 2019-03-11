@@ -2,9 +2,9 @@ package core
 
 import (
 	"fmt"
+	"io/ioutil"
 	"strconv"
 	"strings"
-	"io/ioutil"
 
 	"github.com/signintech/gopdf"
 )
@@ -106,12 +106,12 @@ func (p *Converter) Page(line string, elements []string) {
 	CheckLength(line, elements, 4)
 	switch elements[2] {
 	/* A0 ~ A5 纸张像素表示
-		'A0': [2383.94, 3370.39],
-		'A1': [1683.78, 2383.94],
-		'A2': [1190.55, 1683.78],
-		'A3': [841.89, 1190.55],
-		'A4': [595.28, 841.89],
-		'A5': [419.53, 595.28],
+	'A0': [2383.94, 3370.39],
+	'A1': [1683.78, 2383.94],
+	'A2': [1190.55, 1683.78],
+	'A3': [841.89, 1190.55],
+	'A4': [595.28, 841.89],
+	'A5': [419.53, 595.28],
 	*/
 	case "A3":
 		config := defaultConfigs["A3"]

@@ -2,9 +2,9 @@ package example
 
 import (
 	"fmt"
-	"time"
-	"testing"
 	"path/filepath"
+	"testing"
+	"time"
 
 	"github.com/tiechui1994/gopdf"
 	"github.com/tiechui1994/gopdf/core"

@@ -299,7 +299,7 @@ func (table *Table) getTableHeight() float64 {
 }
 
 // 自动换行生成
-func (table *Table) GenerateAtomicCell() (error) {
+func (table *Table) GenerateAtomicCell() error {
 	var (
 		sx, sy         = table.pdf.GetXY()
 		pageEndY       = table.pdf.GetPageEndY()

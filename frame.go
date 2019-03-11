@@ -1,8 +1,8 @@
 package gopdf
 
 import (
-	"strings"
 	"math"
+	"strings"
 
 	"github.com/tiechui1994/gopdf/core"
 )

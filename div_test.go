@@ -2,6 +2,7 @@ package gopdf
 
 import (
 	"testing"
+
 	"github.com/tiechui1994/gopdf/core"
 )
 
