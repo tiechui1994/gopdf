@@ -109,6 +109,10 @@ func (r *Report) GetBytesPdf() (ret []byte) {
 	return
 }
 
+func (r *Report) LoadCellsFromText(fileName string) error {
+	return r.converter.ReadFile(fileName)
+}
+
 // 转换, 内容 -> PDF文件
 func (r *Report) execute(exec bool) {
 	if exec {

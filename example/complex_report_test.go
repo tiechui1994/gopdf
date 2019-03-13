@@ -44,13 +44,13 @@ func ComplexReport() {
 
 func ComplexReportExecutor(report *core.Report) {
 	var (
-		data      JobExportDetail
+		data      ReportDetail
 		unit      = report.GetUnit()
 		lineSpace = 0.01 * unit
 		lineHight = 1.9 * unit
 	)
 
-	ret, errStr := getExportJobData(&data)
+	ret, errStr := getReportDetailData(&data)
 	if ret != 0 {
 		panic(struct {
 			ret    int
@@ -129,13 +129,13 @@ func ComplexReportExecutor(report *core.Report) {
 	}
 }
 
-type JobExportInfo struct {
+type ExportInfo struct {
 	Time       string
 	Msg        string
 	CreateUser string
 }
 
-type JobExportDetail struct {
+type ReportDetail struct {
 	JobName           string
 	CreatedAt         string
 	CreatUserName     string
@@ -146,11 +146,11 @@ type JobExportDetail struct {
 
 	Template map[string]string
 
-	Contents []JobExportInfo
-	History  []JobExportInfo
+	Contents []ExportInfo
+	History  []ExportInfo
 }
 
-func getExportJobData(data *JobExportDetail) (ret int, errStr string) {
+func getReportDetailData(data *ReportDetail) (ret int, errStr string) {
 	data.JobName = "技术指导"
 	data.CreatedAt = time.Now().Format(DateFormat)
 	data.CreatUserName = "钱伟长"
@@ -158,7 +158,7 @@ func getExportJobData(data *JobExportDetail) (ret int, errStr string) {
 	data.IssueClassName = "发动机类别"
 	data.IssueSubClassName = "测试飞机发动机"
 
-	data.Contents = []JobExportInfo{
+	data.Contents = []ExportInfo{
 		{
 			time.Now().Format("2006-01-02 15:03:04"),
 			"涡扇发动机结构，涡扇发动机通俗的讲可以看做两根粗细不同的管子套在一起组成的。细管子里包含了低高压气机、燃烧室、低高压涡轮，最后连接至尾喷管，这根内管所包裹的空间叫做发动机的内涵道，流经里头的空气叫内涵气流。而套在内涵道外面的粗管子则包裹着风扇以及整个或者部分细管子（内涵道），我们需要注意。",
@@ -176,7 +176,7 @@ func getExportJobData(data *JobExportDetail) (ret int, errStr string) {
 		},
 	}
 
-	data.History = []JobExportInfo{
+	data.History = []ExportInfo{
 		{
 			time.Now().Format("2006-01-02 15:03:04"),
 			"涡扇发动机启动，其实现代的飞机尾部一般会加装了一个辅助动力装置，叫做APU.它是涡扇发动机能够启动的关键所在，APU是由一个小电动机带动的小型" +

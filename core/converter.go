@@ -25,11 +25,12 @@ type Converter struct {
 
 // var p.Unit float64 = 2.834645669
 
+// 添加AtomicCell
 func (p *Converter) AddAtomicCell(cell string) {
 	p.AtomicCells = append(p.AtomicCells, cell)
 }
 
-// 读取PDF文件(UTF-8), 解析到Text
+// 从保存的文件解析AtomicCell
 func (p *Converter) ReadFile(fileName string) error {
 	buf, err := ioutil.ReadFile(fileName)
 	if err != nil {
