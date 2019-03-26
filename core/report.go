@@ -28,25 +28,24 @@ type Executor func(report *Report)
 type CallBack func(report *Report)
 
 type Report struct {
-	IsMutiPage      bool
 	FisrtPageNeedFH bool // 首页需要执行页眉和页脚
 	Vars            map[string]string
 
-	currX     float64
-	currY     float64
-	executors map[string]*Executor
-	flags     map[string]bool
-	sumWork   map[string]float64
-	unit      float64 // 转换单位
-	pageNo    int     // 记录当前的 Page 的页数
-	converter *Converter
+	converter    *Converter           //转换引擎(对接第三方库)
+	currX, currY float64              //　当前位置
+	executors    map[string]*Executor // 执行器
+	flags        map[string]bool      // 标记(自动分页和重置页号码)
+	sumWork      map[string]float64   // 线宽
+	unit         float64              // 转换单位
+	pageNo       int                  // 记录当前的 Page 的页数
 
+	// 下面是页面的信息
 	pageWidth, pageHeight       float64
 	contentWidth, contentHeight float64
 	pageStartX, pageStartY      float64
 	pageEndX, pageEndY          float64
 
-	callbacks []CallBack // 在PDF生成之后执行
+	callbacks []CallBack // 回调函数,在PDF生成之后执行
 	config    *Config
 }
 
@@ -60,7 +59,6 @@ func CreateReport() *Report {
 	report.callbacks = make([]CallBack, 0)
 	report.flags = make(map[string]bool)
 
-	report.IsMutiPage = true
 	report.sumWork["__ft__"] = 0.0 // FooterY
 	report.flags[Flag_AutoAddNewPage] = false
 	report.flags[Flag_ResetPageNo] = false
@@ -68,8 +66,8 @@ func CreateReport() *Report {
 	return report
 }
 
-func (r *Report) NoCompression() {
-	r.converter.GoPdf.SetNoCompression()
+func (report *Report) NoCompression() {
+	report.converter.pdf.SetNoCompression()
 }
 
 /****************************************************************
@@ -80,59 +78,56 @@ func (r *Report) NoCompression() {
 	1  最快的压缩, 但是压缩比率不是最好的
 	9  最大限度的压缩, 但是执行效率也是最慢的
 ****************************************************************/
-func (r *Report) CompressLevel(level int) {
-	r.converter.GoPdf.SetCompressLevel(level)
+func (report *Report) CompressLevel(level int) {
+	report.converter.pdf.SetCompressLevel(level)
 }
 
 // 写入PDF文件
-func (r *Report) Execute(filename string) {
-	if r.config == nil {
+func (report *Report) Execute(filename string) {
+	if report.config == nil {
 		panic("please set page config")
 	}
 
-	r.execute(true)
-	r.converter.GoPdf.WritePdf(filename)
+	report.execute(true)
+	report.converter.pdf.WritePdf(filename)
 
-	for i := range r.callbacks {
-		r.callbacks[i](r)
+	for i := range report.callbacks {
+		report.callbacks[i](report)
 	}
 }
 
 // 获取PDF内容
-func (r *Report) GetBytesPdf() (ret []byte) {
-	if r.config == nil {
+func (report *Report) GetBytesPdf() (ret []byte) {
+	if report.config == nil {
 		panic("please set page config")
 	}
 
-	r.execute(true)
-	ret = r.converter.GoPdf.GetBytesPdf()
+	report.execute(true)
+	ret = report.converter.pdf.GetBytesPdf()
 	return
 }
 
-func (r *Report) LoadCellsFromText(fileName string) error {
-	return r.converter.ReadFile(fileName)
+func (report *Report) LoadCellsFromText(fileName string) error {
+	return report.converter.ReadFile(fileName)
 }
 
 // 转换, 内容 -> PDF文件
-func (r *Report) execute(exec bool) {
+func (report *Report) execute(exec bool) {
 	if exec {
-		r.pageNo = 1
-		r.currX, r.currY = r.GetPageStartXY()
+		report.pageNo = 1
+		report.currX, report.currY = report.GetPageStartXY()
 
-		r.addAtomicCell("v|PAGE|" + strconv.Itoa(r.pageNo))
-		r.ExecuteDetail()
+		report.addAtomicCell("v|PAGE|" + strconv.Itoa(report.pageNo))
+		report.ExecuteDetail()
 
-		r.pagination() // 分页
+		report.pagination() // 分页
 	}
-	r.converter.Execute()
+	report.converter.Execute()
 }
 
 // 分页, 只有一个页面的PDF没有此操作
-func (r *Report) pagination() {
-	if r.IsMutiPage == false {
-		return
-	}
-	lines := r.converter.AtomicCells[:]
+func (report *Report) pagination() {
+	lines := report.converter.atomicCells[:]
 	list := new(List)
 
 	// 第一次遍历单元格, 确定需要创建的PDF页
@@ -152,7 +147,7 @@ func (r *Report) pagination() {
 	// 第二次遍历单元格, 检查 TotalPage
 	for i, line := range lines {
 		if strings.Index(line, "{#TotalPage#}") > -1 {
-			total := r.getpageNoBylineNo(i, list)
+			total := report.getpageNoBylineNo(i, list)
 			//fmt.Printf("total :%v\n", total)
 			lines[i] = strings.Replace(lines[i], "{#TotalPage#}", strconv.Itoa(total), -1)
 		}
@@ -162,11 +157,11 @@ func (r *Report) pagination() {
 	for _, line := range lines {
 		cells = append(cells, line)
 	}
-	r.converter.AtomicCells = cells
+	report.converter.atomicCells = cells
 }
 
 // 获取 lineNo 对应的 pageNo
-func (r *Report) getpageNoBylineNo(lineNo int, list *List) int {
+func (report *Report) getpageNoBylineNo(lineNo int, list *List) int {
 	count := 0
 	page := 0
 
@@ -192,110 +187,110 @@ func (r *Report) getpageNoBylineNo(lineNo int, list *List) int {
 }
 
 // 设置可用字体
-func (r *Report) SetFonts(fmap []*FontMap) {
-	r.converter.Fonts = fmap
+func (report *Report) SetFonts(fmap []*FontMap) {
+	report.converter.fonts = fmap
 }
 
 // 获取当前页面编号
-func (r *Report) GetCurrentPageNo() int {
-	return r.pageNo
+func (report *Report) GetCurrentPageNo() int {
+	return report.pageNo
 }
 
 // 添加新的页面
-func (r *Report) AddNewPage(resetpageNo bool) {
-	r.ExecutePageFooter()
+func (report *Report) AddNewPage(resetpageNo bool) {
+	report.ExecutePageFooter()
 
-	r.addAtomicCell("NP") // 构建新的页面
+	report.addAtomicCell("NP") // 构建新的页面
 	if resetpageNo {
-		r.pageNo = 1
+		report.pageNo = 1
 	} else {
-		r.pageNo++
+		report.pageNo++
 	}
-	r.ExecutePageHeader()
+	report.ExecutePageHeader()
 
-	r.addAtomicCell("v|PAGE|" + strconv.Itoa(r.pageNo))
+	report.addAtomicCell("v|PAGE|" + strconv.Itoa(report.pageNo))
 }
 
-func (r *Report) ExecutePageFooter() {
-	r.currY = r.config.endY / r.unit
-	r.currX = r.config.startX / r.unit
+func (report *Report) ExecutePageFooter() {
+	report.currY = report.config.endY / report.unit
+	report.currX = report.config.startX / report.unit
 
-	h := r.executors[Footer]
+	h := report.executors[Footer]
 	if h != nil {
-		(*h)(r)
+		(*h)(report)
 	}
 }
-func (r *Report) ExecutePageHeader() {
-	r.currX, r.currY = r.GetPageStartXY()
-	h := r.executors[Header]
+func (report *Report) ExecutePageHeader() {
+	report.currX, report.currY = report.GetPageStartXY()
+	h := report.executors[Header]
 	if h != nil {
-		(*h)(r)
+		(*h)(report)
 	}
 }
-func (r *Report) ExecuteDetail() {
-	h := r.executors[Detail]
+func (report *Report) ExecuteDetail() {
+	h := report.executors[Detail]
 	if h != nil {
-		if r.flags[Flag_AutoAddNewPage] {
-			r.AddNewPage(r.flags[Flag_ResetPageNo])
-			r.flags[Flag_AutoAddNewPage] = false
-			r.flags[Flag_ResetPageNo] = false
+		if report.flags[Flag_AutoAddNewPage] {
+			report.AddNewPage(report.flags[Flag_ResetPageNo])
+			report.flags[Flag_AutoAddNewPage] = false
+			report.flags[Flag_ResetPageNo] = false
 		}
 
-		if r.FisrtPageNeedFH {
-			r.ExecutePageHeader()
-			currX, currY := r.currX, r.currY
-			r.ExecutePageFooter()
-			r.currX, r.currY = currX, currY
+		if report.FisrtPageNeedFH {
+			report.ExecutePageHeader()
+			currX, currY := report.currX, report.currY
+			report.ExecutePageFooter()
+			report.currX, report.currY = currX, currY
 		}
 
-		(*h)(r)
+		(*h)(report)
 	}
 }
 
-func (r *Report) RegisterExecutor(execuror Executor, name string) {
-	r.executors[name] = &execuror
+func (report *Report) RegisterExecutor(execuror Executor, name string) {
+	report.executors[name] = &execuror
 }
 
 // 换页坐标
-func (r *Report) GetPageEndY() float64 {
-	return r.pageEndY / r.unit
+func (report *Report) GetPageEndY() float64 {
+	return report.pageEndY / report.unit
 }
 
-func (r *Report) GetPageEndX() float64 {
-	return r.pageEndX / r.unit
+func (report *Report) GetPageEndX() float64 {
+	return report.pageEndX / report.unit
 }
 
 // 页面开始坐标
-func (r *Report) GetPageStartXY() (x, y float64) {
-	return r.pageStartX / r.unit, r.pageStartY / r.unit
+func (report *Report) GetPageStartXY() (x, y float64) {
+	return report.pageStartX / report.unit, report.pageStartY / report.unit
 }
 
-func (r *Report) GetContentWidthAndHeight() (width, height float64) {
-	return r.contentWidth / r.unit, r.contentHeight / r.unit
+func (report *Report) GetContentWidthAndHeight() (width, height float64) {
+	return report.contentWidth / report.unit, report.contentHeight / report.unit
 }
 
 // currX, currY, 坐标
-func (r *Report) SetXY(currX, currY float64) {
+func (report *Report) SetXY(currX, currY float64) {
 	if currX > 0 {
-		r.currX = currX
+		report.currX = currX
 	}
 
 	if currY > 0 {
-		r.currY = currY
+		report.currY = currY
 	}
 }
-func (r *Report) GetXY() (x, y float64) {
-	return r.currX, r.currY
+func (report *Report) GetXY() (x, y float64) {
+	return report.currX, report.currY
 }
 
-func (r *Report) SetMargin(dx, dy float64) {
-	x, y := r.GetXY()
-	r.SetXY(x+dx, y+dy)
+func (report *Report) SetMargin(dx, dy float64) {
+	x, y := report.GetXY()
+	report.SetXY(x+dx, y+dy)
 }
 
 // 设置页面的尺寸, unit: mm pt in  size: A4 LTR, 目前支持常用的两种方式
-func (r *Report) SetPage(size string, unit string, orientation string) {
-	r.setUnit(unit)
+func (report *Report) SetPage(size string, unit string, orientation string) {
+	report.setUnit(unit)
 	config, ok := defaultConfigs[size]
 	if !ok {
 		panic("the config not exists, please add config")
@@ -305,74 +300,74 @@ func (r *Report) SetPage(size string, unit string, orientation string) {
 	case "A4":
 		switch orientation {
 		case "P":
-			r.addAtomicCell("P|" + unit + "|A4|P")
-			r.pageWidth = config.width / r.unit
-			r.pageHeight = config.height / r.unit
+			report.addAtomicCell("P|" + unit + "|A4|P")
+			report.pageWidth = config.width / report.unit
+			report.pageHeight = config.height / report.unit
 		case "L":
-			r.addAtomicCell("P|" + unit + "|A4|L")
-			r.pageWidth = config.height / r.unit
-			r.pageHeight = config.width / r.unit
+			report.addAtomicCell("P|" + unit + "|A4|L")
+			report.pageWidth = config.height / report.unit
+			report.pageHeight = config.width / report.unit
 		}
 	case "LTR":
 		switch orientation {
 		case "P":
-			r.pageWidth = config.width / r.unit
-			r.pageHeight = config.height / r.unit
-			r.addAtomicCell("P|" + unit + "|" + strconv.FormatFloat(r.pageWidth, 'f', 4, 64) +
-				"|" + strconv.FormatFloat(r.pageHeight, 'f', 4, 64))
+			report.pageWidth = config.width / report.unit
+			report.pageHeight = config.height / report.unit
+			report.addAtomicCell("P|" + unit + "|" + strconv.FormatFloat(report.pageWidth, 'f', 4, 64) +
+				"|" + strconv.FormatFloat(report.pageHeight, 'f', 4, 64))
 		case "L":
-			r.pageWidth = config.height / r.unit
-			r.pageHeight = config.width / r.unit
-			r.addAtomicCell("P  |" + unit + "|" + strconv.FormatFloat(r.pageWidth, 'f', 4, 64) +
-				"|" + strconv.FormatFloat(r.pageHeight, 'f', 4, 64))
+			report.pageWidth = config.height / report.unit
+			report.pageHeight = config.width / report.unit
+			report.addAtomicCell("P  |" + unit + "|" + strconv.FormatFloat(report.pageWidth, 'f', 4, 64) +
+				"|" + strconv.FormatFloat(report.pageHeight, 'f', 4, 64))
 		}
 	}
 
-	r.contentWidth = config.contentWidth
-	r.contentHeight = config.contentHeight
+	report.contentWidth = config.contentWidth
+	report.contentHeight = config.contentHeight
 
-	r.pageStartX = config.startX
-	r.pageStartY = config.startY
-	r.pageEndX = config.endX
-	r.pageEndY = config.endY
-	r.config = config
+	report.pageStartX = config.startX
+	report.pageStartY = config.startY
+	report.pageEndX = config.endX
+	report.pageEndY = config.endY
+	report.config = config
 
-	r.execute(false)
+	report.execute(false)
 }
 
-func (r *Report) setUnit(unit string) {
+func (report *Report) setUnit(unit string) {
 	switch unit {
 	case "mm":
-		r.unit = 2.834645669
+		report.unit = 2.834645669
 	case "pt":
-		r.unit = 1
+		report.unit = 1
 	case "in":
-		r.unit = 72
+		report.unit = 72
 	default:
 		panic("This unit is not specified :" + unit)
 	}
 }
-func (r *Report) GetUnit() float64 {
-	if r.unit == 0.0 {
+func (report *Report) GetUnit() float64 {
+	if report.unit == 0.0 {
 		panic("does not set unit")
 	}
-	return r.unit
+	return report.unit
 }
 
 // 获取底层的所有的原子单元内容
-func (r *Report) GetAtomicCells() *[]string {
-	return &r.converter.AtomicCells
+func (report *Report) GetAtomicCells() *[]string {
+	return &report.converter.atomicCells
 }
 
 // 保存原子操作单元
-func (r *Report) SaveAtomicCellText(fileName string) {
-	text := strings.Join(r.converter.AtomicCells, "\n")
+func (report *Report) SaveAtomicCellText(fileName string) {
+	text := strings.Join(report.converter.atomicCells, "\n")
 	ioutil.WriteFile(fileName, []byte(text), os.ModePerm)
 }
 
 // 计算文本宽度, 必须先调用 SetFontWithStyle() 或者 SetFont()
-func (r *Report) MeasureTextWidth(text string) float64 {
-	w, err := r.converter.GoPdf.MeasureTextWidth(text)
+func (report *Report) MeasureTextWidth(text string) float64 {
+	w, err := report.converter.pdf.MeasureTextWidth(text)
 	if err != nil {
 		panic(err)
 	}
@@ -380,106 +375,106 @@ func (r *Report) MeasureTextWidth(text string) float64 {
 }
 
 // 设置当前文本字体, 先注册,后设置
-func (r *Report) SetFontWithStyle(family, style string, size int) {
-	r.converter.GoPdf.SetFont(family, style, size)
+func (report *Report) SetFontWithStyle(family, style string, size int) {
+	report.converter.pdf.SetFont(family, style, size)
 }
-func (r *Report) SetFont(family string, size int) {
-	r.SetFontWithStyle(family, "", size)
+func (report *Report) SetFont(family string, size int) {
+	report.SetFontWithStyle(family, "", size)
 }
 
-func (r *Report) AddCallBack(callback CallBack) {
-	r.callbacks = append(r.callbacks, callback)
+func (report *Report) AddCallBack(callback CallBack) {
+	report.callbacks = append(report.callbacks, callback)
 }
 
 /********************************************
  将特定的字符串转换成底层可以识别的原子操作符
 *********************************************/
-func (r *Report) addAtomicCell(s string) {
-	r.converter.AddAtomicCell(s)
+func (report *Report) addAtomicCell(s string) {
+	report.converter.AddAtomicCell(s)
 }
 
 // 注册当前字体
-func (r *Report) Font(fontName string, size int, style string) {
-	r.addAtomicCell("F|" + fontName + "|" + style + "|" + strconv.Itoa(size))
+func (report *Report) Font(fontName string, size int, style string) {
+	report.addAtomicCell("F|" + fontName + "|" + style + "|" + strconv.Itoa(size))
 }
 
 // 写入字符串内容
-func (r *Report) Cell(x float64, y float64, content string) {
-	r.addAtomicCell("C1|" + Ftoa(x) + "|" + Ftoa(y) + "|" + content)
+func (report *Report) Cell(x float64, y float64, content string) {
+	report.addAtomicCell("C1|" + Ftoa(x) + "|" + Ftoa(y) + "|" + content)
 }
-func (r *Report) CellRight(x float64, y float64, w float64, content string) {
-	r.addAtomicCell("CR|" + Ftoa(x) + "|" + Ftoa(y) + "|" +
+func (report *Report) CellRight(x float64, y float64, w float64, content string) {
+	report.addAtomicCell("CR|" + Ftoa(x) + "|" + Ftoa(y) + "|" +
 		Ftoa(w) + "|" + content)
 }
 
 // 划线
-func (r *Report) LineType(ltype string, width float64) {
-	r.sumWork["__lw__"] = width
-	r.addAtomicCell("LT|" + ltype + "|" + Ftoa(width))
+func (report *Report) LineType(ltype string, width float64) {
+	report.sumWork["__lw__"] = width
+	report.addAtomicCell("LT|" + ltype + "|" + Ftoa(width))
 }
-func (r *Report) Line(x1 float64, y1 float64, x2 float64, y2 float64) {
-	r.addAtomicCell("L|" + Ftoa(x1) + "|" + Ftoa(y1) + "|" + Ftoa(x2) +
+func (report *Report) Line(x1 float64, y1 float64, x2 float64, y2 float64) {
+	report.addAtomicCell("L|" + Ftoa(x1) + "|" + Ftoa(y1) + "|" + Ftoa(x2) +
 		"|" + Ftoa(y2))
 }
-func (r *Report) LineH(x1 float64, y float64, x2 float64) {
-	adj := r.sumWork["__lw__"] * 0.5
-	r.addAtomicCell("LH|" + Ftoa(x1) + "|" + Ftoa(y+adj) + "|" + Ftoa(x2))
+func (report *Report) LineH(x1 float64, y float64, x2 float64) {
+	adj := report.sumWork["__lw__"] * 0.5
+	report.addAtomicCell("LH|" + Ftoa(x1) + "|" + Ftoa(y+adj) + "|" + Ftoa(x2))
 }
-func (r *Report) LineV(x float64, y1 float64, y2 float64) {
-	adj := r.sumWork["__lw__"] * 0.5
-	r.addAtomicCell("LV|" + Ftoa(x+adj) + "|" + Ftoa(y1) + "|" + Ftoa(y2))
+func (report *Report) LineV(x float64, y1 float64, y2 float64) {
+	adj := report.sumWork["__lw__"] * 0.5
+	report.addAtomicCell("LV|" + Ftoa(x+adj) + "|" + Ftoa(y1) + "|" + Ftoa(y2))
 }
 
 // 画特定的图形, 目前支持: 长方形, 椭圆两大类
-func (r *Report) Rect(x1 float64, y1 float64, x2 float64, y2 float64) {
-	r.addAtomicCell("R|" + Ftoa(x1) + "|" + Ftoa(y1) + "|" + Ftoa(x2) +
+func (report *Report) Rect(x1 float64, y1 float64, x2 float64, y2 float64) {
+	report.addAtomicCell("R|" + Ftoa(x1) + "|" + Ftoa(y1) + "|" + Ftoa(x2) +
 		"|" + Ftoa(y2))
 }
-func (r *Report) Oval(x1 float64, y1 float64, x2 float64, y2 float64) {
-	r.addAtomicCell("O|" + Ftoa(x1) + "|" + Ftoa(y1) + "|" + Ftoa(x2) +
+func (report *Report) Oval(x1 float64, y1 float64, x2 float64, y2 float64) {
+	report.addAtomicCell("O|" + Ftoa(x1) + "|" + Ftoa(y1) + "|" + Ftoa(x2) +
 		"|" + Ftoa(y2))
 }
 
 // 设置当前的字体颜色, 线条颜色
-func (r *Report) TextColor(red int, green int, blue int) {
-	r.addAtomicCell("TC|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) +
+func (report *Report) TextColor(red int, green int, blue int) {
+	report.addAtomicCell("TC|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) +
 		"|" + strconv.Itoa(blue))
 }
-func (r *Report) LineColor(red int, green int, blue int) {
-	r.addAtomicCell("LC|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) +
-		"|" + strconv.Itoa(blue))
-}
-
-func (r *Report) FillColor(red int, green int, blue int) {
-	r.addAtomicCell("FC|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) +
+func (report *Report) LineColor(red int, green int, blue int) {
+	report.addAtomicCell("LC|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) +
 		"|" + strconv.Itoa(blue))
 }
 
-func (r *Report) GrayColor(x, y float64, w, h float64, gray float64) {
+func (report *Report) FillColor(red int, green int, blue int) {
+	report.addAtomicCell("FC|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) +
+		"|" + strconv.Itoa(blue))
+}
+
+func (report *Report) GrayColor(x, y float64, w, h float64, gray float64) {
 	if gray < 0 || gray > 1 {
 		gray = 0.85
 	}
-	r.LineType("straight", h)
-	r.GrayStroke(gray)
-	r.LineH(x, y, x+w)
-	r.LineType("straight", 0.01)
-	r.GrayStroke(0)
+	report.LineType("straight", h)
+	report.GrayStroke(gray)
+	report.LineH(x, y, x+w)
+	report.LineType("straight", 0.01)
+	report.GrayStroke(0)
 }
 
-func (r *Report) GrayFill(grayScale float64) {
-	r.addAtomicCell("GF|" + Ftoa(grayScale))
+func (report *Report) GrayFill(grayScale float64) {
+	report.addAtomicCell("GF|" + Ftoa(grayScale))
 }
-func (r *Report) GrayStroke(grayScale float64) {
-	r.addAtomicCell("GS|" + Ftoa(grayScale))
+func (report *Report) GrayStroke(grayScale float64) {
+	report.addAtomicCell("GS|" + Ftoa(grayScale))
 }
 
 // 图片
-func (r *Report) Image(path string, x1 float64, y1 float64, x2 float64, y2 float64) {
-	r.addAtomicCell("I|" + path + "|" + Ftoa(x1) + "|" + Ftoa(y1) + "|" +
+func (report *Report) Image(path string, x1 float64, y1 float64, x2 float64, y2 float64) {
+	report.addAtomicCell("I|" + path + "|" + Ftoa(x1) + "|" + Ftoa(y1) + "|" +
 		Ftoa(x2) + "|" + Ftoa(y2))
 }
 
 // 添加变量
-func (r *Report) Var(name string, val string) {
-	r.addAtomicCell("V|" + name + "|" + val)
+func (report *Report) Var(name string, val string) {
+	report.addAtomicCell("V|" + name + "|" + val)
 }

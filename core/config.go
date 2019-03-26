@@ -9,21 +9,21 @@ type Config struct {
 	contentWidth, contentHeight float64 // PDF页内容的宽度和高度, 计算得到
 }
 
-func (c *Config) checkConfig() {
-	if c.startX < 0 || c.startY < 0 {
+func (config *Config) checkConfig() {
+	if config.startX < 0 || config.startY < 0 {
 		panic("the pdf page start position invilid")
 	}
 
-	if c.endX < 0 || c.endY < 0 || c.endX <= c.startX || c.endY <= c.startY {
+	if config.endX < 0 || config.endY < 0 || config.endX <= config.startX || config.endY <= config.startY {
 		panic("the pdf page end position invilid")
 	}
 
-	if c.width <= c.endX || c.height <= c.endY {
+	if config.width <= config.endX || config.height <= config.endY {
 		panic("the pdf page width or height invilid")
 	}
 
 	// 关系验证
-	if c.endX+c.startX != c.width || c.endY+c.startY != c.height {
+	if config.endX+config.startX != config.width || config.endY+config.startY != config.height {
 		panic("the paf page config invilid")
 	}
 }
