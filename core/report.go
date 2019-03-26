@@ -83,13 +83,13 @@ func (report *Report) CompressLevel(level int) {
 }
 
 // 写入PDF文件
-func (report *Report) Execute(filename string) {
+func (report *Report) Execute(filepath string) {
 	if report.config == nil {
 		panic("please set page config")
 	}
 
 	report.execute(true)
-	report.converter.pdf.WritePdf(filename)
+	report.converter.pdf.WritePdf(filepath)
 
 	for i := range report.callbacks {
 		report.callbacks[i](report)
@@ -107,8 +107,8 @@ func (report *Report) GetBytesPdf() (ret []byte) {
 	return
 }
 
-func (report *Report) LoadCellsFromText(fileName string) error {
-	return report.converter.ReadFile(fileName)
+func (report *Report) LoadCellsFromText(filepath string) error {
+	return report.converter.ReadFile(filepath)
 }
 
 // 转换, 内容 -> PDF文件
