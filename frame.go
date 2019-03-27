@@ -240,8 +240,8 @@ func (frame *Frame) SetContent(content string) *Frame {
 	return frame
 }
 
-// 自动换行
-func (frame *Frame) GenerateAtomicCell() error {
+// 自动分页
+func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 	var (
 		sx, sy                     = frame.pdf.GetXY()
 		x, y                       float64
@@ -319,7 +319,7 @@ func (frame *Frame) GenerateAtomicCell() error {
 
 			frame.pdf.AddNewPage(false)
 			frame.pdf.SetXY(frame.pdf.GetPageStartXY())
-			return frame.GenerateAtomicCell()
+			return frame.GenerateAtomicCellWithAutoPage()
 		}
 
 		// todo: 不需要换页, 只需要增加数据
@@ -373,6 +373,121 @@ func (frame *Frame) GenerateAtomicCell() error {
 	frame.pdf.SetXY(x, y+frame.lineHeight+frame.margin.Bottom) // 定格最终的位置
 
 	return nil
+}
+
+// 非自动分页
+func (frame *Frame) GenerateAtomicCell() error {
+	var (
+		sx, sy                     = frame.pdf.GetXY()
+		x, y                       float64
+		isFirstSetVerticalCentered bool
+	)
+
+	if isEmpty(frame.font) {
+		panic("no font")
+	}
+
+	switch frame.frameType {
+	case FRAME_STRAIGHT:
+		frame.pdf.LineType("straight", 0.01)
+	case FRAME_DASHED:
+		frame.pdf.LineType("dashed", 0.01)
+	case FRAME_DOTTED:
+		frame.pdf.LineType("dotted", 0.01)
+	}
+
+	for i := 0; i < len(frame.contents); i++ {
+		var (
+			hOriginBorder Scope
+			vOriginBorder Scope
+		)
+		// todo: 水平居中, 只是对当前的行设置新的 Border
+		if frame.horizontalCentered {
+			frame.pdf.SetFontWithStyle(frame.font.Family, frame.font.Style, frame.font.Size)
+			hOriginBorder = frame.border
+			width := frame.pdf.MeasureTextWidth(frame.contents[i]) / frame.pdf.GetUnit()
+			if width < frame.width {
+				m := (frame.width - width) / 2
+				frame.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}
+			}
+		}
+
+		// todo: 水平居右, 只是对当前的行设置新的 Border
+		if frame.rightAlign {
+			frame.pdf.SetFontWithStyle(frame.font.Family, frame.font.Style, frame.font.Size)
+			hOriginBorder = frame.border
+			width := frame.pdf.MeasureTextWidth(frame.contents[i]) / frame.pdf.GetUnit()
+			m := frame.width - width
+			frame.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}
+		}
+
+		// todo: 垂直居中, 只能操作一次
+		if i == 0 && frame.verticalCentered {
+			isFirstSetVerticalCentered = true
+			frame.verticalCentered = false
+			vOriginBorder = frame.border
+			length := float64(len(frame.contents))
+			height := (length-1)*frame.lineSpace + length*frame.lineHeight + frame.border.Top
+			if height < frame.height {
+				m := (frame.height - height) / 2
+				frame.border = Scope{vOriginBorder.Left, m, vOriginBorder.Right, 0}
+			}
+		}
+
+		x, y = frame.getContentPosition(sx, sy, i)
+
+		// todo: 不需要换页, 只需要增加数据
+		if !isEmpty(frame.fontColor) {
+			frame.pdf.TextColor(getColorRGB(frame.fontColor))
+		}
+
+		if !isEmpty(frame.backColor) {
+			x1 := x - frame.border.Left
+			y1 := y
+			frame.pdf.GrayColor(x1, y1, frame.width, frame.lineHeight+frame.lineSpace, frame.backColor)
+		}
+
+		frame.pdf.Font(frame.font.Family, frame.font.Size, frame.font.Style) // 添加设置
+		frame.pdf.Cell(x, y, frame.contents[i])
+
+		if frame.horizontalCentered || frame.rightAlign {
+			frame.border = hOriginBorder
+		}
+
+		if isFirstSetVerticalCentered {
+			isFirstSetVerticalCentered = false
+			frame.border = vOriginBorder
+		}
+
+		if i == 0 && frame.frameType != FRAME_NONE {
+			// 两条竖线 + 一条横线
+			frame.pdf.LineH(sx+frame.margin.Left, y-frame.margin.Top, sx+frame.margin.Left+frame.width)
+			frame.pdf.LineV(sx+frame.margin.Left, y-frame.margin.Top, y+frame.lineHeight+frame.lineSpace)
+			frame.pdf.LineV(sx+frame.margin.Left+frame.width, y-frame.margin.Top, y+frame.lineHeight+frame.lineSpace)
+			continue
+		}
+
+		// 两条竖线
+		if frame.frameType != FRAME_NONE {
+			frame.pdf.LineV(sx+frame.margin.Left, y, y+frame.lineHeight+frame.lineSpace)
+			frame.pdf.LineV(sx+frame.margin.Left+frame.width, y, y+frame.lineHeight+frame.lineSpace)
+		}
+
+		// 一条横线
+		if i == len(frame.contents)-1 && frame.frameType != FRAME_NONE {
+			frame.pdf.LineH(sx+frame.margin.Left, y+frame.lineHeight+frame.lineSpace,
+				sx+frame.margin.Left+frame.width)
+		}
+	}
+
+	if !isEmpty(frame.fontColor) {
+		frame.pdf.TextColor(getColorRGB(frame.fontColor))
+	}
+	x, _ = frame.pdf.GetPageStartXY()
+	frame.pdf.SetXY(x, y+frame.lineHeight+frame.margin.Bottom) // 定格最终的位置
+
+	return nil
+
 }
 
 func (frame *Frame) replaceHeight() {

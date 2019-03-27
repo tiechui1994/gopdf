@@ -28,16 +28,18 @@ type Executor func(report *Report)
 type CallBack func(report *Report)
 
 type Report struct {
-	FisrtPageNeedFH bool // 首页需要执行页眉和页脚
-	Vars            map[string]string
+	FisrtPageNeedHeader bool // 首页需要执行页眉
+	FisrtPageNeedFooter bool // 首页需要执行页脚
+	Vars                map[string]string
 
-	converter    *Converter           //转换引擎(对接第三方库)
-	currX, currY float64              //　当前位置
+	converter    *Converter           // 转换引擎(对接第三方库)
+	config       *Config              // 当前PDF的页面配置
+	currX, currY float64              // 当前位置
 	executors    map[string]*Executor // 执行器
 	flags        map[string]bool      // 标记(自动分页和重置页号码)
-	sumWork      map[string]float64   // 线宽
 	unit         float64              // 转换单位
 	pageNo       int                  // 记录当前的 Page 的页数
+	linew        float64              // 线宽
 
 	// 下面是页面的信息
 	pageWidth, pageHeight       float64
@@ -46,7 +48,6 @@ type Report struct {
 	pageEndX, pageEndY          float64
 
 	callbacks []CallBack // 回调函数,在PDF生成之后执行
-	config    *Config
 }
 
 func CreateReport() *Report {
@@ -55,11 +56,9 @@ func CreateReport() *Report {
 
 	report.Vars = make(map[string]string)
 	report.executors = make(map[string]*Executor)
-	report.sumWork = make(map[string]float64)
 	report.callbacks = make([]CallBack, 0)
 	report.flags = make(map[string]bool)
 
-	report.sumWork["__ft__"] = 0.0 // FooterY
 	report.flags[Flag_AutoAddNewPage] = false
 	report.flags[Flag_ResetPageNo] = false
 
@@ -127,7 +126,7 @@ func (report *Report) execute(exec bool) {
 
 // 分页, 只有一个页面的PDF没有此操作
 func (report *Report) pagination() {
-	lines := report.converter.atomicCells[:]
+	lines := report.converter.GetAutomicCells()
 	list := new(List)
 
 	// 第一次遍历单元格, 确定需要创建的PDF页
@@ -157,7 +156,7 @@ func (report *Report) pagination() {
 	for _, line := range lines {
 		cells = append(cells, line)
 	}
-	report.converter.atomicCells = cells
+	report.converter.SetAutomicCells(cells)
 }
 
 // 获取 lineNo 对应的 pageNo
@@ -206,12 +205,19 @@ func (report *Report) AddNewPage(resetpageNo bool) {
 	} else {
 		report.pageNo++
 	}
-	report.ExecutePageHeader()
 
 	report.addAtomicCell("v|PAGE|" + strconv.Itoa(report.pageNo))
+	report.SetXY(report.GetPageStartXY())
+	report.ExecutePageHeader()
 }
 
 func (report *Report) ExecutePageFooter() {
+	if !report.FisrtPageNeedFooter {
+		report.FisrtPageNeedFooter = true
+		return
+	}
+
+	curX, curY := report.GetXY()
 	report.currY = report.config.endY / report.unit
 	report.currX = report.config.startX / report.unit
 
@@ -219,13 +225,21 @@ func (report *Report) ExecutePageFooter() {
 	if h != nil {
 		(*h)(report)
 	}
+	report.SetXY(curX, curY)
 }
 func (report *Report) ExecutePageHeader() {
+	if !report.FisrtPageNeedHeader {
+		report.FisrtPageNeedHeader = true
+		return
+	}
+
+	curX, curY := report.GetXY()
 	report.currX, report.currY = report.GetPageStartXY()
 	h := report.executors[Header]
 	if h != nil {
 		(*h)(report)
 	}
+	report.SetXY(curX, curY)
 }
 func (report *Report) ExecuteDetail() {
 	h := report.executors[Detail]
@@ -234,13 +248,6 @@ func (report *Report) ExecuteDetail() {
 			report.AddNewPage(report.flags[Flag_ResetPageNo])
 			report.flags[Flag_AutoAddNewPage] = false
 			report.flags[Flag_ResetPageNo] = false
-		}
-
-		if report.FisrtPageNeedFH {
-			report.ExecutePageHeader()
-			currX, currY := report.currX, report.currY
-			report.ExecutePageFooter()
-			report.currX, report.currY = currX, currY
 		}
 
 		(*h)(report)
@@ -356,13 +363,15 @@ func (report *Report) GetUnit() float64 {
 
 // 获取底层的所有的原子单元内容
 func (report *Report) GetAtomicCells() *[]string {
-	return &report.converter.atomicCells
+	cells := report.converter.GetAutomicCells()
+	return &cells
 }
 
 // 保存原子操作单元
-func (report *Report) SaveAtomicCellText(fileName string) {
-	text := strings.Join(report.converter.atomicCells, "\n")
-	ioutil.WriteFile(fileName, []byte(text), os.ModePerm)
+func (report *Report) SaveAtomicCellText(filepath string) {
+	cells := report.converter.GetAutomicCells()
+	text := strings.Join(cells, "\n")
+	ioutil.WriteFile(filepath, []byte(text), os.ModePerm)
 }
 
 // 计算文本宽度, 必须先调用 SetFontWithStyle() 或者 SetFont()
@@ -409,7 +418,7 @@ func (report *Report) CellRight(x float64, y float64, w float64, content string)
 
 // 划线
 func (report *Report) LineType(ltype string, width float64) {
-	report.sumWork["__lw__"] = width
+	report.linew = width
 	report.addAtomicCell("LT|" + ltype + "|" + Ftoa(width))
 }
 func (report *Report) Line(x1 float64, y1 float64, x2 float64, y2 float64) {
@@ -417,11 +426,11 @@ func (report *Report) Line(x1 float64, y1 float64, x2 float64, y2 float64) {
 		"|" + Ftoa(y2))
 }
 func (report *Report) LineH(x1 float64, y float64, x2 float64) {
-	adj := report.sumWork["__lw__"] * 0.5
+	adj := report.linew * 0.5
 	report.addAtomicCell("LH|" + Ftoa(x1) + "|" + Ftoa(y+adj) + "|" + Ftoa(x2))
 }
 func (report *Report) LineV(x float64, y1 float64, y2 float64) {
-	adj := report.sumWork["__lw__"] * 0.5
+	adj := report.linew * 0.5
 	report.addAtomicCell("LV|" + Ftoa(x+adj) + "|" + Ftoa(y1) + "|" + Ftoa(y2))
 }
 

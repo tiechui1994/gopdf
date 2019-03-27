@@ -34,6 +34,7 @@ func ComplexTableReportWithData() {
 
 	r.Execute("table_test_data.pdf")
 	r.SaveAtomicCellText("table_test_data.txt")
+	fmt.Println(r.GetCurrentPageNo())
 }
 func TableReportWithDataExecutor(report *core.Report) {
 	unit := report.GetUnit()

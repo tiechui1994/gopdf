@@ -232,7 +232,7 @@ func (div *Div) clearContents() {
 }
 
 // 自动换行
-func (div *Div) GenerateAtomicCellWithAutoWarp() error {
+func (div *Div) GenerateAtomicCellWithAutoPage() error {
 	var (
 		sx, sy                     = div.pdf.GetXY()
 		x, y                       float64
@@ -291,7 +291,7 @@ func (div *Div) GenerateAtomicCellWithAutoWarp() error {
 			div.contents = div.contents[i:]
 			div.pdf.AddNewPage(false)
 			div.pdf.SetXY(div.pdf.GetPageStartXY())
-			return div.GenerateAtomicCellWithAutoWarp()
+			return div.GenerateAtomicCellWithAutoPage()
 		}
 
 		// todo: 不需要换页, 只需要增加数据

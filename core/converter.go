@@ -16,22 +16,38 @@ type FontMap struct {
 
 // 对接 pdf
 type Converter struct {
-	pdf         *gopdf.GoPdf
-	fonts       []*FontMap
-	unit        float64
-	linew       float64
-	atomicCells []string // 原子单元, 多个单元格最终汇总成PDF文件
+	pdf         *gopdf.GoPdf // 第三方转换
+	atomicCells []string     // 原子单元, 多个单元格最终汇总成PDF文件
+
+	unit  float64    // 单位像素
+	fonts []*FontMap // 字体
+
+	linew    float64 // 线宽度(辅助)
+	lastFont string  // 最近字体(辅助)
 }
 
 // var convert.unit float64 = 2.834645669
 
+// 获取AtomicCells
+func (convert *Converter) GetAutomicCells() []string {
+	cells := make([]string, len(convert.atomicCells))
+	copy(cells, convert.atomicCells)
+	return cells
+}
+
+// 设置AtomicCells(小心使用)
+func (convert *Converter) SetAutomicCells(cells []string) {
+	convert.atomicCells = cells
+}
+
 // 添加AtomicCell
 func (convert *Converter) AddAtomicCell(cell string) {
-	if len(convert.atomicCells) > 0 {
-		length := len(convert.atomicCells)
-		if convert.atomicCells[length-1] == cell {
+	if strings.HasPrefix(cell, "F") {
+		if cell == convert.lastFont {
 			return
 		}
+
+		convert.lastFont = cell
 	}
 
 	convert.atomicCells = append(convert.atomicCells, cell)

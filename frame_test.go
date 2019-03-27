@@ -70,7 +70,7 @@ They provide alternative ways to perform operations that would otherwise require
 Many people find subqueries more readable than complex joins or unions. Indeed, it was the innovation of subqueries that gave people the original idea of calling the early SQL “Structured Query Language.”
 how the optimizer handles subqueries, see Section 8.2.2, “Optimizing Subqueries, Derived Tables, and View References”. For a discussion of restrictions on subquery use, including performance issues for certain forms of subquery syntax, see Section C.4, “Restrictions on Subqueries”.`
 	frame.SetContent(strings.Repeat(content, 4))
-	frame.GenerateAtomicCell()
+	frame.GenerateAtomicCellWithAutoPage()
 }
 
 func TestComplexFrameReport(t *testing.T) {

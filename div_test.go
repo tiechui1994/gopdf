@@ -93,7 +93,7 @@ A subquery's outer statement can be any one of: SELECT, INSERT, UPDATE, DELETE, 
 In MySQL, you cannot modify a table and select from the same table in a subquery. This applies to statements such as DELETE, INSERT, REPLACE, UPDATE, and (because subqueries can be used in the SET clause) LOAD DATA INFILE.
 
 For information about how the optimizer handles subqueries, see Section 8.2.2, “Optimizing Subqueries, Derived Tables, and View References”. For a discussion of restrictions on subquery use, including performance issues for certain forms of subquery syntax, see Section C.4, “Restrictions on Subqueries”.`)
-	div.GenerateAtomicCellWithAutoWarp()
+	div.GenerateAtomicCellWithAutoPage()
 }
 
 func ComplexFillColorReport() {
