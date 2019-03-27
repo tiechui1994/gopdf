@@ -286,11 +286,19 @@ func (div *Div) GenerateAtomicCellWithAutoPage() error {
 
 		// todo: 换页的依据
 		if (y < pageEndY || y >= pageEndY) && y+div.lineHeight > pageEndY {
+			var newX, newY float64 // 新页面的X,Y位置
 			div.SetMarign(Scope{div.margin.Left, 0, div.margin.Right, 0})
 			div.SetBorder(Scope{div.border.Left, 0, div.border.Right, 0})
 			div.contents = div.contents[i:]
+			_, newY = div.pdf.GetPageStartXY()
+			if len(div.contents) > 0 {
+				newX, _ = div.pdf.GetXY()
+			} else {
+				newX, _ = div.pdf.GetPageStartXY()
+			}
+
 			div.pdf.AddNewPage(false)
-			div.pdf.SetXY(div.pdf.GetPageStartXY())
+			div.pdf.SetXY(newX, newY)
 			return div.GenerateAtomicCellWithAutoPage()
 		}
 

@@ -310,6 +310,7 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 
 		// todo: 换页的依据
 		if (y < pageEndY || y >= pageEndY) && y+frame.lineHeight > pageEndY {
+			var newX, newY float64
 			frame.SetMarign(Scope{frame.margin.Left, 0, frame.margin.Right, 0})
 			frame.SetBorder(Scope{frame.border.Left, 0, frame.border.Right, 0})
 			frame.contents = frame.contents[i:]
@@ -323,8 +324,14 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 					sx+frame.margin.Left+frame.width)
 			}
 
+			_, newY = frame.pdf.GetPageStartXY()
+			if len(frame.contents) > 0 {
+				newX, _ = frame.pdf.GetXY()
+			} else {
+				newX, _ = frame.pdf.GetPageStartXY()
+			}
 			frame.pdf.AddNewPage(false)
-			frame.pdf.SetXY(frame.pdf.GetPageStartXY())
+			frame.pdf.SetXY(newX, newY)
 			return frame.GenerateAtomicCellWithAutoPage()
 		}
 

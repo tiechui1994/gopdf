@@ -29,9 +29,9 @@ func isEmpty(object interface{}) bool {
 	}
 }
 
-func checkColor(color string) {
+func checkColor(color string) string {
+	color = strings.Replace(color, " ", "", -1)
 	rgb := strings.Split(color, ",")
-	//fmt.Println(len(rgb), color)
 	if len(rgb) != 3 {
 		panic("the color err")
 	}
@@ -45,10 +45,12 @@ func checkColor(color string) {
 			panic("the R,G,B value error")
 		}
 	}
+
+	return color
 }
 
 func getColorRGB(color string) (r, g, b int) {
-	checkColor(color)
+	color = checkColor(color)
 	rgb := strings.Split(color, ",")
 	return atoi(rgb[0]), atoi(rgb[1]), atoi(rgb[2])
 }

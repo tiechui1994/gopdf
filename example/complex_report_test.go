@@ -68,7 +68,7 @@ func ComplexReportExecutor(report *core.Report) {
 	// todo: 任务详情
 	div := gopdf.NewDivWithWidth(20*unit, lineHight, lineSpace, report)
 	div.SetFont(largeFont)
-	div.SetContent("任务详情").GenerateAtomicCellWithAutoPage()
+	div.SetContent("测试报告").GenerateAtomicCellWithAutoPage()
 	line.GenerateAtomicCell()
 
 	// 二维码
@@ -80,25 +80,24 @@ func ComplexReportExecutor(report *core.Report) {
 	report.SetMargin(2*unit, -4.4*unit)
 	baseInfoDiv := gopdf.NewDivWithWidth(20*unit, lineHight, lineSpace, report)
 	baseInfoDiv.SetFont(headFont)
-	baseInfoDiv.SetContent("基本信息").GenerateAtomicCellWithAutoPage()
+	baseInfoDiv.SetContent("报告概要").GenerateAtomicCellWithAutoPage()
 
 	baseInfo := gopdf.NewDivWithWidth(80*unit, lineHight, lineSpace, report)
 	baseInfo.SetMarign(gopdf.Scope{Left: 4 * unit, Top: 1 * unit})
-	baseInfo.SetFont(textFont).SetContent(fmt.Sprintf("任务名称: %s", data.JobName)).GenerateAtomicCellWithAutoPage()
+	baseInfo.SetFont(textFont).SetContent(fmt.Sprintf("任务: %s", data.JobName)).GenerateAtomicCellWithAutoPage()
 	baseInfo.CopyWithContent(fmt.Sprintf("创建人: %s", data.CreatUserName)).GenerateAtomicCellWithAutoPage()
 	baseInfo.CopyWithContent(fmt.Sprintf("状态: %s", data.Status)).GenerateAtomicCellWithAutoPage()
-	baseInfo.CopyWithContent(fmt.Sprintf("任务分类: %s", data.IssueClassName)).GenerateAtomicCellWithAutoPage()
-	baseInfo.CopyWithContent(fmt.Sprintf("任务: %s", data.IssueSubClassName)).GenerateAtomicCellWithAutoPage()
+	baseInfo.CopyWithContent(fmt.Sprintf("类别: %s", data.IssueClassName)).GenerateAtomicCellWithAutoPage()
 
 	// 模板
 	report.SetMargin(2*unit, 1*unit)
-	baseInfoDiv.CopyWithContent("模板信息").GenerateAtomicCellWithAutoPage()
+	baseInfoDiv.CopyWithContent("过程").GenerateAtomicCellWithAutoPage()
 	report.SetMargin(0, 1*unit)
 	SimpleTableReportExecutor(report)
 
 	// todo: 评论
 	report.SetMargin(0, 1*unit)
-	div.CopyWithContent("评论").GenerateAtomicCellWithAutoPage()
+	div.CopyWithContent("评论信息").GenerateAtomicCellWithAutoPage()
 	line.GenerateAtomicCell()
 
 	if len(data.Contents) == 0 {
@@ -115,7 +114,7 @@ func ComplexReportExecutor(report *core.Report) {
 
 	// todo: 历史记录
 	report.SetMargin(0, 1*unit)
-	historyDiv := div.CopyWithContent("历史")
+	historyDiv := div.CopyWithContent("历史回复")
 	historyDiv.GenerateAtomicCellWithAutoPage()
 	line.GenerateAtomicCell()
 
@@ -137,6 +136,7 @@ func ComplexReportFooterExecutor(report *core.Report) {
 	content := fmt.Sprintf("第 %v 页", report.GetCurrentPageNo())
 	footer := gopdf.NewFrame(10, 0, report)
 	footer.SetFont(textFont)
+	footer.SetFontColor("60, 179, 113")
 	footer.SetBorder(gopdf.Scope{Top: 10})
 	footer.SetHorizontalCentered().SetVerticalCentered().SetContent(content).GenerateAtomicCell()
 }

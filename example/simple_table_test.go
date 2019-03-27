@@ -21,7 +21,7 @@ type Template struct {
 	TableObj struct {
 		Columns []struct {
 			ColumnsName string `json:"columnsName"`
-		} `json:"columns"` // 列名称
+		} `json:"columns"`          // 列名称
 		Rows []string `json:"rows"` // 行名称, 从第2行开算, 第一行是Header,没有
 	} `json:"tableObj"`
 
@@ -240,7 +240,78 @@ func SimpleTableReportExecutor(report *core.Report) {
 		lineSpace = 0.01 * unit
 		lineHight = 1.9 * unit
 	)
-	str := `[{"modelname":"所在公司","modeltype":"5","value":"中国航天科技九院"},{"modelname":"报销部门","modeltype":"1","value":"财务部"},{"modelname":"报销人","modeltype":"1","value":"钱伟长"},{"modelname":"职务","modeltype":"1","value":"技术总领导"},{"modelname":"项目名称","modeltype":"1","value":"航天科技人员培训"},{"modelname":"出差时间","modeltype":"2","value":"12.21"},{"modelname":"结束时间","modeltype":"2","value":"12.27"},{"modelname":"目的地","modeltype":"1","value":"青海金银滩"},{"modelname":"出差说明","modeltype":"2","value":"指导培训"},{"modelname":"实际出差时间和结束时间段","modeltype":"2"},{"modelname":"报销明细单","modeltype":"8","tableObj":{"columns":[{"columnsName":"出发或事项发生时间","columnsType":"text"},{"columnsName":"出发地点","columnsType":"text"},{"columnsName":"到达或事项结束时间","columnsType":"text"},{"columnsName":"到达地点","columnsType":"text"},{"columnsName":"交通工具","columnsType":"text"},{"columnsName":"事项","columnsType":"text"},{"columnsName":"交通费","columnsType":"number"},{"columnsName":"住宿费","columnsType":"number"},{"columnsName":"招待费","columnsType":"number"},{"columnsName":"补贴","columnsType":"number"},{"columnsName":"票据数","columnsType":"text"},{"columnsName":"票据序号","columnsType":"text"},{"columnsName":"备注","columnsType":"text"}],"rows":[]},"tbodyArray":[],"tableTotalArr":["","","","","","","","","","","","",""]},{"modelname":"报销总额（小写）","modeltype":"1","tableObj":{"columns":[],"rows":[]}},{"modelname":"报销总额（大写）","modeltype":"1","tableObj":{"columns":[],"rows":[]}},{"modelname":"超支金额","modeltype":"1","tableObj":{"columns":[],"rows":[]}},{"modelname":"应报金额","modeltype":"1","tableObj":{"columns":[],"rows":[]}},{"modelname":"调整金额","modeltype":"8","tableObj":{"columns":[{"columnsName":"交通费","columnsType":"text"},{"columnsName":"住宿费","columnsType":"text"},{"columnsName":"招待费","columnsType":"text"},{"columnsName":"补贴","columnsType":"text"}],"rows":["调整","实报金额"]},"tbodyArray":[[{"columnsName":"交通费","rowsName":"调整","columnsType":"text","content":""},{"columnsName":"住宿费","rowsName":"调整","columnsType":"text","content":""},{"columnsName":"招待费","rowsName":"调整","columnsType":"text","content":""},{"columnsName":"补贴","rowsName":"调整","columnsType":"text","content":""}],[{"columnsName":"交通费","rowsName":"实报金额","columnsType":"text","content":""},{"columnsName":"住宿费","rowsName":"实报金额","columnsType":"text","content":""},{"columnsName":"招待费","rowsName":"实报金额","columnsType":"text","content":""},{"columnsName":"补贴","rowsName":"实报金额","columnsType":"text","content":""}]],"tableTotalArr":["","","",""]},{"modelname":"备注","modeltype":"2","tableObj":{"columns":[],"rows":[]}},{"modelname":"附件","modeltype":"4","tableObj":{"columns":[],"rows":[]},"fileNameArr":[],"attachfileArr":[],"value":"[]"},{"modelname":"附单据","modeltype":"4","tableObj":{"columns":[],"rows":[]},"fileNameArr":[],"attachfileArr":[]}]`
+	str := `[
+	{"modelname":"所在公司","modeltype":"5","value":"中国航天科技九院"},
+	{"modelname":"报销部门","modeltype":"1","value":"财务部"},
+	{"modelname":"报销人","modeltype":"1","value":"钱伟长"},
+	{"modelname":"职务","modeltype":"1","value":"技术总领导"},
+	{"modelname":"项目名称","modeltype":"1","value":"航天科技人员培训"},
+	{"modelname":"出差时间","modeltype":"2","value":"12.21"},
+	{"modelname":"结束时间","modeltype":"2","value":"12.27"},
+	{"modelname":"目的地","modeltype":"1","value":"青海金银滩"},
+	{"modelname":"出差说明","modeltype":"2","value":"指导培训"},
+	{"modelname":"实际出差时间和结束时间段","modeltype":"2"},
+	{
+		"modelname":"报销明细单",
+		"modeltype":"8",
+		"tableObj":{
+			"columns":[
+				{"columnsName":"出发时间","columnsType":"text"},
+				{"columnsName":"出发地点","columnsType":"text"},
+				{"columnsName":"到达时间","columnsType":"text"},
+				{"columnsName":"到达地点","columnsType":"text"},
+				{"columnsName":"交通工具","columnsType":"text"},
+				{"columnsName":"事项","columnsType":"text"},
+				{"columnsName":"交通费","columnsType":"number"},
+				{"columnsName":"住宿费","columnsType":"number"},
+				{"columnsName":"招待费","columnsType":"number"},
+				{"columnsName":"补贴","columnsType":"number"},
+				{"columnsName":"票据数","columnsType":"text"},
+				{"columnsName":"票据序号","columnsType":"text"},
+				{"columnsName":"备注","columnsType":"text"}
+			],
+			"rows":[]
+		},
+		"tbodyArray":[],
+		"tableTotalArr":["","","","","","","","","","","","",""]
+	},
+	{"modelname":"报销总额（小写）", "modeltype":"1","value":""},
+	{"modelname":"报销总额（大写）","modeltype":"1","tableObj":{"columns":[],"rows":[]}},
+	{"modelname":"超支金额","modeltype":"1","value":""},
+	{"modelname":"应报金额","modeltype":"1","value":""},
+	{
+		"modelname":"调整金额",
+		"modeltype":"8",
+		"tableObj":{
+			"columns":[
+				{"columnsName":"交通费","columnsType":"text"},
+				{"columnsName":"住宿费","columnsType":"text"},
+				{"columnsName":"招待费","columnsType":"text"},
+				{"columnsName":"补贴","columnsType":"text"}
+			],
+			"rows":["调整","实报金额"]
+		},
+		"tbodyArray":[
+			[
+				{"columnsName":"交通费","rowsName":"调整"},
+				{"columnsName":"住宿费","rowsName":"调整"},
+				{"columnsName":"招待费","rowsName":"调整"},
+				{"columnsName":"补贴","rowsName":"调整"}
+			],
+			[
+				{"columnsName":"交通费","rowsName":"实报金额"},
+				{"columnsName":"住宿费","rowsName":"实报金额"},
+				{"columnsName":"招待费","rowsName":"实报金额"},
+				{"columnsName":"补贴","rowsName":"实报金额"}
+			]
+		],
+		"tableTotalArr":["","","",""]
+	},
+	{"modelname":"备注","modeltype":"2", "value":""},
+	{"modelname":"附件","modeltype":"4", "fileNameArr":[],"attachfileArr":[],"value":"[]"},
+	{"modelname":"附单据","modeltype":"4","fileNameArr":[],"attachfileArr":[]}
+]`
+
 	json.Unmarshal([]byte(str), &templates)
 
 	for _, template := range templates {
