@@ -32,7 +32,7 @@ import (
 func main() {
 
 	pdf := gopdf.GoPdf{}
-	pdf.Start(gopdf.Config{ PageSize: gopdf.Rect{W: 595.28, H: 841.89}}) //595.28, 841.89 = A4
+	pdf.Start(gopdf.Config{ PageSize: gopdf.PageSizeA4 })  
 	pdf.AddPage()
 	err := pdf.AddTTFFont("wts11", "../ttf/wts11.ttf")
 	if err != nil {
@@ -64,7 +64,7 @@ import (
 
 func main() {
 	pdf := gopdf.GoPdf{}
-	pdf.Start(gopdf.Config{PageSize: gopdf.Rect{W: 595.28, H: 841.89}}) //595.28, 841.89 = A4
+	pdf.Start(gopdf.Config{PageSize: gopdf.PageSizeA4 })  
 	pdf.AddPage()
 	var err error
 	err = pdf.AddTTFFont("loma", "../ttf/Loma.ttf")
@@ -101,7 +101,7 @@ import (
 
 func main()  {
 	pdf := gopdf.GoPdf{}
-	pdf.Start(gopdf.Config{ PageSize: gopdf.Rect{W: 595.28, H: 841.89}}) //595.28, 841.89 = A4
+	pdf.Start(gopdf.Config{ PageSize: gopdf.PageSizeA4 }) //595.28, 841.89 = A4
 	pdf.AddPage()
 	err := pdf.AddTTFFont("times", "./test/res/times.ttf")
 	if err != nil {
@@ -149,6 +149,15 @@ pdf.SetLineWidth(1)
 pdf.Oval(100, 200, 500, 500)
 ```
 
+### Rotation text or image
+```go
+pdf.SetX(100)
+pdf.SetY(100)
+pdf.Rotate(270.0, 100.0, 100.0)
+pdf.Text("Hello...")
+pdf.RotateReset() //reset
+```
+
 ### Password protection
 ```go
 package main
@@ -164,7 +173,7 @@ func main() {
 
 	pdf := gopdf.GoPdf{}
 	pdf.Start(gopdf.Config{
-		PageSize: gopdf.Rect{W: 595.28, H: 841.89}, //595.28, 841.89 = A4
+		PageSize: gopdf.PageSizeA4, //595.28, 841.89 = A4
 		Protection: gopdf.PDFProtectionConfig{
 			UseProtection: true,
 			Permissions: gopdf.PermissionsPrint | gopdf.PermissionsCopy | gopdf.PermissionsModify,
@@ -179,5 +188,7 @@ func main() {
 }
 
 ```
+  
+
   
 visit https://github.com/oneplus1000/gopdfsample for more samples.

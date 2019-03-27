@@ -197,7 +197,7 @@ func (convert *Converter) NewPage(line string, elements []string) {
 // 设置PDF文件基本信息(单位,页面大小)
 func (convert *Converter) Start(w float64, h float64) {
 	convert.pdf.Start(gopdf.Config{
-		Unit:     "pt",
+		Unit:     gopdf.Unit_PT,
 		PageSize: gopdf.Rect{W: w, H: h},
 	}) // 595.28, 841.89 = A4
 }
