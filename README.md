@@ -21,3 +21,6 @@ gopdf 是一个生成PDF文档的 Golang 库.
 go get -u github.com/tiechui1994/gopdf
 ```
 
+案例: [案例代码](./example/complex_report_test.go)
+
+![](./example/pictures/example.png)
