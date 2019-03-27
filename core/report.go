@@ -113,14 +113,18 @@ func (report *Report) LoadCellsFromText(filepath string) error {
 // 转换, 内容 -> PDF文件
 func (report *Report) execute(exec bool) {
 	if exec {
+		report.ExecutePageHeader() // 首页的页眉
+
 		report.pageNo = 1
 		report.currX, report.currY = report.GetPageStartXY()
-
 		report.addAtomicCell("v|PAGE|" + strconv.Itoa(report.pageNo))
 		report.ExecuteDetail()
 
 		report.pagination() // 分页
+
+		report.ExecutePageFooter() // 最后一页的页脚
 	}
+
 	report.converter.Execute()
 }
 
@@ -156,6 +160,7 @@ func (report *Report) pagination() {
 	for _, line := range lines {
 		cells = append(cells, line)
 	}
+
 	report.converter.SetAutomicCells(cells)
 }
 
@@ -208,6 +213,7 @@ func (report *Report) AddNewPage(resetpageNo bool) {
 
 	report.addAtomicCell("v|PAGE|" + strconv.Itoa(report.pageNo))
 	report.SetXY(report.GetPageStartXY())
+
 	report.ExecutePageHeader()
 }
 
@@ -234,7 +240,8 @@ func (report *Report) ExecutePageHeader() {
 	}
 
 	curX, curY := report.GetXY()
-	report.currX, report.currY = report.GetPageStartXY()
+	report.currY = 0
+	report.currX = report.config.startX / report.unit
 	h := report.executors[Header]
 	if h != nil {
 		(*h)(report)
@@ -445,6 +452,21 @@ func (report *Report) Oval(x1 float64, y1 float64, x2 float64, y2 float64) {
 }
 
 // 设置当前的字体颜色, 线条颜色
+func (report *Report) TextDefaultColor() {
+	report.addAtomicCell("TC|" + strconv.Itoa(1) + "|" + strconv.Itoa(1) +
+		"|" + strconv.Itoa(1))
+}
+
+func (report *Report) LineDefaultColor() {
+	report.addAtomicCell("LC|" + strconv.Itoa(1) + "|" + strconv.Itoa(1) +
+		"|" + strconv.Itoa(1))
+}
+
+func (report *Report) FillDefaultColor() {
+	report.addAtomicCell("FC|" + strconv.Itoa(255) + "|" + strconv.Itoa(255) +
+		"|" + strconv.Itoa(255))
+}
+
 func (report *Report) TextColor(red int, green int, blue int) {
 	report.addAtomicCell("TC|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) +
 		"|" + strconv.Itoa(blue))

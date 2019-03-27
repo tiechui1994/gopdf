@@ -35,8 +35,12 @@ func ComplexReport() {
 	}
 	r.SetFonts([]*core.FontMap{&font1, &font2})
 	r.SetPage("A4", "mm", "P")
+	r.FisrtPageNeedHeader = true
+	r.FisrtPageNeedFooter = true
 
 	r.RegisterExecutor(core.Executor(ComplexReportExecutor), core.Detail)
+	r.RegisterExecutor(core.Executor(ComplexReportFooterExecutor), core.Footer)
+	r.RegisterExecutor(core.Executor(ComplexReportHeaderExecutor), core.Header)
 
 	r.Execute(fmt.Sprintf("complex_report_test.pdf"))
 	r.SaveAtomicCellText("complex_report_test.txt")
@@ -127,6 +131,23 @@ func ComplexReportExecutor(report *core.Report) {
 		comment.SetFont(textFont).SetContent(cellStr).GenerateAtomicCellWithAutoPage()
 		report.SetMargin(0, 1*unit)
 	}
+}
+
+func ComplexReportFooterExecutor(report *core.Report) {
+	content := fmt.Sprintf("第 %v 页", report.GetCurrentPageNo())
+	footer := gopdf.NewFrame(10, 0, report)
+	footer.SetFont(textFont)
+	footer.SetBorder(gopdf.Scope{Top: 10})
+	footer.SetHorizontalCentered().SetVerticalCentered().SetContent(content).GenerateAtomicCell()
+}
+
+func ComplexReportHeaderExecutor(report *core.Report) {
+	content := "github.com/tiechui1994/gopdf"
+	footer := gopdf.NewFrame(10, 0, report)
+	footer.SetFont(textFont)
+	footer.SetFontColor("255,0,0")
+	footer.SetBorder(gopdf.Scope{Top: 10})
+	footer.SetHorizontalCentered().SetVerticalCentered().SetContent(content).GenerateAtomicCell()
 }
 
 type ExportInfo struct {

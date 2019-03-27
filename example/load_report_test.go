@@ -2,9 +2,10 @@ package example
 
 import (
 	"fmt"
-	"github.com/tiechui1994/gopdf/core"
 	"path/filepath"
 	"testing"
+
+	"github.com/tiechui1994/gopdf/core"
 )
 
 func LoadReport() {

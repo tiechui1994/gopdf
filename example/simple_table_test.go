@@ -281,16 +281,8 @@ func SimpleTableReportExecutor(report *core.Report) {
 
 			table.GenerateAtomicCell()
 			report.SetMargin(0, 1*unit)
-
-			report.AddNewPage(false)
 		}
 	}
-}
-
-func SimleTableReportFooterExecutor(report *core.Report) {
-	content := fmt.Sprintf("第 %v 页", report.GetCurrentPageNo())
-	footer := gopdf.NewFrame(20, 5, report)
-	footer.SetFont(textFont).SetHorizontalCentered().SetContent(content).GenerateAtomicCell()
 }
 
 func SimpleTableReport() {
@@ -307,7 +299,6 @@ func SimpleTableReport() {
 	r.SetPage("A4", "mm", "P")
 
 	r.RegisterExecutor(core.Executor(SimpleTableReportExecutor), core.Detail)
-	r.RegisterExecutor(core.Executor(SimleTableReportFooterExecutor), core.Footer)
 	r.Execute("simple_table_test.pdf")
 	r.SaveAtomicCellText("simple_table_test.txt")
 }

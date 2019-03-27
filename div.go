@@ -295,18 +295,25 @@ func (div *Div) GenerateAtomicCellWithAutoPage() error {
 		}
 
 		// todo: 不需要换页, 只需要增加数据
-
 		if !isEmpty(div.fontColor) {
 			div.pdf.TextColor(getColorRGB(div.fontColor))
 		}
-
 		if !isEmpty(div.backColor) {
 			x1 := x - div.border.Left
 			y1 := y
 			div.pdf.GrayColor(x1, y1, div.width, div.lineHeight+div.lineSpace, div.backColor)
 		}
+
 		div.pdf.Font(div.font.Family, div.font.Size, div.font.Style) // 添加设置
 		div.pdf.Cell(x, y, div.contents[i])
+
+		// todo: 颜色恢复
+		if !isEmpty(div.fontColor) {
+			div.pdf.TextDefaultColor()
+		}
+		if !isEmpty(div.backColor) {
+			div.pdf.FillDefaultColor()
+		}
 
 		if div.horizontalCentered || div.rightAlign {
 			div.border = hOriginBorder
@@ -318,11 +325,9 @@ func (div *Div) GenerateAtomicCellWithAutoPage() error {
 		}
 	}
 
-	if !isEmpty(div.fontColor) {
-		div.pdf.TextColor(getColorRGB(div.fontColor))
-	}
 	x, _ = div.pdf.GetPageStartXY()
 	div.pdf.SetXY(x, y+div.lineHeight+div.margin.Bottom) // 定格最终的位置
+
 	return nil
 }
 
@@ -384,7 +389,6 @@ func (div *Div) GenerateAtomicCell() error {
 		if !isEmpty(div.fontColor) {
 			div.pdf.TextColor(getColorRGB(div.fontColor))
 		}
-
 		if !isEmpty(div.backColor) {
 			x1 := x - div.border.Left
 			y1 := y - div.border.Top
@@ -400,13 +404,25 @@ func (div *Div) GenerateAtomicCell() error {
 			}
 			div.pdf.GrayColor(x1, y1, div.width, h, div.backColor)
 		}
+
 		div.pdf.Font(div.font.Family, div.font.Size, div.font.Style) // 添加设置
 		div.pdf.Cell(x, y, div.contents[i])
+
+		// todo:颜色恢复
+		if !isEmpty(div.fontColor) {
+			div.pdf.TextDefaultColor()
+		}
+		if !isEmpty(div.backColor) {
+			div.pdf.FillDefaultColor()
+		}
 
 		if div.horizontalCentered || div.rightAlign {
 			div.border = hOriginBorder
 		}
 	}
+
+	x, _ = div.pdf.GetPageStartXY()
+	div.pdf.SetXY(x, y+div.lineHeight+div.margin.Bottom) // 定格最终的位置
 
 	return nil
 }

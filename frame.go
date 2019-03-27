@@ -177,6 +177,12 @@ func (frame *Frame) SetFont(font Font) *Frame {
 	return frame
 }
 
+func (frame *Frame) SetFontColor(color string) *Frame {
+	checkColor(color)
+	frame.fontColor = color
+	return frame
+}
+
 func (frame *Frame) SetContent(content string) *Frame {
 	convertStr := strings.Replace(content, "\t", "    ", -1)
 
@@ -326,7 +332,6 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 		if !isEmpty(frame.fontColor) {
 			frame.pdf.TextColor(getColorRGB(frame.fontColor))
 		}
-
 		if !isEmpty(frame.backColor) {
 			x1 := x - frame.border.Left
 			y1 := y
@@ -335,6 +340,14 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 
 		frame.pdf.Font(frame.font.Family, frame.font.Size, frame.font.Style) // 添加设置
 		frame.pdf.Cell(x, y, frame.contents[i])
+
+		// todo: 颜色恢复
+		if !isEmpty(frame.fontColor) {
+			frame.pdf.TextDefaultColor()
+		}
+		if !isEmpty(frame.backColor) {
+			frame.pdf.FillDefaultColor()
+		}
 
 		if frame.horizontalCentered || frame.rightAlign {
 			frame.border = hOriginBorder
@@ -366,9 +379,6 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 		}
 	}
 
-	if !isEmpty(frame.fontColor) {
-		frame.pdf.TextColor(getColorRGB(frame.fontColor))
-	}
 	x, _ = frame.pdf.GetPageStartXY()
 	frame.pdf.SetXY(x, y+frame.lineHeight+frame.margin.Bottom) // 定格最终的位置
 
@@ -440,7 +450,6 @@ func (frame *Frame) GenerateAtomicCell() error {
 		if !isEmpty(frame.fontColor) {
 			frame.pdf.TextColor(getColorRGB(frame.fontColor))
 		}
-
 		if !isEmpty(frame.backColor) {
 			x1 := x - frame.border.Left
 			y1 := y
@@ -449,6 +458,14 @@ func (frame *Frame) GenerateAtomicCell() error {
 
 		frame.pdf.Font(frame.font.Family, frame.font.Size, frame.font.Style) // 添加设置
 		frame.pdf.Cell(x, y, frame.contents[i])
+
+		// todo: 颜色恢复
+		if !isEmpty(frame.fontColor) {
+			frame.pdf.TextDefaultColor()
+		}
+		if !isEmpty(frame.backColor) {
+			frame.pdf.FillDefaultColor()
+		}
 
 		if frame.horizontalCentered || frame.rightAlign {
 			frame.border = hOriginBorder
@@ -480,9 +497,6 @@ func (frame *Frame) GenerateAtomicCell() error {
 		}
 	}
 
-	if !isEmpty(frame.fontColor) {
-		frame.pdf.TextColor(getColorRGB(frame.fontColor))
-	}
 	x, _ = frame.pdf.GetPageStartXY()
 	frame.pdf.SetXY(x, y+frame.lineHeight+frame.margin.Bottom) // 定格最终的位置
 
