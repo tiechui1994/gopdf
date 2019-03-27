@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/tiechui1994/gopdf/core"
+	"github.com/tiechui1994/gopdf/util"
 )
 
 type Div struct {
@@ -17,16 +18,16 @@ type Div struct {
 	lineSpace float64
 
 	// div的位置调整和内容调整
-	margin Scope
-	border Scope
+	margin core.Scope
+	border core.Scope
 
 	// 内容
 	contents []string
 
 	// 颜色控制
-	font      Font
+	font      core.Font
 	fontColor string
-	backColor float64
+	backColor string
 
 	// 辅助作用
 	isFirstSetHeight bool
@@ -95,8 +96,8 @@ func (div *Div) SetLineHeight(lineHeight float64) *Div {
 
 // 注: 当div使用为tablecell的时候, 禁止设置margin
 // margin的Right无法生效,而且Bottom必须大于0
-func (div *Div) SetMarign(marign Scope) *Div {
-	replaceMarign(&marign)
+func (div *Div) SetMarign(marign core.Scope) *Div {
+	marign.ReplaceMarign()
 	div.margin = marign
 
 	// 重新设置div的宽度
@@ -110,13 +111,19 @@ func (div *Div) SetMarign(marign Scope) *Div {
 }
 
 func (div *Div) SetFontColor(color string) *Div {
-	checkColor(color)
+	util.CheckColor(color)
 	div.fontColor = color
 	return div
 }
 
+func (div *Div) SetBackColor(color string) *Div {
+	util.CheckColor(color)
+	div.backColor = color
+	return div
+}
+
 // 注册字体
-func (div *Div) SetFont(font Font) *Div {
+func (div *Div) SetFont(font core.Font) *Div {
 	div.font = font
 	// 注册, 启动
 	div.pdf.Font(font.Family, font.Size, font.Style)
@@ -124,8 +131,15 @@ func (div *Div) SetFont(font Font) *Div {
 	return div
 }
 
-func (div *Div) SetBorder(border Scope) {
-	replaceBorder(&border)
+func (div *Div) SetFontWithColor(font core.Font, color string) *Div {
+	div.SetFont(font)
+	div.SetFontColor(color)
+
+	return div
+}
+
+func (div *Div) SetBorder(border core.Scope) {
+	border.ReplaceBorder()
 	div.border = border
 }
 
@@ -160,7 +174,7 @@ func (div *Div) SetContent(s string) *Div {
 	)
 
 	// 必须检查字体
-	if isEmpty(div.font) {
+	if util.IsEmpty(div.font) {
 		panic("there no avliable font")
 	}
 
@@ -213,7 +227,7 @@ func (div *Div) SetContent(s string) *Div {
 }
 
 // 同步操作, 只能操作一次, 操作要小心使用
-func (div *Div) setHeight(height float64) {
+func (div *Div) SetHeight(height float64) {
 	if div.isFirstSetHeight {
 		div.height = height
 		div.isFirstSetHeight = false
@@ -227,7 +241,7 @@ func (div *Div) GetHeight() float64 {
 	return div.height
 }
 
-func (div *Div) clearContents() {
+func (div *Div) ClearContents() {
 	div.contents = nil
 }
 
@@ -240,14 +254,14 @@ func (div *Div) GenerateAtomicCellWithAutoPage() error {
 		pageEndY                   = div.pdf.GetPageEndY()
 	)
 
-	if isEmpty(div.font) {
+	if util.IsEmpty(div.font) {
 		panic("no font")
 	}
 
 	for i := 0; i < len(div.contents); i++ {
 		var (
-			hOriginBorder Scope
-			vOriginBorder Scope
+			hOriginBorder core.Scope
+			vOriginBorder core.Scope
 		)
 		// todo: 水平居中, 只是对当前的行设置新的 Border
 		if div.horizontalCentered {
@@ -256,7 +270,7 @@ func (div *Div) GenerateAtomicCellWithAutoPage() error {
 			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
 			if width < div.width {
 				m := (div.width - width) / 2
-				div.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}
+				div.border = core.NewScope(m, hOriginBorder.Top, 0, hOriginBorder.Right)
 			}
 		}
 
@@ -266,7 +280,7 @@ func (div *Div) GenerateAtomicCellWithAutoPage() error {
 			hOriginBorder = div.border
 			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
 			m := div.width - width
-			div.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}
+			div.border = core.NewScope(m, hOriginBorder.Top, 0, hOriginBorder.Right)
 		}
 
 		// todo: 垂直居中, 只能操作一次
@@ -278,7 +292,7 @@ func (div *Div) GenerateAtomicCellWithAutoPage() error {
 			height := (length-1)*div.lineSpace + length*div.lineHeight + div.border.Top
 			if height < div.height {
 				m := (div.height - height) / 2
-				div.border = Scope{vOriginBorder.Left, m, vOriginBorder.Right, 0}
+				div.border = core.NewScope(vOriginBorder.Left, m, vOriginBorder.Right, 0)
 			}
 		}
 
@@ -287,8 +301,8 @@ func (div *Div) GenerateAtomicCellWithAutoPage() error {
 		// todo: 换页的依据
 		if (y < pageEndY || y >= pageEndY) && y+div.lineHeight > pageEndY {
 			var newX, newY float64 // 新页面的X,Y位置
-			div.SetMarign(Scope{div.margin.Left, 0, div.margin.Right, 0})
-			div.SetBorder(Scope{div.border.Left, 0, div.border.Right, 0})
+			div.SetMarign(core.NewScope(div.margin.Left, 0, div.margin.Right, 0))
+			div.SetBorder(core.NewScope(div.border.Left, 0, div.border.Right, 0))
 			div.contents = div.contents[i:]
 			_, newY = div.pdf.GetPageStartXY()
 			if len(div.contents) > 0 {
@@ -303,23 +317,24 @@ func (div *Div) GenerateAtomicCellWithAutoPage() error {
 		}
 
 		// todo: 不需要换页, 只需要增加数据
-		if !isEmpty(div.fontColor) {
-			div.pdf.TextColor(getColorRGB(div.fontColor))
+		if !util.IsEmpty(div.fontColor) {
+			div.pdf.TextColor(util.GetColorRGB(div.fontColor))
 		}
-		if !isEmpty(div.backColor) {
+		if !util.IsEmpty(div.backColor) {
 			x1 := x - div.border.Left
 			y1 := y
-			div.pdf.GrayColor(x1, y1, div.width, div.lineHeight+div.lineSpace, div.backColor)
+			//div.pdf.GrayColor(x1, y1, div.width, div.lineHeight+div.lineSpace, div.backColor)
+			div.pdf.BackgroundColor(x1, y1, div.width, div.lineHeight+div.lineSpace, div.backColor)
 		}
 
 		div.pdf.Font(div.font.Family, div.font.Size, div.font.Style) // 添加设置
 		div.pdf.Cell(x, y, div.contents[i])
 
 		// todo: 颜色恢复
-		if !isEmpty(div.fontColor) {
+		if !util.IsEmpty(div.fontColor) {
 			div.pdf.TextDefaultColor()
 		}
-		if !isEmpty(div.backColor) {
+		if !util.IsEmpty(div.backColor) {
 			div.pdf.FillDefaultColor()
 		}
 
@@ -346,13 +361,13 @@ func (div *Div) GenerateAtomicCell() error {
 		sx, sy   = div.pdf.GetXY()
 		pageEndY = div.pdf.GetPageEndY()
 	)
-	if isEmpty(div.font) {
+	if util.IsEmpty(div.font) {
 		panic("no font")
 	}
 
 	for i := 0; i < len(div.contents); i++ {
 		var (
-			hOriginBorder Scope
+			hOriginBorder core.Scope
 		)
 		// todo: 水平居中, 只是对当前的行设置新的 Border
 		if div.horizontalCentered {
@@ -361,7 +376,7 @@ func (div *Div) GenerateAtomicCell() error {
 			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
 			if width < div.width {
 				m := (div.width - width) / 2
-				div.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}
+				div.border = core.NewScope(m, hOriginBorder.Top, 0, hOriginBorder.Right)
 			}
 		}
 
@@ -371,7 +386,7 @@ func (div *Div) GenerateAtomicCell() error {
 			hOriginBorder = div.border
 			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
 			m := div.width - width
-			div.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}
+			div.border = core.NewScope(m, hOriginBorder.Top, 0, hOriginBorder.Right)
 		}
 
 		x, y = div.getContentPosition(sx, sy, i)
@@ -383,21 +398,22 @@ func (div *Div) GenerateAtomicCell() error {
 		if (y < pageEndY || y >= pageEndY) && y+div.lineHeight >= pageEndY {
 			div.contents = div.contents[i:]
 			div.replaceHeight()
-			if !isEmpty(div.backColor) {
+			if !util.IsEmpty(div.backColor) {
 				x1 := x - div.border.Left
 				y1 := y - div.border.Top
 				h := pageEndY - y1
-				div.pdf.GrayColor(x1, y1, div.width, h, div.backColor)
+				//div.pdf.GrayColor(x1, y1, div.width, h, div.backColor)
+				div.pdf.BackgroundColor(x1, y1, div.width, h, div.backColor)
 			}
 			div.margin.Top = 0
 			return nil
 		}
 
 		// 当前页
-		if !isEmpty(div.fontColor) {
-			div.pdf.TextColor(getColorRGB(div.fontColor))
+		if !util.IsEmpty(div.fontColor) {
+			div.pdf.TextColor(util.GetColorRGB(div.fontColor))
 		}
-		if !isEmpty(div.backColor) {
+		if !util.IsEmpty(div.backColor) {
 			x1 := x - div.border.Left
 			y1 := y - div.border.Top
 			h := div.lineHeight + div.lineSpace
@@ -410,17 +426,18 @@ func (div *Div) GenerateAtomicCell() error {
 				originHeight := float64(len(div.contents))*div.lineHeight + div.border.Top + float64(len(div.contents)-1)*div.lineSpace
 				h += div.height - originHeight
 			}
-			div.pdf.GrayColor(x1, y1, div.width, h, div.backColor)
+			//div.pdf.GrayColor(x1, y1, div.width, h, div.backColor)
+			div.pdf.BackgroundColor(x1, y1, div.width, h, div.backColor)
 		}
 
 		div.pdf.Font(div.font.Family, div.font.Size, div.font.Style) // 添加设置
 		div.pdf.Cell(x, y, div.contents[i])
 
 		// todo:颜色恢复
-		if !isEmpty(div.fontColor) {
+		if !util.IsEmpty(div.fontColor) {
 			div.pdf.TextDefaultColor()
 		}
-		if !isEmpty(div.backColor) {
+		if !util.IsEmpty(div.backColor) {
 			div.pdf.FillDefaultColor()
 		}
 

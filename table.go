@@ -2,6 +2,7 @@ package gopdf
 
 import (
 	"github.com/tiechui1994/gopdf/core"
+	"github.com/tiechui1994/gopdf/util"
 )
 
 // 构建表格
@@ -23,7 +24,7 @@ type Table struct {
 	lineSpace  float64
 
 	// table的位置调整
-	margin Scope
+	margin core.Scope
 
 	cells [][]*TableCell
 
@@ -95,8 +96,8 @@ func (table *Table) SetLineHeight(lineHeight float64) {
 }
 
 // 设置表的外
-func (table *Table) SetMargin(margin Scope) {
-	replaceMarign(&margin)
+func (table *Table) SetMargin(margin core.Scope) {
+	margin.ReplaceMarign()
 	table.margin = margin
 }
 
@@ -195,7 +196,7 @@ func (table *Table) replaceCellHeight() {
 		for i := 0; i < table.rows; i++ {
 			for j := 0; j < table.cols; j++ {
 				if cells[i][j] != nil && cells[i][j].element != nil {
-					cells[i][j].element.setHeight(cells[i][j].height)
+					cells[i][j].element.SetHeight(cells[i][j].height)
 				}
 			}
 		}
@@ -338,7 +339,7 @@ func (table *Table) GenerateAtomicCell() error {
 				// todo: 只能说明当前的cell已经写完,但是没有更新height, div的逻辑本身如此, 这里需要手动同步一下div当中的contents
 				if cellOriginHeight == cell.element.GetHeight() {
 					cell.height = 0
-					cell.element.clearContents()
+					cell.element.ClearContents()
 				} else {
 					cell.height = cell.element.GetHeight() // 将修改后的高度同步到本地的Cell当中, element -> table
 				}
@@ -448,7 +449,7 @@ func (table *Table) getNextRowAndCol(row, col int) (nexRow int, nextCol int) {
 		}
 
 		for ; j < table.cols; j++ {
-			if isEmpty(table.cells[i][j]) {
+			if util.IsEmpty(table.cells[i][j]) {
 				return i, j
 			}
 		}
@@ -539,14 +540,14 @@ type TableCell struct {
 	rowspan, colspan int
 
 	// 单元格内容
-	element    Element
+	element    core.Element
 	selfHeight float64 // 当前cell自身高度, 辅助计算
 	height     float64 // 当rowspan=1时, height = selfHeight
 	table      *Table
 }
 
 // Element: 创建,并且设置了字体, 偏移量
-func (cell *TableCell) SetElement(e Element) *TableCell {
+func (cell *TableCell) SetElement(e core.Element) *TableCell {
 	cell.element = e
 	cell.height = cell.element.GetHeight()
 	if cell.colspan+cell.rowspan == 2 {

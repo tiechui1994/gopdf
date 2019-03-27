@@ -18,9 +18,9 @@ const (
 )
 
 var (
-	largeFont = gopdf.Font{Family: FONT_MY, Size: 15}
-	headFont  = gopdf.Font{Family: FONT_MY, Size: 12}
-	textFont  = gopdf.Font{Family: FONT_MY, Size: 10}
+	largeFont = core.Font{Family: FONT_MY, Size: 15}
+	headFont  = core.Font{Family: FONT_MY, Size: 12}
+	textFont  = core.Font{Family: FONT_MY, Size: 10}
 )
 
 func ComplexReport() {
@@ -64,7 +64,7 @@ func ComplexReportExecutor(report *core.Report) {
 
 	dir, _ := filepath.Abs("pictures")
 	qrcodeFile := fmt.Sprintf("%v/qrcode.png", dir)
-	line := gopdf.NewHLine(report).SetMargin(gopdf.Scope{Top: 1 * unit, Bottom: 1 * unit}).SetWidth(0.09)
+	line := gopdf.NewHLine(report).SetMargin(core.Scope{Top: 1 * unit, Bottom: 1 * unit}).SetWidth(0.09)
 	// todo: 任务详情
 	div := gopdf.NewDivWithWidth(20*unit, lineHight, lineSpace, report)
 	div.SetFont(largeFont)
@@ -73,7 +73,7 @@ func ComplexReportExecutor(report *core.Report) {
 
 	// 二维码
 	im := gopdf.NewImageWithWidthAndHeight(qrcodeFile, 10*unit, 10*unit, report)
-	im.SetMargin(gopdf.Scope{Left: 40 * unit, Top: -6 * unit})
+	im.SetMargin(core.Scope{Left: 40 * unit, Top: -6 * unit})
 	im.GenerateAtomicCell()
 
 	// 基本信息
@@ -83,7 +83,7 @@ func ComplexReportExecutor(report *core.Report) {
 	baseInfoDiv.SetContent("报告概要").GenerateAtomicCellWithAutoPage()
 
 	baseInfo := gopdf.NewDivWithWidth(80*unit, lineHight, lineSpace, report)
-	baseInfo.SetMarign(gopdf.Scope{Left: 4 * unit, Top: 1 * unit})
+	baseInfo.SetMarign(core.Scope{Left: 4 * unit, Top: 1 * unit})
 	baseInfo.SetFont(textFont).SetContent(fmt.Sprintf("任务: %s", data.JobName)).GenerateAtomicCellWithAutoPage()
 	baseInfo.CopyWithContent(fmt.Sprintf("创建人: %s", data.CreatUserName)).GenerateAtomicCellWithAutoPage()
 	baseInfo.CopyWithContent(fmt.Sprintf("状态: %s", data.Status)).GenerateAtomicCellWithAutoPage()
@@ -137,7 +137,7 @@ func ComplexReportFooterExecutor(report *core.Report) {
 	footer := gopdf.NewFrame(10, 0, report)
 	footer.SetFont(textFont)
 	footer.SetFontColor("60, 179, 113")
-	footer.SetBorder(gopdf.Scope{Top: 10})
+	footer.SetBorder(core.Scope{Top: 10})
 	footer.SetHorizontalCentered().SetVerticalCentered().SetContent(content).GenerateAtomicCell()
 }
 
@@ -146,7 +146,7 @@ func ComplexReportHeaderExecutor(report *core.Report) {
 	footer := gopdf.NewFrame(10, 0, report)
 	footer.SetFont(textFont)
 	footer.SetFontColor("255,0,0")
-	footer.SetBorder(gopdf.Scope{Top: 10})
+	footer.SetBorder(core.Scope{Top: 10})
 	footer.SetHorizontalCentered().SetVerticalCentered().SetContent(content).GenerateAtomicCell()
 }
 

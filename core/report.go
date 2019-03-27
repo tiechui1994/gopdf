@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/tiechui1994/gopdf/util"
 )
 
 // 需要解决的问题: currY的控制权, 用户 -> 程序 -> 自动化操作
@@ -416,39 +418,39 @@ func (report *Report) Font(fontName string, size int, style string) {
 
 // 写入字符串内容
 func (report *Report) Cell(x float64, y float64, content string) {
-	report.addAtomicCell("C1|" + Ftoa(x) + "|" + Ftoa(y) + "|" + content)
+	report.addAtomicCell("C1|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + content)
 }
 func (report *Report) CellRight(x float64, y float64, w float64, content string) {
-	report.addAtomicCell("CR|" + Ftoa(x) + "|" + Ftoa(y) + "|" +
-		Ftoa(w) + "|" + content)
+	report.addAtomicCell("CR|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" +
+		util.Ftoa(w) + "|" + content)
 }
 
 // 划线
 func (report *Report) LineType(ltype string, width float64) {
 	report.linew = width
-	report.addAtomicCell("LT|" + ltype + "|" + Ftoa(width))
+	report.addAtomicCell("LT|" + ltype + "|" + util.Ftoa(width))
 }
 func (report *Report) Line(x1 float64, y1 float64, x2 float64, y2 float64) {
-	report.addAtomicCell("L|" + Ftoa(x1) + "|" + Ftoa(y1) + "|" + Ftoa(x2) +
-		"|" + Ftoa(y2))
+	report.addAtomicCell("L|" + util.Ftoa(x1) + "|" + util.Ftoa(y1) + "|" + util.Ftoa(x2) +
+		"|" + util.Ftoa(y2))
 }
 func (report *Report) LineH(x1 float64, y float64, x2 float64) {
 	adj := report.linew * 0.5
-	report.addAtomicCell("LH|" + Ftoa(x1) + "|" + Ftoa(y+adj) + "|" + Ftoa(x2))
+	report.addAtomicCell("LH|" + util.Ftoa(x1) + "|" + util.Ftoa(y+adj) + "|" + util.Ftoa(x2))
 }
 func (report *Report) LineV(x float64, y1 float64, y2 float64) {
 	adj := report.linew * 0.5
-	report.addAtomicCell("LV|" + Ftoa(x+adj) + "|" + Ftoa(y1) + "|" + Ftoa(y2))
+	report.addAtomicCell("LV|" + util.Ftoa(x+adj) + "|" + util.Ftoa(y1) + "|" + util.Ftoa(y2))
 }
 
 // 画特定的图形, 目前支持: 长方形, 椭圆两大类
 func (report *Report) Rect(x1 float64, y1 float64, x2 float64, y2 float64) {
-	report.addAtomicCell("R|" + Ftoa(x1) + "|" + Ftoa(y1) + "|" + Ftoa(x2) +
-		"|" + Ftoa(y2))
+	report.addAtomicCell("R|" + util.Ftoa(x1) + "|" + util.Ftoa(y1) + "|" + util.Ftoa(x2) +
+		"|" + util.Ftoa(y2))
 }
 func (report *Report) Oval(x1 float64, y1 float64, x2 float64, y2 float64) {
-	report.addAtomicCell("O|" + Ftoa(x1) + "|" + Ftoa(y1) + "|" + Ftoa(x2) +
-		"|" + Ftoa(y2))
+	report.addAtomicCell("O|" + util.Ftoa(x1) + "|" + util.Ftoa(y1) + "|" + util.Ftoa(x2) +
+		"|" + util.Ftoa(y2))
 }
 
 // 设置当前的字体颜色, 线条颜色
@@ -476,6 +478,13 @@ func (report *Report) LineColor(red int, green int, blue int) {
 		"|" + strconv.Itoa(blue))
 }
 
+func (report *Report) BackgroundColor(x, y, w, h float64, color string) {
+	red, green, blue := util.GetColorRGB(color)
+
+	report.addAtomicCell("BC|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + util.Ftoa(w) + "|" +
+		util.Ftoa(h) + "|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) + "|" + strconv.Itoa(blue))
+}
+
 func (report *Report) FillColor(red int, green int, blue int) {
 	report.addAtomicCell("FC|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) +
 		"|" + strconv.Itoa(blue))
@@ -493,16 +502,16 @@ func (report *Report) GrayColor(x, y float64, w, h float64, gray float64) {
 }
 
 func (report *Report) GrayFill(grayScale float64) {
-	report.addAtomicCell("GF|" + Ftoa(grayScale))
+	report.addAtomicCell("GF|" + util.Ftoa(grayScale))
 }
 func (report *Report) GrayStroke(grayScale float64) {
-	report.addAtomicCell("GS|" + Ftoa(grayScale))
+	report.addAtomicCell("GS|" + util.Ftoa(grayScale))
 }
 
 // 图片
 func (report *Report) Image(path string, x1 float64, y1 float64, x2 float64, y2 float64) {
-	report.addAtomicCell("I|" + path + "|" + Ftoa(x1) + "|" + Ftoa(y1) + "|" +
-		Ftoa(x2) + "|" + Ftoa(y2))
+	report.addAtomicCell("I|" + path + "|" + util.Ftoa(x1) + "|" + util.Ftoa(y1) + "|" +
+		util.Ftoa(x2) + "|" + util.Ftoa(y2))
 }
 
 // 添加变量

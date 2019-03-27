@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/tiechui1994/gopdf/core"
+	"github.com/tiechui1994/gopdf/util"
 )
 
 const (
@@ -17,7 +18,7 @@ const (
 // 边框
 type Frame struct {
 	pdf       *core.Report
-	font      Font
+	font      core.Font
 	frameType int // 边框类型
 
 	width, height float64
@@ -25,10 +26,10 @@ type Frame struct {
 	lineSpace     float64
 
 	fontColor string
-	backColor float64 // 灰度颜色, 0-1.0
+	backColor string // 灰度颜色, 0-1.0
 
-	margin Scope
-	border Scope
+	margin core.Scope
+	border core.Scope
 
 	contents           []string
 	horizontalCentered bool
@@ -96,8 +97,8 @@ func (frame *Frame) CopyWithContent(content string) *Frame {
 	return f
 }
 
-func (frame *Frame) SetMarign(margin Scope) *Frame {
-	replaceMarign(&margin)
+func (frame *Frame) SetMarign(margin core.Scope) *Frame {
+	margin.ReplaceMarign()
 	currX, _ := frame.pdf.GetXY()
 	endX := frame.pdf.GetPageEndX()
 
@@ -115,8 +116,8 @@ func (frame *Frame) SetMarign(margin Scope) *Frame {
 	return frame
 }
 
-func (frame *Frame) SetBorder(border Scope) *Frame {
-	replaceBorder(&border)
+func (frame *Frame) SetBorder(border core.Scope) *Frame {
+	border.ReplaceBorder()
 	currX, _ := frame.pdf.GetXY()
 	endX := frame.pdf.GetPageEndX()
 
@@ -168,7 +169,7 @@ func (frame *Frame) SetRightAlign() *Frame {
 	return frame
 }
 
-func (frame *Frame) SetFont(font Font) *Frame {
+func (frame *Frame) SetFont(font core.Font) *Frame {
 	frame.font = font
 	// 注册, 启动
 	frame.pdf.Font(font.Family, font.Size, font.Style)
@@ -178,7 +179,7 @@ func (frame *Frame) SetFont(font Font) *Frame {
 }
 
 func (frame *Frame) SetFontColor(color string) *Frame {
-	checkColor(color)
+	util.CheckColor(color)
 	frame.fontColor = color
 	return frame
 }
@@ -193,7 +194,7 @@ func (frame *Frame) SetContent(content string) *Frame {
 	)
 
 	// 必须检查字体
-	if isEmpty(frame.font) {
+	if util.IsEmpty(frame.font) {
 		panic("there no avliable font")
 	}
 
@@ -255,7 +256,7 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 		pageEndY                   = frame.pdf.GetPageEndY()
 	)
 
-	if isEmpty(frame.font) {
+	if util.IsEmpty(frame.font) {
 		panic("no font")
 	}
 
@@ -270,8 +271,8 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 
 	for i := 0; i < len(frame.contents); i++ {
 		var (
-			hOriginBorder Scope
-			vOriginBorder Scope
+			hOriginBorder core.Scope
+			vOriginBorder core.Scope
 		)
 		// todo: 水平居中, 只是对当前的行设置新的 Border
 		if frame.horizontalCentered {
@@ -280,7 +281,7 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 			width := frame.pdf.MeasureTextWidth(frame.contents[i]) / frame.pdf.GetUnit()
 			if width < frame.width {
 				m := (frame.width - width) / 2
-				frame.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}
+				frame.border = core.NewScope(m, hOriginBorder.Top, 0, hOriginBorder.Right)
 			}
 		}
 
@@ -290,7 +291,7 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 			hOriginBorder = frame.border
 			width := frame.pdf.MeasureTextWidth(frame.contents[i]) / frame.pdf.GetUnit()
 			m := frame.width - width
-			frame.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}
+			frame.border = core.NewScope(m, hOriginBorder.Top, 0, hOriginBorder.Right)
 		}
 
 		// todo: 垂直居中, 只能操作一次
@@ -302,7 +303,7 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 			height := (length-1)*frame.lineSpace + length*frame.lineHeight + frame.border.Top
 			if height < frame.height {
 				m := (frame.height - height) / 2
-				frame.border = Scope{vOriginBorder.Left, m, vOriginBorder.Right, 0}
+				frame.border = core.NewScope(vOriginBorder.Left, m, vOriginBorder.Right, 0)
 			}
 		}
 
@@ -311,8 +312,8 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 		// todo: 换页的依据
 		if (y < pageEndY || y >= pageEndY) && y+frame.lineHeight > pageEndY {
 			var newX, newY float64
-			frame.SetMarign(Scope{frame.margin.Left, 0, frame.margin.Right, 0})
-			frame.SetBorder(Scope{frame.border.Left, 0, frame.border.Right, 0})
+			frame.SetMarign(core.NewScope(frame.margin.Left, 0, frame.margin.Right, 0))
+			frame.SetBorder(core.NewScope(frame.border.Left, 0, frame.border.Right, 0))
 			frame.contents = frame.contents[i:]
 			frame.replaceHeight()
 
@@ -336,23 +337,24 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 		}
 
 		// todo: 不需要换页, 只需要增加数据
-		if !isEmpty(frame.fontColor) {
-			frame.pdf.TextColor(getColorRGB(frame.fontColor))
+		if !util.IsEmpty(frame.fontColor) {
+			frame.pdf.TextColor(util.GetColorRGB(frame.fontColor))
 		}
-		if !isEmpty(frame.backColor) {
+		if !util.IsEmpty(frame.backColor) {
 			x1 := x - frame.border.Left
 			y1 := y
-			frame.pdf.GrayColor(x1, y1, frame.width, frame.lineHeight+frame.lineSpace, frame.backColor)
+			//frame.pdf.GrayColor(x1, y1, frame.width, frame.lineHeight+frame.lineSpace, frame.backColor)
+			frame.pdf.BackgroundColor(x1, y1, frame.width, frame.lineHeight+frame.lineSpace, frame.backColor)
 		}
 
 		frame.pdf.Font(frame.font.Family, frame.font.Size, frame.font.Style) // 添加设置
 		frame.pdf.Cell(x, y, frame.contents[i])
 
 		// todo: 颜色恢复
-		if !isEmpty(frame.fontColor) {
+		if !util.IsEmpty(frame.fontColor) {
 			frame.pdf.TextDefaultColor()
 		}
-		if !isEmpty(frame.backColor) {
+		if !util.IsEmpty(frame.backColor) {
 			frame.pdf.FillDefaultColor()
 		}
 
@@ -400,7 +402,7 @@ func (frame *Frame) GenerateAtomicCell() error {
 		isFirstSetVerticalCentered bool
 	)
 
-	if isEmpty(frame.font) {
+	if util.IsEmpty(frame.font) {
 		panic("no font")
 	}
 
@@ -415,8 +417,8 @@ func (frame *Frame) GenerateAtomicCell() error {
 
 	for i := 0; i < len(frame.contents); i++ {
 		var (
-			hOriginBorder Scope
-			vOriginBorder Scope
+			hOriginBorder core.Scope
+			vOriginBorder core.Scope
 		)
 		// todo: 水平居中, 只是对当前的行设置新的 Border
 		if frame.horizontalCentered {
@@ -425,7 +427,7 @@ func (frame *Frame) GenerateAtomicCell() error {
 			width := frame.pdf.MeasureTextWidth(frame.contents[i]) / frame.pdf.GetUnit()
 			if width < frame.width {
 				m := (frame.width - width) / 2
-				frame.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}
+				frame.border = core.NewScope(m, hOriginBorder.Top, 0, hOriginBorder.Right)
 			}
 		}
 
@@ -435,7 +437,7 @@ func (frame *Frame) GenerateAtomicCell() error {
 			hOriginBorder = frame.border
 			width := frame.pdf.MeasureTextWidth(frame.contents[i]) / frame.pdf.GetUnit()
 			m := frame.width - width
-			frame.border = Scope{m, hOriginBorder.Top, 0, hOriginBorder.Right}
+			frame.border = core.NewScope(m, hOriginBorder.Top, 0, hOriginBorder.Right)
 		}
 
 		// todo: 垂直居中, 只能操作一次
@@ -447,30 +449,31 @@ func (frame *Frame) GenerateAtomicCell() error {
 			height := (length-1)*frame.lineSpace + length*frame.lineHeight + frame.border.Top
 			if height < frame.height {
 				m := (frame.height - height) / 2
-				frame.border = Scope{vOriginBorder.Left, m, vOriginBorder.Right, 0}
+				frame.border = core.NewScope(vOriginBorder.Left, m, vOriginBorder.Right, 0)
 			}
 		}
 
 		x, y = frame.getContentPosition(sx, sy, i)
 
 		// todo: 不需要换页, 只需要增加数据
-		if !isEmpty(frame.fontColor) {
-			frame.pdf.TextColor(getColorRGB(frame.fontColor))
+		if !util.IsEmpty(frame.fontColor) {
+			frame.pdf.TextColor(util.GetColorRGB(frame.fontColor))
 		}
-		if !isEmpty(frame.backColor) {
+		if !util.IsEmpty(frame.backColor) {
 			x1 := x - frame.border.Left
 			y1 := y
-			frame.pdf.GrayColor(x1, y1, frame.width, frame.lineHeight+frame.lineSpace, frame.backColor)
+			//frame.pdf.GrayColor(x1, y1, frame.width, frame.lineHeight+frame.lineSpace, frame.backColor)
+			frame.pdf.BackgroundColor(x1, y1, frame.width, frame.lineHeight+frame.lineSpace, frame.backColor)
 		}
 
 		frame.pdf.Font(frame.font.Family, frame.font.Size, frame.font.Style) // 添加设置
 		frame.pdf.Cell(x, y, frame.contents[i])
 
 		// todo: 颜色恢复
-		if !isEmpty(frame.fontColor) {
+		if !util.IsEmpty(frame.fontColor) {
 			frame.pdf.TextDefaultColor()
 		}
-		if !isEmpty(frame.backColor) {
+		if !util.IsEmpty(frame.backColor) {
 			frame.pdf.FillDefaultColor()
 		}
 

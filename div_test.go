@@ -31,7 +31,7 @@ func ComplexDivReport() {
 }
 func DivReportExecutor(report *core.Report) {
 	unit := report.GetUnit()
-	font := Font{Family: DIV_MD, Size: 10}
+	font := core.Font{Family: DIV_MD, Size: 10}
 
 	report.Font(DIV_MD, 10, "")
 	report.SetFont(DIV_MD, 10)
@@ -41,10 +41,11 @@ func DivReportExecutor(report *core.Report) {
 
 	div := NewDivWithWidth(48*unit, lineHeight, lineSpace, report)
 	div.SetFont(font)
+	div.SetBackColor("11,123,244")
 	div.SetRightAlign()
-	div.SetMarign(Scope{10, 20, 0, 0})
+	div.SetMarign(core.NewScope(10, 20, 0, 0))
 
-	div.SetBorder(Scope{10, 50, 0, 0})
+	div.SetBorder(core.NewScope(10, 50, 0, 0))
 	div.SetContent(`13.2.10 Subquery  Syntax 
 13.2.10.1 The Subquery as Scalar Operand 
 13.2.10.2 Comparisons Using Subqueries

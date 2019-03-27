@@ -86,6 +86,8 @@ func (convert *Converter) Execute() {
 			convert.LineColor(line, elements) //
 		case "FC":
 			convert.FillColor(line, elements)
+		case "BC":
+			convert.BackgroundColor(line, elements) // 背景颜色
 		case "GF", "GS":
 			convert.Grey(line, elements)
 		case "C", "C1", "CR":
@@ -244,12 +246,31 @@ func (convert *Converter) LineColor(line string, elements []string) {
 		uint8(AtoiPanic(elements[3], line)))
 }
 
+func (convert *Converter) BackgroundColor(line string, elements []string) {
+	CheckLength(line, elements, 8)
+
+	convert.pdf.SetLineWidth(0.5) // 宽带最小
+	//convert.pdf.SetStrokeColor(255, 255, 255) // 白色线条
+
+	convert.pdf.SetFillColor(uint8(AtoiPanic(elements[5], line)),
+		uint8(AtoiPanic(elements[6], line)),
+		uint8(AtoiPanic(elements[7], line))) // 设置填充颜色
+
+	convert.pdf.RectFromUpperLeftWithStyle(ParseFloatPanic(elements[1], line)*convert.unit,
+		ParseFloatPanic(elements[2], line)*convert.unit,
+		ParseFloatPanic(elements[3], line)*convert.unit,
+		ParseFloatPanic(elements[4], line)*convert.unit, "F")
+
+	convert.pdf.SetFillColor(0, 0, 0) // 颜色恢复
+}
+
 // 背景色
 func (convert *Converter) FillColor(line string, elements []string) {
 	CheckLength(line, elements, 4)
 	convert.pdf.SetFillColor(uint8(AtoiPanic(elements[1], line)),
 		uint8(AtoiPanic(elements[2], line)),
 		uint8(AtoiPanic(elements[3], line)))
+
 }
 
 // 椭圆

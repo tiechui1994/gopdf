@@ -21,7 +21,7 @@ type Template struct {
 	TableObj struct {
 		Columns []struct {
 			ColumnsName string `json:"columnsName"`
-		} `json:"columns"`          // 列名称
+		} `json:"columns"` // 列名称
 		Rows []string `json:"rows"` // 行名称, 从第2行开算, 第一行是Header,没有
 	} `json:"tableObj"`
 
@@ -341,7 +341,7 @@ func SimpleTableReportExecutor(report *core.Report) {
 					cell := table.NewCell()
 					element := gopdf.NewDivWithWidth(table.GetColWithByIndex(i, j), lineHight, lineSpace, report)
 					element.SetFont(textFont)
-					element.SetBorder(gopdf.Scope{Left: 0.5 * unit, Top: 0.5 * unit})
+					element.SetBorder(core.Scope{Left: 0.5 * unit, Top: 0.5 * unit})
 					if i == 0 || j == 0 && hasRowName {
 						element.SetHorizontalCentered()
 					}
