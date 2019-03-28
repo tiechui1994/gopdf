@@ -6,13 +6,13 @@ import (
 )
 
 // 构建表格
-type Table struct {
+type Form struct {
 	pdf           *core.Report
 	rows, cols    int //
 	width, height float64
-	colwidths     []float64      // 列宽百分比: 应加起来为1
-	rowheights    []float64      // 保存行高
-	cells         [][]*TableCell // 单元格
+	colwidths     []float64     // 列宽百分比: 应加起来为1
+	rowheights    []float64     // 保存行高
+	cells         [][]*FormCell // 单元格
 
 	lineHeight float64    // 默认行高
 	margin     core.Scope // 位置调整
@@ -23,18 +23,18 @@ type Table struct {
 	isFirstCalTableCellHeight bool
 }
 
-type TableCell struct {
-	table            *Table // table元素
-	row, col         int    // 位置
-	rowspan, colspan int    // 单元格大小
+type FormCell struct {
+	form             *Form // table元素
+	row, col         int   // 位置
+	rowspan, colspan int   // 单元格大小
 
-	element    core.Element // 单元格元素
-	selfheight float64      // 当前cell自身高度, 辅助计算
-	height     float64      // 当rowspan=1时, height = selfheight
+	element    *TextCell // 单元格元素
+	selfheight float64   // 当前cell自身高度, 辅助计算
+	height     float64   // 当rowspan=1时, height = selfheight
 }
 
 // Element: 创建,并且设置了字体, 偏移量
-func (cell *TableCell) SetElement(e core.Element) *TableCell {
+func (cell *FormCell) SetElement(e *TextCell) *FormCell {
 	cell.element = e
 	cell.height = cell.element.GetHeight()
 	if cell.colspan+cell.rowspan == 2 {
@@ -43,7 +43,7 @@ func (cell *TableCell) SetElement(e core.Element) *TableCell {
 	return cell
 }
 
-func NewTable(cols, rows int, width, lineHeight float64, pdf *core.Report) *Table {
+func NewForm(cols, rows int, width, lineHeight float64, pdf *core.Report) *Form {
 	contentWidth, _ := pdf.GetContentWidthAndHeight()
 	if width > contentWidth {
 		width = contentWidth
@@ -52,7 +52,7 @@ func NewTable(cols, rows int, width, lineHeight float64, pdf *core.Report) *Tabl
 	pdf.LineType("straight", 0.1)
 	pdf.GrayStroke(0)
 
-	t := &Table{
+	t := &Form{
 		pdf:    pdf,
 		rows:   rows,
 		cols:   cols,
@@ -73,9 +73,9 @@ func NewTable(cols, rows int, width, lineHeight float64, pdf *core.Report) *Tabl
 		t.colwidths = append(t.colwidths, float64(1.0)/float64(cols))
 	}
 
-	cells := make([][]*TableCell, rows)
+	cells := make([][]*FormCell, rows)
 	for i := range cells {
-		cells[i] = make([]*TableCell, cols)
+		cells[i] = make([]*FormCell, cols)
 	}
 
 	t.cells = cells
@@ -84,68 +84,68 @@ func NewTable(cols, rows int, width, lineHeight float64, pdf *core.Report) *Tabl
 }
 
 // 创建长宽为1的单元格
-func (table *Table) NewCell() *TableCell {
-	row, col := table.nextrow, table.nextcol
+func (form *Form) NewCell() *FormCell {
+	row, col := form.nextrow, form.nextcol
 
-	cell := &TableCell{
+	cell := &FormCell{
 		row:        row,
 		col:        col,
 		rowspan:    1,
 		colspan:    1,
-		table:      table,
-		height:     table.lineHeight,
-		selfheight: table.lineHeight,
+		form:       form,
+		height:     form.lineHeight,
+		selfheight: form.lineHeight,
 	}
 
-	table.cells[row][col] = cell
+	form.cells[row][col] = cell
 
 	// 计算nextcol, nextrow
-	table.nextcol += 1
-	if table.nextcol == table.cols {
-		table.nextcol = 0
-		table.nextrow += 1
+	form.nextcol += 1
+	if form.nextcol == form.cols {
+		form.nextcol = 0
+		form.nextrow += 1
 	}
 
-	if table.nextrow == table.rows {
-		table.nextcol = -1
-		table.nextrow = -1
+	if form.nextrow == form.rows {
+		form.nextcol = -1
+		form.nextrow = -1
 	}
-	fmt.Println("w,h", 1, 1, "cur:", row, col, "next: ", table.nextrow, table.nextcol)
+	fmt.Println("w,h", 1, 1, "cur:", row, col, "next: ", form.nextrow, form.nextcol)
 	return cell
 }
 
 // 创建固定长度的单元格
-func (table *Table) NewCellByRange(w, h int) *TableCell {
+func (form *Form) NewCellByRange(w, h int) *FormCell {
 	colspan, rowspan := w, h
 	if colspan == 1 && rowspan == 1 {
-		return table.NewCell()
+		return form.NewCell()
 	}
 
-	row, col := table.nextrow, table.nextcol
+	row, col := form.nextrow, form.nextcol
 
 	// 防止非法的宽度
-	if colspan >= table.cols-col {
-		colspan = table.cols - col
+	if colspan >= form.cols-col {
+		colspan = form.cols - col
 	}
-	if rowspan >= table.rows-row {
-		rowspan = table.rows - row
+	if rowspan >= form.rows-row {
+		rowspan = form.rows - row
 	}
 
 	if colspan <= 0 || rowspan <= 0 {
 		panic("inlivid layout, please check w and h")
 	}
 
-	cell := &TableCell{
+	cell := &FormCell{
 		row:        row,
 		col:        col,
 		rowspan:    rowspan,
 		colspan:    colspan,
-		table:      table,
-		height:     table.lineHeight,
-		selfheight: table.lineHeight,
+		form:       form,
+		height:     form.lineHeight,
+		selfheight: form.lineHeight,
 	}
 
-	table.cells[row][col] = cell
+	form.cells[row][col] = cell
 
 	// 构建空白单元格
 
@@ -156,97 +156,101 @@ func (table *Table) NewCellByRange(w, h int) *TableCell {
 		}
 
 		for ; j < colspan; j++ {
-			table.newSpaceCell(col+j, row+i, -row, -col)
+			form.newSpaceCell(col+j, row+i, -row, -col)
 		}
 	}
 
 	// 计算nextcol, nextrow, 需要遍历处理
-	table.nextcol += colspan
-	if table.nextcol == table.cols {
-		table.nextcol = 0
-		table.nextrow += 1
+	form.nextcol += colspan
+	if form.nextcol == form.cols {
+		form.nextcol = 0
+		form.nextrow += 1
 	}
 
-	for i := table.nextrow; i < table.rows; i++ {
+	for i := form.nextrow; i < form.rows; i++ {
 		var j int
-		if i == table.nextrow {
-			j = table.nextcol
+		if i == form.nextrow {
+			j = form.nextcol
 		}
 
-		for ; j < table.cols; j++ {
-			if table.cells[i][j] == nil {
-				table.nextrow, table.nextcol = i, j
+		for ; j < form.cols; j++ {
+			if form.cells[i][j] == nil {
+				form.nextrow, form.nextcol = i, j
 				return cell
 			}
 		}
 	}
 
-	if table.nextrow == table.rows {
-		table.nextcol = -1
-		table.nextrow = -1
+	if form.nextrow == form.rows {
+		form.nextcol = -1
+		form.nextrow = -1
 	}
 
 	return nil
 }
 
 // 创建长宽为1的空白单元格
-func (table *Table) newSpaceCell(col, row int, pr, pc int) *TableCell {
-	cell := &TableCell{
+func (form *Form) newSpaceCell(col, row int, pr, pc int) *FormCell {
+	cell := &FormCell{
 		row:        row,
 		col:        col,
 		colspan:    pc,
 		rowspan:    pr,
-		table:      table,
-		height:     table.lineHeight,
-		selfheight: table.lineHeight,
+		form:       form,
+		height:     form.lineHeight,
+		selfheight: form.lineHeight,
 	}
 
-	table.cells[row][col] = cell
+	form.cells[row][col] = cell
 	return cell
 }
 
 /********************************************************************************************************************/
 
 // 获取某列的宽度
-func (table *Table) GetColWidth(row, col int) float64 {
-	if row < 0 || row > len(table.cells) || col < 0 || col > len(table.cells[row]) {
+func (form *Form) GetColWidth(row, col int) float64 {
+	if row < 0 || row > len(form.cells) || col < 0 || col > len(form.cells[row]) {
 		panic("the index out range")
 	}
 
 	count := 0.0
-	for i := 0; i < table.cells[row][col].colspan; i++ {
-		count += table.colwidths[i+col] * table.width
+	for i := 0; i < form.cells[row][col].colspan; i++ {
+		count += form.colwidths[i+col] * form.width
 	}
 
 	return count
 }
 
 // 设置表的行高, 行高必须大于当前使用字体的行高
-func (table *Table) SetLineHeight(lineHeight float64) {
-	table.lineHeight = lineHeight
+func (form *Form) SetLineHeight(lineHeight float64) {
+	form.lineHeight = lineHeight
 }
 
 // 设置表的外
-func (table *Table) SetMargin(margin core.Scope) {
+func (form *Form) SetMargin(margin core.Scope) {
 	margin.ReplaceMarign()
-	table.margin = margin
+	form.margin = margin
 }
 
 /********************************************************************************************************************/
 
+func (form *Form) addNewPage() {
+
+}
+
 // 自动换行生成
-func (table *Table) GenerateAtomicCell() error {
+func (form *Form) GenerateAtomicCell() error {
 	var (
-		sx, sy         = table.pdf.GetXY() // 基准坐标
-		pageEndY       = table.pdf.GetPageEndY()
+		sx, sy         = form.pdf.GetXY() // 基准坐标
+		pageEndY       = form.pdf.GetPageEndY()
 		x1, y1, x2, y2 float64 // 当前位置
 	)
 
 	// 重新计算行高
-	table.replaceCellHeight()
+	form.replaceCellHeight()
 
-	for i := 0; i < table.rows; i++ {
-		x1, y1, x2, y2 = table.getVLinePosition(sx, sy, 0, i)
+	for i := 0; i < form.rows; i++ {
+		x1, y1, x2, y2 = form.getVLinePosition(sx, sy, 0, i)
 
 		// todo: 换页
 		if y1 < pageEndY && y2 > pageEndY {
@@ -257,15 +261,15 @@ func (table *Table) GenerateAtomicCell() error {
 			)
 
 			if i == 0 {
-				table.pdf.AddNewPage(false)
-				table.margin.Top = 0
-				table.pdf.SetXY(table.pdf.GetPageStartXY())
+				form.pdf.AddNewPage(false)
+				form.margin.Top = 0
+				form.pdf.SetXY(form.pdf.GetPageStartXY())
 
-				return table.GenerateAtomicCell()
+				return form.GenerateAtomicCell()
 			}
 
-			for k := 0; k < table.cols; k++ {
-				cell := table.cells[i][k]
+			for k := 0; k < form.cols; k++ {
+				cell := form.cells[i][k]
 				if cell.element == nil {
 					allRowCellWriteEverything = false
 					continue
@@ -276,8 +280,8 @@ func (table *Table) GenerateAtomicCell() error {
 				}
 
 				cellOriginHeight := cell.height
-				x1, y1, _, _ := table.getHLinePosition(sx, sy, k, i)
-				cell.table.pdf.SetXY(x1, y1)
+				x1, y1, _, _ := form.getHLinePosition(sx, sy, k, i)
+				cell.form.pdf.SetXY(x1, y1)
 				cell.element.GenerateAtomicCell() // 会修改element的高度
 
 				// todo: 只能说明当前的cell已经写完,但是没有更新height, div的逻辑本身如此, 这里需要手动同步一下div当中的contents
@@ -285,13 +289,13 @@ func (table *Table) GenerateAtomicCell() error {
 					cell.height = 0
 					cell.element.ClearContents()
 				} else {
-					cell.height = cell.element.GetHeight() // 将修改后的高度同步到本地的Cell当中, element -> table
+					cell.height = cell.element.GetHeight() // 将修改后的高度同步到本地的Cell当中, element -> form
 				}
 
 				if cell.rowspan == 1 {
 					cell.selfheight = cell.height
 				}
-				cell.table.pdf.SetXY(sx, sy)
+				cell.form.pdf.SetXY(sx, sy)
 
 				if cellOriginHeight-cell.element.GetHeight() > 0 {
 					needSetHLine = true
@@ -302,113 +306,114 @@ func (table *Table) GenerateAtomicCell() error {
 				}
 
 				// 2) 垂直线
-				if table.hasVLine(k, i) {
-					x1, y1, x2, y2 = table.getVLinePosition(sx, sy, k, i)
-					table.pdf.Line(x1, y1, x2, pageEndY)
+				if form.hasVLine(k, i) {
+					x1, y1, x2, y2 = form.getVLinePosition(sx, sy, k, i)
+					form.pdf.Line(x1, y1, x2, pageEndY)
 				}
 			}
 
 			// 3) 只有当一个有写入则必须有水平线
 			if needSetHLine {
-				for k := 0; k < table.cols; k++ {
-					if table.hasHLine(k, i) {
-						x1, y1, x2, y2 = table.getHLinePosition(sx, sy, k, i)
-						table.pdf.Line(x1, y1, x2, y2)
+				for k := 0; k < form.cols; k++ {
+					if form.hasHLine(k, i) {
+						x1, y1, x2, y2 = form.getHLinePosition(sx, sy, k, i)
+						form.pdf.Line(x1, y1, x2, y2)
 					}
 				}
 			}
 
 			// 4) 补全右侧垂直线 和 底层水平线
-			x1, y1, x2, y2 = table.getVLinePosition(sx, sy, 0, 0)
-			table.pdf.LineH(x1, pageEndY, x1+table.width)
-			table.pdf.LineV(x1+table.width, y1, pageEndY)
+			x1, y1, x2, y2 = form.getVLinePosition(sx, sy, 0, 0)
+			form.pdf.LineH(x1, pageEndY, x1+form.width)
+			form.pdf.LineV(x1+form.width, y1, pageEndY)
 
 			// 5) 增加新页面
-			table.pdf.AddNewPage(false)
-			table.margin.Top = 0
+			form.pdf.AddNewPage(false)
+			form.margin.Top = 0
 			if allRowCellWriteEverything {
-				table.cells = table.cells[i+1:]
+				form.cells = form.cells[i+1:]
 			} else {
-				table.cells = table.cells[i:]
+				form.cells = form.cells[i:]
 			}
-			table.rows = len(table.cells)
+			form.rows = len(form.cells)
 
-			table.pdf.LineType("straight", 0.1)
-			table.pdf.GrayStroke(0)
-			table.pdf.SetXY(table.pdf.GetPageStartXY())
+			form.pdf.LineType("straight", 0.1)
+			form.pdf.GrayStroke(0)
+			form.pdf.SetXY(form.pdf.GetPageStartXY())
 
-			if table.rows == 0 {
+			if form.rows == 0 {
 				return nil
 			}
 
 			// 6) 剩下页面
-			return table.GenerateAtomicCell()
+			return form.GenerateAtomicCell()
 		}
 
 		// todo: 当前页
-		for j := 0; j < table.cols; j++ {
+		for j := 0; j < form.cols; j++ {
 			// 1. 水平线
-			if table.hasHLine(j, i) {
-				x1, y1, x2, y2 = table.getHLinePosition(sx, sy, j, i)
-				table.pdf.Line(x1, y1, x2, y2)
+			if form.hasHLine(j, i) {
+				x1, y1, x2, y2 = form.getHLinePosition(sx, sy, j, i)
+				form.pdf.Line(x1, y1, x2, y2)
 			}
 
 			// 2. 垂直线
-			if table.hasVLine(j, i) {
-				x1, y1, x2, y2 = table.getVLinePosition(sx, sy, j, i)
-				table.pdf.Line(x1, y1, x2, y2)
+			if form.hasVLine(j, i) {
+				x1, y1, x2, y2 = form.getVLinePosition(sx, sy, j, i)
+				form.pdf.Line(x1, y1, x2, y2)
 			}
 
 			// 3. 写入数据, 坐标系必须变换
-			cell := table.cells[i][j]
+			cell := form.cells[i][j]
 			if cell.element == nil {
 				continue
 			}
 
-			x1, y1, _, _ := table.getHLinePosition(sx, sy, j, i)
-			cell.table.pdf.SetXY(x1, y1)
-			cell.element.GenerateAtomicCell()
-			cell.table.pdf.SetXY(sx, sy)
+			x1, y1, x2, y2 = form.getVLinePosition(sx, sy, j, i) // 垂直线
+			cell.form.pdf.SetXY(x1, y1)
+
+			cell.element.GenerateAtomicCell(y2 - y1)
+			cell.form.pdf.SetXY(sx, sy)
 		}
 	}
 
 	// todo: 最后一个页面的最后部分
-	height := table.getTableHeight()
-	x1, y1, x2, y2 = table.getVLinePosition(sx, sy, 0, 0)
-	table.pdf.LineH(x1, y1+height+table.margin.Top, x1+table.width)
-	table.pdf.LineV(x1+table.width, y1, y1+height+table.margin.Top)
+	height := form.getTableHeight()
+	x1, y1, x2, y2 = form.getVLinePosition(sx, sy, 0, 0)
+	form.pdf.LineH(x1, y1+height+form.margin.Top, x1+form.width)
+	form.pdf.LineV(x1+form.width, y1, y1+height+form.margin.Top)
 
-	x1, _ = table.pdf.GetPageStartXY()
-	table.pdf.SetXY(x1, y1+height+table.margin.Top+table.margin.Bottom) // 定格最终的位置
+	x1, _ = form.pdf.GetPageStartXY()
+	form.pdf.SetXY(x1, y1+height+form.margin.Top+form.margin.Bottom) // 定格最终的位置
 
 	return nil
 }
 
 // 校验table是否合法
-func (table *Table) checkTable() {
+func (form *Form) checkTable() {
 	var count int
-	for i := 0; i < table.rows; i++ {
-		for j := 0; j < table.cols; j++ {
-			if table.cells[i][j] != nil {
+	for i := 0; i < form.rows; i++ {
+		for j := 0; j < form.cols; j++ {
+			if form.cells[i][j] != nil {
 				count += 1
 			}
 		}
 	}
 
-	if count != table.cols*table.rows {
+	if count != form.cols*form.rows {
 		panic("please check setting rows, cols and writed cell")
 	}
 }
 
 // todo: 重新计算tablecell的高度, 必须是所有的cell已经到位
-func (table *Table) replaceCellHeight() {
-	table.checkTable()
-	cells := table.cells
+func (form *Form) replaceCellHeight() {
+	form.checkTable()
+	cells := form.cells
 
 	// element -> tablecell, 只进行一次
-	if table.isFirstCalTableCellHeight {
-		for i := 0; i < table.rows; i++ {
-			for j := 0; j < table.cols; j++ {
+	if form.isFirstCalTableCellHeight {
+		for i := 0; i < form.rows; i++ {
+			for j := 0; j < form.cols; j++ {
 				if cells[i][j] != nil && cells[i][j].element != nil && cells[i][j].colspan > 0 {
 					cells[i][j].height = cells[i][j].element.GetHeight()
 					if cells[i][j].rowspan == 1 {
@@ -420,15 +425,15 @@ func (table *Table) replaceCellHeight() {
 	}
 
 	// 第一遍计算行高度
-	for i := 0; i < table.rows; i++ {
+	for i := 0; i < form.rows; i++ {
 		var maxHeight float64 // 当前行的最大高度
-		for j := 0; j < table.cols; j++ {
+		for j := 0; j < form.cols; j++ {
 			if cells[i][j] != nil && maxHeight < cells[i][j].selfheight {
 				maxHeight = cells[i][j].selfheight
 			}
 		}
 
-		for j := 0; j < table.cols; j++ {
+		for j := 0; j < form.cols; j++ {
 			if cells[i][j] != nil {
 				cells[i][j].selfheight = maxHeight
 			}
@@ -440,8 +445,8 @@ func (table *Table) replaceCellHeight() {
 	}
 
 	// 第二遍计算rowsapn非1的行高度
-	for i := 0; i < table.rows; i++ {
-		for j := 0; j < table.cols; j++ {
+	for i := 0; i < form.rows; i++ {
+		for j := 0; j < form.cols; j++ {
 			if cells[i][j] != nil && cells[i][j].rowspan > 1 {
 				var totalHeight float64
 				for v := 0; v < cells[i][j].rowspan; v++ {
@@ -452,7 +457,7 @@ func (table *Table) replaceCellHeight() {
 				if totalHeight < cells[i][j].height {
 					h := cells[i][j].height - totalHeight
 					row := cells[i][j].row + cells[i][j].rowspan - 1
-					for col := 0; col < table.cols; col++ {
+					for col := 0; col < form.cols; col++ {
 						cells[row][col].selfheight += h
 						// 1行的开始
 						if cells[row][col].rowspan == 1 {
@@ -476,67 +481,67 @@ func (table *Table) replaceCellHeight() {
 	}
 
 	// tablecell -> element 只能同步操作一次
-	if table.isFirstCalTableCellHeight {
-		for i := 0; i < table.rows; i++ {
-			for j := 0; j < table.cols; j++ {
+	if form.isFirstCalTableCellHeight {
+		for i := 0; i < form.rows; i++ {
+			for j := 0; j < form.cols; j++ {
 				if cells[i][j] != nil && cells[i][j].element != nil {
 					cells[i][j].element.SetHeight(cells[i][j].height)
 				}
 			}
 		}
 
-		table.isFirstCalTableCellHeight = false
+		form.isFirstCalTableCellHeight = false
 	}
 
-	table.cells = cells
+	form.cells = cells
 }
 
 // 垂直线
-func (table *Table) getVLinePosition(sx, sy float64, col, row int) (x1, y1 float64, x2, y2 float64) {
+func (form *Form) getVLinePosition(sx, sy float64, col, row int) (x1, y1 float64, x2, y2 float64) {
 	var (
 		x, y float64
-		cell = table.cells[row][col]
+		cell = form.cells[row][col]
 	)
 
 	for i := 0; i < col; i++ {
-		x += table.colwidths[i]
+		x += form.colwidths[i]
 	}
-	x = sx + x*table.width + table.margin.Left
+	x = sx + x*form.width + form.margin.Left
 
 	for i := 0; i < row; i++ {
-		y += table.cells[i][0].selfheight
+		y += form.cells[i][0].selfheight
 	}
-	y = sy + y + table.margin.Top
+	y = sy + y + form.margin.Top
 
 	return x, y, x, y + cell.selfheight
 }
 
 // 水平线
-func (table *Table) getHLinePosition(sx, sy float64, col, row int) (x1, y1 float64, x2, y2 float64) {
+func (form *Form) getHLinePosition(sx, sy float64, col, row int) (x1, y1 float64, x2, y2 float64) {
 	var (
 		x, y float64
 	)
 
 	for i := 0; i < col; i++ {
-		x += table.colwidths[i]
+		x += form.colwidths[i]
 	}
-	x = sx + x*table.width + table.margin.Left
+	x = sx + x*form.width + form.margin.Left
 
 	for i := 0; i < row; i++ {
-		y += table.cells[i][0].selfheight
+		y += form.cells[i][0].selfheight
 	}
-	y = sy + y + table.margin.Top
+	y = sy + y + form.margin.Top
 
-	return x, y, x + table.colwidths[col]*table.width, y
+	return x, y, x + form.colwidths[col]*form.width, y
 }
 
 // 节点垂直平线
-func (table *Table) hasVLine(col, row int) bool {
+func (form *Form) hasVLine(col, row int) bool {
 	if col == 0 {
 		return true
 	}
 
-	cell := table.cells[row][col]
+	cell := form.cells[row][col]
 	// 单独或者多个, 肯定是第一个
 	if cell.rowspan+cell.colspan >= 2 {
 		return true
@@ -552,13 +557,13 @@ func (table *Table) hasVLine(col, row int) bool {
 }
 
 // 节点水平线
-func (table *Table) hasHLine(col, row int) bool {
+func (form *Form) hasHLine(col, row int) bool {
 	if row == 0 {
 		return true
 	}
 
 	var (
-		cell = table.cells[row][col]
+		cell = form.cells[row][col]
 	)
 
 	// 单独或者多个, 肯定是第一个
@@ -575,10 +580,10 @@ func (table *Table) hasHLine(col, row int) bool {
 }
 
 // 获取表的垂直高度
-func (table *Table) getTableHeight() float64 {
+func (form *Form) getTableHeight() float64 {
 	var count float64
-	for i := 0; i < table.rows; i++ {
-		count += table.cells[i][0].selfheight
+	for i := 0; i < form.rows; i++ {
+		count += form.cells[i][0].selfheight
 	}
 	return count
 }

@@ -52,10 +52,10 @@ func TableReportWithDataExecutor(report *core.Report) {
 	c10 := table.NewCellByRange(3, 1)
 
 	f1 := core.Font{Family: TABLE_MY, Size: 15, Style: ""}
-	c00.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 0), lineHeight, lineSpace, report).SetFont(f1).SetHorizontalCentered().SetContent("0-0"))
-	c01.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 1), lineHeight, lineSpace, report).SetFont(f1).SetRightAlign().SetContent("0-1"))
-	c03.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 3), lineHeight, lineSpace, report).SetFont(f1).SetRightAlign().SetContent("0-3-近日，江苏苏州市姑苏区市场监督管理局向苏州定园旅游服务有限公司送达行政处罚决定书，对定园进行处罚，吊销其营业执照，此举开创了我国旅游景点因虚假宣传被吊销营业执照的先河"))
-	c10.SetElement(NewDivWithWidth(table.GetColWithByIndex(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent("1-0-近日，江苏苏州市姑苏区市场监督管理局向苏州定园旅游服务有限公司送达行政处罚决定书了我国旅游景点因虚假宣传被吊销营业执照的先河"))
+	c00.SetElement(NewDivWithWidth(table.GetColWidth(0, 0), lineHeight, lineSpace, report).SetFont(f1).SetHorizontalCentered().SetContent("0-0"))
+	c01.SetElement(NewDivWithWidth(table.GetColWidth(0, 1), lineHeight, lineSpace, report).SetFont(f1).SetRightAlign().SetContent("0-1"))
+	c03.SetElement(NewDivWithWidth(table.GetColWidth(0, 3), lineHeight, lineSpace, report).SetFont(f1).SetRightAlign().SetContent("0-3-近日，江苏苏州市姑苏区市场监督管理局向苏州定园旅游服务有限公司送达行政处罚决定书，对定园进行处罚，吊销其营业执照，此举开创了我国旅游景点因虚假宣传被吊销营业执照的先河"))
+	c10.SetElement(NewDivWithWidth(table.GetColWidth(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent("1-0-近日，江苏苏州市姑苏区市场监督管理局向苏州定园旅游服务有限公司送达行政处罚决定书了我国旅游景点因虚假宣传被吊销营业执照的先河"))
 
 	f1 = core.Font{Family: TABLE_MY, Size: 10}
 	border := core.NewScope(0.5*unit, 0.5*unit, 0, 0)
@@ -69,7 +69,7 @@ func TableReportWithDataExecutor(report *core.Report) {
 		for j := 0; j < 5; j++ {
 			str := `有限公司送达行政处罚决定书`
 			s := fmt.Sprintf("%v-%v", i+2, str)
-			w := table.GetColWithByIndex(i+2, j)
+			w := table.GetColWidth(i+2, j)
 			e := NewDivWithWidth(w, lineHeight, lineSpace, report)
 			e.SetFont(f1)
 			e.SetBackColor("255,192,203")
@@ -120,10 +120,10 @@ func TableReportExecutor(report *core.Report) {
 	c10 := table.NewCellByRange(3, 1)
 
 	f1 := core.Font{Family: TABLE_MY, Size: 15}
-	c00.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent(""))
-	c01.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 1), lineHeight, lineSpace, report).SetFont(f1).SetContent(""))
-	c03.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 3), lineHeight, lineSpace, report).SetFont(f1).SetContent(""))
-	c10.SetElement(NewDivWithWidth(table.GetColWithByIndex(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent(""))
+	c00.SetElement(NewDivWithWidth(table.GetColWidth(0, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent(""))
+	c01.SetElement(NewDivWithWidth(table.GetColWidth(0, 1), lineHeight, lineSpace, report).SetFont(f1).SetContent(""))
+	c03.SetElement(NewDivWithWidth(table.GetColWidth(0, 3), lineHeight, lineSpace, report).SetFont(f1).SetContent(""))
+	c10.SetElement(NewDivWithWidth(table.GetColWidth(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent(""))
 
 	f1 = core.Font{Family: TABLE_MY, Size: 10}
 	border := core.NewScope(0.5*unit, 0.5*unit, 0, 0)
@@ -135,7 +135,7 @@ func TableReportExecutor(report *core.Report) {
 		}
 
 		for j := 0; j < 5; j++ {
-			w := table.GetColWithByIndex(i+2, j)
+			w := table.GetColWidth(i+2, j)
 			// todo: div执行的严格顺序
 			e := NewDivWithWidth(w, lineHeight, lineSpace, report)
 			e.SetFont(f1)
@@ -154,5 +154,5 @@ func TestTableWithdata(t *testing.T) {
 }
 
 func TestTable(t *testing.T) {
-	ComplexTableReport()
+	//ComplexTableReport()
 }

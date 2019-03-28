@@ -339,7 +339,7 @@ func SimpleTableReportExecutor(report *core.Report) {
 			for i := 0; i < rows; i++ {
 				for j := 0; j < cols; j++ {
 					cell := table.NewCell()
-					element := gopdf.NewDivWithWidth(table.GetColWithByIndex(i, j), lineHight, lineSpace, report)
+					element := gopdf.NewDivWithWidth(table.GetColWidth(i, j), lineHight, lineSpace, report)
 					element.SetFont(textFont)
 					element.SetBorder(core.Scope{Left: 0.5 * unit, Top: 0.5 * unit})
 					if i == 0 || j == 0 && hasRowName {
