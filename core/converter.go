@@ -42,7 +42,7 @@ func (convert *Converter) SetAutomicCells(cells []string) {
 
 // 添加AtomicCell
 func (convert *Converter) AddAtomicCell(cell string) {
-	if strings.HasPrefix(cell, "F") {
+	if strings.HasPrefix(cell, "F|") {
 		if cell == convert.lastFont {
 			return
 		}
@@ -84,8 +84,8 @@ func (convert *Converter) Execute() {
 			convert.TextColor(line, elements) // 颜色
 		case "LC":
 			convert.LineColor(line, elements) //
-		case "FC":
-			convert.FillColor(line, elements)
+		case "BC":
+			convert.BackgroundColor(line, elements) // 背景颜色
 		case "GF", "GS":
 			convert.Grey(line, elements)
 		case "C", "C1", "CR":
@@ -244,12 +244,44 @@ func (convert *Converter) LineColor(line string, elements []string) {
 		uint8(AtoiPanic(elements[3], line)))
 }
 
-// 背景色
-func (convert *Converter) FillColor(line string, elements []string) {
-	CheckLength(line, elements, 4)
-	convert.pdf.SetFillColor(uint8(AtoiPanic(elements[1], line)),
-		uint8(AtoiPanic(elements[2], line)),
-		uint8(AtoiPanic(elements[3], line)))
+func (convert *Converter) BackgroundColor(line string, elements []string) {
+	CheckLength(line, elements, 9)
+
+	//convert.pdf.SetLineWidth(0)               // 宽带最小
+	convert.pdf.SetStrokeColor(255, 255, 255) // 白色线条
+
+	convert.pdf.SetFillColor(uint8(AtoiPanic(elements[5], line)),
+		uint8(AtoiPanic(elements[6], line)),
+		uint8(AtoiPanic(elements[7], line))) // 设置填充颜色
+
+	convert.pdf.RectFromUpperLeftWithStyle(ParseFloatPanic(elements[1], line)*convert.unit,
+		ParseFloatPanic(elements[2], line)*convert.unit,
+		ParseFloatPanic(elements[3], line)*convert.unit,
+		ParseFloatPanic(elements[4], line)*convert.unit, "F")
+
+	convert.pdf.SetFillColor(0, 0, 0) // 颜色恢复
+	convert.pdf.SetStrokeColor(0, 0, 0)
+
+	convert.pdf.SetLineType("solid")
+
+	x := ParseFloatPanic(elements[1], line) * convert.unit
+	y := ParseFloatPanic(elements[2], line) * convert.unit
+	w := ParseFloatPanic(elements[3], line) * convert.unit
+	h := ParseFloatPanic(elements[4], line) * convert.unit
+
+	lines := elements[8] //  LEFT,TOP,RIGHT,BOTTOM
+	if lines[0] == '1' {
+		convert.pdf.Line(x, y, x, y+h)
+	}
+	if lines[1] == '1' {
+		convert.pdf.Line(x, y, x+w, y)
+	}
+	if lines[2] == '1' {
+		convert.pdf.Line(x+w, y, x+w, y+h)
+	}
+	if lines[3] == '1' {
+		convert.pdf.Line(x, y+h, x+w, y+h)
+	}
 }
 
 // 椭圆

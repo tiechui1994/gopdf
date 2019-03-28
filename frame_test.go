@@ -33,7 +33,7 @@ func ComplexFrameReport() {
 
 func ComplexFrameReportExecutor(report *core.Report) {
 	unit := report.GetUnit()
-	font := Font{Family: FRAME_MD, Size: 10}
+	font := core.Font{Family: FRAME_MD, Size: 10}
 
 	report.Font(FRAME_MD, 10, "")
 	report.SetFont(FRAME_MD, 10)
@@ -44,8 +44,8 @@ func ComplexFrameReportExecutor(report *core.Report) {
 	frame := NewFrameWithWidth(48*unit, lineHeight, lineSpace, report)
 	frame.SetFrameType(FRAME_DOTTED)
 	frame.SetFont(font)
-	frame.SetMarign(Scope{10, 20, 0, 0})
-	frame.SetBorder(Scope{2, 50, 0, 0})
+	frame.SetMarign(core.NewScope(10, 20, 0, 0))
+	frame.SetBorder(core.NewScope(2, 50, 0, 0))
 
 	content := `13.2.10 Subquery  Syntax 
 13.2.10.1 The Subquery as Scalar Operand 

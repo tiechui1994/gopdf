@@ -8,7 +8,7 @@ type HLine struct {
 	pdf    *core.Report
 	color  float64
 	width  float64
-	margin Scope
+	margin core.Scope
 }
 
 func NewHLine(pdf *core.Report) *HLine {
@@ -17,7 +17,7 @@ func NewHLine(pdf *core.Report) *HLine {
 		pdf:   pdf,
 		color: 0,
 		width: 0.1,
-		margin: Scope{
+		margin: core.Scope{
 			Left:   0,
 			Right:  0,
 			Top:    0.1 * unit,
@@ -35,8 +35,8 @@ func (h *HLine) SetColor(color float64) *HLine {
 	return h
 }
 
-func (h *HLine) SetMargin(margin Scope) *HLine {
-	replaceMarign(&margin)
+func (h *HLine) SetMargin(margin core.Scope) *HLine {
+	margin.ReplaceMarign()
 	h.margin = margin
 	return h
 }

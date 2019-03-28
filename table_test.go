@@ -43,7 +43,7 @@ func TableReportWithDataExecutor(report *core.Report) {
 	lineHeight := 2 * unit
 
 	table := NewTable(5, 100, 80*unit, lineHeight, report)
-	table.SetMargin(Scope{0, 0, 0, 0})
+	table.SetMargin(core.Scope{0, 0, 0, 0})
 
 	// 先把当前的行设置完毕, 然后才能添加单元格内容.
 	c00 := table.NewCellByRange(1, 1)
@@ -51,14 +51,14 @@ func TableReportWithDataExecutor(report *core.Report) {
 	c03 := table.NewCellByRange(2, 2)
 	c10 := table.NewCellByRange(3, 1)
 
-	f1 := Font{Family: TABLE_MY, Size: 15, Style: ""}
+	f1 := core.Font{Family: TABLE_MY, Size: 15, Style: ""}
 	c00.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 0), lineHeight, lineSpace, report).SetFont(f1).SetHorizontalCentered().SetContent("0-0"))
 	c01.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 1), lineHeight, lineSpace, report).SetFont(f1).SetRightAlign().SetContent("0-1"))
 	c03.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 3), lineHeight, lineSpace, report).SetFont(f1).SetRightAlign().SetContent("0-3-近日，江苏苏州市姑苏区市场监督管理局向苏州定园旅游服务有限公司送达行政处罚决定书，对定园进行处罚，吊销其营业执照，此举开创了我国旅游景点因虚假宣传被吊销营业执照的先河"))
 	c10.SetElement(NewDivWithWidth(table.GetColWithByIndex(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent("1-0-近日，江苏苏州市姑苏区市场监督管理局向苏州定园旅游服务有限公司送达行政处罚决定书了我国旅游景点因虚假宣传被吊销营业执照的先河"))
 
-	f1 = Font{Family: TABLE_MY, Size: 10}
-	border := Scope{0.5 * unit, 0.5 * unit, 0, 0}
+	f1 = core.Font{Family: TABLE_MY, Size: 10}
+	border := core.NewScope(0.5*unit, 0.5*unit, 0, 0)
 
 	for i := 0; i < 98; i++ {
 		cells := make([]*TableCell, 5)
@@ -72,7 +72,7 @@ func TableReportWithDataExecutor(report *core.Report) {
 			w := table.GetColWithByIndex(i+2, j)
 			e := NewDivWithWidth(w, lineHeight, lineSpace, report)
 			e.SetFont(f1)
-			e.SetFontColor("178,34,34")
+			e.SetBackColor("255,192,203")
 			e.SetBorder(border)
 			e.SetContent(s)
 			cells[j].SetElement(e)
@@ -111,7 +111,7 @@ func TableReportExecutor(report *core.Report) {
 	lineHeight := 2 * unit
 
 	table := NewTable(5, 100, 50*unit, lineHeight, report)
-	table.SetMargin(Scope{0 * unit, 0 * unit, 0, 0})
+	table.SetMargin(core.Scope{0 * unit, 0 * unit, 0, 0})
 
 	// todo: 先把当前的行设置完毕, 然后才能添加单元格内容.
 	c00 := table.NewCellByRange(1, 1)
@@ -119,14 +119,14 @@ func TableReportExecutor(report *core.Report) {
 	c03 := table.NewCellByRange(2, 2)
 	c10 := table.NewCellByRange(3, 1)
 
-	f1 := Font{Family: TABLE_MY, Size: 15}
+	f1 := core.Font{Family: TABLE_MY, Size: 15}
 	c00.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent(""))
 	c01.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 1), lineHeight, lineSpace, report).SetFont(f1).SetContent(""))
 	c03.SetElement(NewDivWithWidth(table.GetColWithByIndex(0, 3), lineHeight, lineSpace, report).SetFont(f1).SetContent(""))
 	c10.SetElement(NewDivWithWidth(table.GetColWithByIndex(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent(""))
 
-	f1 = Font{Family: TABLE_MY, Size: 10}
-	border := Scope{0.5 * unit, 0.5 * unit, 0, 0}
+	f1 = core.Font{Family: TABLE_MY, Size: 10}
+	border := core.NewScope(0.5*unit, 0.5*unit, 0, 0)
 
 	for i := 0; i < 98; i++ {
 		cells := make([]*TableCell, 5)
@@ -139,6 +139,7 @@ func TableReportExecutor(report *core.Report) {
 			// todo: div执行的严格顺序
 			e := NewDivWithWidth(w, lineHeight, lineSpace, report)
 			e.SetFont(f1)
+			e.SetBackColor("255,192,203")
 			e.SetBorder(border)
 			e.SetContent("")
 			cells[j].SetElement(e)

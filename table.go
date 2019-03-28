@@ -2,6 +2,7 @@ package gopdf
 
 import (
 	"github.com/tiechui1994/gopdf/core"
+	"github.com/tiechui1994/gopdf/util"
 )
 
 // 构建表格
@@ -23,7 +24,7 @@ type Table struct {
 	lineSpace  float64
 
 	// table的位置调整
-	margin Scope
+	margin core.Scope
 
 	cells [][]*TableCell
 
@@ -95,8 +96,8 @@ func (table *Table) SetLineHeight(lineHeight float64) {
 }
 
 // 设置表的外
-func (table *Table) SetMargin(margin Scope) {
-	replaceMarign(&margin)
+func (table *Table) SetMargin(margin core.Scope) {
+	margin.ReplaceMarign()
 	table.margin = margin
 }
 
@@ -195,7 +196,7 @@ func (table *Table) replaceCellHeight() {
 		for i := 0; i < table.rows; i++ {
 			for j := 0; j < table.cols; j++ {
 				if cells[i][j] != nil && cells[i][j].element != nil {
-					cells[i][j].element.setHeight(cells[i][j].height)
+					cells[i][j].element.SetHeight(cells[i][j].height)
 				}
 			}
 		}
@@ -301,9 +302,9 @@ func (table *Table) getTableHeight() float64 {
 // 自动换行生成
 func (table *Table) GenerateAtomicCell() error {
 	var (
-		sx, sy         = table.pdf.GetXY()
+		sx, sy         = table.pdf.GetXY() // 基准坐标
 		pageEndY       = table.pdf.GetPageEndY()
-		x1, y1, x2, y2 float64
+		x1, y1, x2, y2 float64 // 当前位置
 	)
 
 	// 重新计算行高
@@ -312,13 +313,14 @@ func (table *Table) GenerateAtomicCell() error {
 	for i := 0; i < table.rows; i++ {
 		x1, y1, x2, y2 = table.getVLinePosition(sx, sy, 0, i)
 
-		// todo: 需要换页
+		// todo: 换页
 		if y1 < pageEndY && y2 > pageEndY {
-			// todo: 1) 写入部分数据, 坐标系必须变换
+			// 1) 写入部分数据, 坐标系必须变换
 			var (
 				needSetHLine              bool
 				allRowCellWriteEverything = true // 当前的行不存在空白,且rowspan=1,且全部写完正行
 			)
+
 			for k := 0; k < table.cols; k++ {
 				cell := table.cells[i][k]
 				if cell.element == nil {
@@ -338,7 +340,7 @@ func (table *Table) GenerateAtomicCell() error {
 				// todo: 只能说明当前的cell已经写完,但是没有更新height, div的逻辑本身如此, 这里需要手动同步一下div当中的contents
 				if cellOriginHeight == cell.element.GetHeight() {
 					cell.height = 0
-					cell.element.clearContents()
+					cell.element.ClearContents()
 				} else {
 					cell.height = cell.element.GetHeight() // 将修改后的高度同步到本地的Cell当中, element -> table
 				}
@@ -356,14 +358,14 @@ func (table *Table) GenerateAtomicCell() error {
 					allRowCellWriteEverything = false
 				}
 
-				// todo: 2) 垂直线
+				// 2) 垂直线
 				if table.hasVLine(k, i) {
 					x1, y1, x2, y2 = table.getVLinePosition(sx, sy, k, i)
 					table.pdf.Line(x1, y1, x2, pageEndY)
 				}
 			}
 
-			// todo: 3) 只有当一个有写入则必须有水平线
+			// 3) 只有当一个有写入则必须有水平线
 			if needSetHLine {
 				for k := 0; k < table.cols; k++ {
 					if table.hasHLine(k, i) {
@@ -373,12 +375,12 @@ func (table *Table) GenerateAtomicCell() error {
 				}
 			}
 
-			// todo: 4) 补全右侧垂直线 和 底层水平线
+			// 4) 补全右侧垂直线 和 底层水平线
 			x1, y1, x2, y2 = table.getVLinePosition(sx, sy, 0, 0)
 			table.pdf.LineH(x1, pageEndY, x1+table.width)
 			table.pdf.LineV(x1+table.width, y1, pageEndY)
 
-			// todo: 5) 增加新页面
+			// 5) 增加新页面
 			table.pdf.AddNewPage(false)
 			table.margin.Top = 0
 			if allRowCellWriteEverything {
@@ -396,25 +398,25 @@ func (table *Table) GenerateAtomicCell() error {
 				return nil
 			}
 
-			// todo: 6) 剩下页面
+			// 6) 剩下页面
 			return table.GenerateAtomicCell()
 		}
 
-		// todo: 不需要换页
+		// todo: 当前页
 		for j := 0; j < table.cols; j++ {
-			// todo: 1.水平线
+			// 1. 水平线
 			if table.hasHLine(j, i) {
 				x1, y1, x2, y2 = table.getHLinePosition(sx, sy, j, i)
 				table.pdf.Line(x1, y1, x2, y2)
 			}
 
-			// todo: 2. 垂直线
+			// 2. 垂直线
 			if table.hasVLine(j, i) {
 				x1, y1, x2, y2 = table.getVLinePosition(sx, sy, j, i)
 				table.pdf.Line(x1, y1, x2, y2)
 			}
 
-			// todo: 3. 写入数据, 坐标系必须变换
+			// 3. 写入数据, 坐标系必须变换
 			cell := table.cells[i][j]
 			if cell.element == nil {
 				continue
@@ -448,7 +450,7 @@ func (table *Table) getNextRowAndCol(row, col int) (nexRow int, nextCol int) {
 		}
 
 		for ; j < table.cols; j++ {
-			if isEmpty(table.cells[i][j]) {
+			if util.IsEmpty(table.cells[i][j]) {
 				return i, j
 			}
 		}
@@ -539,14 +541,14 @@ type TableCell struct {
 	rowspan, colspan int
 
 	// 单元格内容
-	element    Element
+	element    core.Element
 	selfHeight float64 // 当前cell自身高度, 辅助计算
 	height     float64 // 当rowspan=1时, height = selfHeight
 	table      *Table
 }
 
 // Element: 创建,并且设置了字体, 偏移量
-func (cell *TableCell) SetElement(e Element) *TableCell {
+func (cell *TableCell) SetElement(e core.Element) *TableCell {
 	cell.element = e
 	cell.height = cell.element.GetHeight()
 	if cell.colspan+cell.rowspan == 2 {

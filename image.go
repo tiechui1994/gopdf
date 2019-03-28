@@ -12,7 +12,7 @@ type Image struct {
 	pdf           *core.Report
 	path          string
 	width, height float64
-	margin        Scope
+	margin        core.Scope
 	tempFilePath  string
 }
 
@@ -105,8 +105,8 @@ func (image *Image) GetWidth() float64 {
 	return image.width
 }
 
-func (image *Image) SetMargin(margin Scope) *Image {
-	replaceMarign(&margin)
+func (image *Image) SetMargin(margin core.Scope) *Image {
+	margin.ReplaceMarign()
 	image.margin = margin
 	return image
 }
