@@ -309,9 +309,10 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 
 		x, y = frame.getContentPosition(sx, sy, i)
 
-		// todo: 换页的依据
-		if (y < pageEndY || y >= pageEndY) && y+frame.lineHeight > pageEndY {
+		// todo: 换页
+		if y+frame.lineHeight > pageEndY {
 			var newX, newY float64
+
 			frame.SetMarign(core.NewScope(frame.margin.Left, 0, frame.margin.Right, 0))
 			frame.SetBorder(core.NewScope(frame.border.Left, 0, frame.border.Right, 0))
 			frame.contents = frame.contents[i:]
@@ -331,20 +332,21 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 			} else {
 				newX, _ = frame.pdf.GetPageStartXY()
 			}
+
 			frame.pdf.AddNewPage(false)
 			frame.pdf.SetXY(newX, newY)
+
 			return frame.GenerateAtomicCellWithAutoPage()
 		}
 
-		// todo: 不需要换页, 只需要增加数据
+		// todo: 当前页
 		if !util.IsEmpty(frame.fontColor) {
 			frame.pdf.TextColor(util.GetColorRGB(frame.fontColor))
 		}
 		if !util.IsEmpty(frame.backColor) {
 			x1 := x - frame.border.Left
 			y1 := y
-			//frame.pdf.GrayColor(x1, y1, frame.width, frame.lineHeight+frame.lineSpace, frame.backColor)
-			frame.pdf.BackgroundColor(x1, y1, frame.width, frame.lineHeight+frame.lineSpace, frame.backColor)
+			frame.pdf.BackgroundColor(x1, y1, frame.width, frame.lineHeight+frame.lineSpace, frame.backColor, "1110")
 		}
 
 		frame.pdf.Font(frame.font.Family, frame.font.Size, frame.font.Style) // 添加设置
@@ -353,9 +355,6 @@ func (frame *Frame) GenerateAtomicCellWithAutoPage() error {
 		// todo: 颜色恢复
 		if !util.IsEmpty(frame.fontColor) {
 			frame.pdf.TextDefaultColor()
-		}
-		if !util.IsEmpty(frame.backColor) {
-			frame.pdf.FillDefaultColor()
 		}
 
 		if frame.horizontalCentered || frame.rightAlign {
@@ -455,15 +454,13 @@ func (frame *Frame) GenerateAtomicCell() error {
 
 		x, y = frame.getContentPosition(sx, sy, i)
 
-		// todo: 不需要换页, 只需要增加数据
 		if !util.IsEmpty(frame.fontColor) {
 			frame.pdf.TextColor(util.GetColorRGB(frame.fontColor))
 		}
 		if !util.IsEmpty(frame.backColor) {
 			x1 := x - frame.border.Left
 			y1 := y
-			//frame.pdf.GrayColor(x1, y1, frame.width, frame.lineHeight+frame.lineSpace, frame.backColor)
-			frame.pdf.BackgroundColor(x1, y1, frame.width, frame.lineHeight+frame.lineSpace, frame.backColor)
+			frame.pdf.BackgroundColor(x1, y1, frame.width, frame.lineHeight+frame.lineSpace, frame.backColor, "1111")
 		}
 
 		frame.pdf.Font(frame.font.Family, frame.font.Size, frame.font.Style) // 添加设置
@@ -472,9 +469,6 @@ func (frame *Frame) GenerateAtomicCell() error {
 		// todo: 颜色恢复
 		if !util.IsEmpty(frame.fontColor) {
 			frame.pdf.TextDefaultColor()
-		}
-		if !util.IsEmpty(frame.backColor) {
-			frame.pdf.FillDefaultColor()
 		}
 
 		if frame.horizontalCentered || frame.rightAlign {

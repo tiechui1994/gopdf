@@ -464,11 +464,6 @@ func (report *Report) LineDefaultColor() {
 		"|" + strconv.Itoa(1))
 }
 
-func (report *Report) FillDefaultColor() {
-	report.addAtomicCell("FC|" + strconv.Itoa(255) + "|" + strconv.Itoa(255) +
-		"|" + strconv.Itoa(255))
-}
-
 func (report *Report) TextColor(red int, green int, blue int) {
 	report.addAtomicCell("TC|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) +
 		"|" + strconv.Itoa(blue))
@@ -478,16 +473,13 @@ func (report *Report) LineColor(red int, green int, blue int) {
 		"|" + strconv.Itoa(blue))
 }
 
-func (report *Report) BackgroundColor(x, y, w, h float64, color string) {
+// color: 背景颜色
+// line: 是否需要边框线条, "0000"不需要,  "1111"需要, "0110" 是需要 TOP,RIGHT 线条
+func (report *Report) BackgroundColor(x, y, w, h float64, color string, line string) {
 	red, green, blue := util.GetColorRGB(color)
 
 	report.addAtomicCell("BC|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + util.Ftoa(w) + "|" +
-		util.Ftoa(h) + "|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) + "|" + strconv.Itoa(blue))
-}
-
-func (report *Report) FillColor(red int, green int, blue int) {
-	report.addAtomicCell("FC|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) +
-		"|" + strconv.Itoa(blue))
+		util.Ftoa(h) + "|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) + "|" + strconv.Itoa(blue) + "|" + line)
 }
 
 func (report *Report) GrayColor(x, y float64, w, h float64, gray float64) {

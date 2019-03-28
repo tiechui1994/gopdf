@@ -302,9 +302,9 @@ func (table *Table) getTableHeight() float64 {
 // 自动换行生成
 func (table *Table) GenerateAtomicCell() error {
 	var (
-		sx, sy         = table.pdf.GetXY()
+		sx, sy         = table.pdf.GetXY() // 基准坐标
 		pageEndY       = table.pdf.GetPageEndY()
-		x1, y1, x2, y2 float64
+		x1, y1, x2, y2 float64 // 当前位置
 	)
 
 	// 重新计算行高
@@ -313,13 +313,14 @@ func (table *Table) GenerateAtomicCell() error {
 	for i := 0; i < table.rows; i++ {
 		x1, y1, x2, y2 = table.getVLinePosition(sx, sy, 0, i)
 
-		// todo: 需要换页
+		// todo: 换页
 		if y1 < pageEndY && y2 > pageEndY {
-			// todo: 1) 写入部分数据, 坐标系必须变换
+			// 1) 写入部分数据, 坐标系必须变换
 			var (
 				needSetHLine              bool
 				allRowCellWriteEverything = true // 当前的行不存在空白,且rowspan=1,且全部写完正行
 			)
+
 			for k := 0; k < table.cols; k++ {
 				cell := table.cells[i][k]
 				if cell.element == nil {
@@ -357,14 +358,14 @@ func (table *Table) GenerateAtomicCell() error {
 					allRowCellWriteEverything = false
 				}
 
-				// todo: 2) 垂直线
+				// 2) 垂直线
 				if table.hasVLine(k, i) {
 					x1, y1, x2, y2 = table.getVLinePosition(sx, sy, k, i)
 					table.pdf.Line(x1, y1, x2, pageEndY)
 				}
 			}
 
-			// todo: 3) 只有当一个有写入则必须有水平线
+			// 3) 只有当一个有写入则必须有水平线
 			if needSetHLine {
 				for k := 0; k < table.cols; k++ {
 					if table.hasHLine(k, i) {
@@ -374,12 +375,12 @@ func (table *Table) GenerateAtomicCell() error {
 				}
 			}
 
-			// todo: 4) 补全右侧垂直线 和 底层水平线
+			// 4) 补全右侧垂直线 和 底层水平线
 			x1, y1, x2, y2 = table.getVLinePosition(sx, sy, 0, 0)
 			table.pdf.LineH(x1, pageEndY, x1+table.width)
 			table.pdf.LineV(x1+table.width, y1, pageEndY)
 
-			// todo: 5) 增加新页面
+			// 5) 增加新页面
 			table.pdf.AddNewPage(false)
 			table.margin.Top = 0
 			if allRowCellWriteEverything {
@@ -397,25 +398,25 @@ func (table *Table) GenerateAtomicCell() error {
 				return nil
 			}
 
-			// todo: 6) 剩下页面
+			// 6) 剩下页面
 			return table.GenerateAtomicCell()
 		}
 
-		// todo: 不需要换页
+		// todo: 当前页
 		for j := 0; j < table.cols; j++ {
-			// todo: 1.水平线
+			// 1. 水平线
 			if table.hasHLine(j, i) {
 				x1, y1, x2, y2 = table.getHLinePosition(sx, sy, j, i)
 				table.pdf.Line(x1, y1, x2, y2)
 			}
 
-			// todo: 2. 垂直线
+			// 2. 垂直线
 			if table.hasVLine(j, i) {
 				x1, y1, x2, y2 = table.getVLinePosition(sx, sy, j, i)
 				table.pdf.Line(x1, y1, x2, y2)
 			}
 
-			// todo: 3. 写入数据, 坐标系必须变换
+			// 3. 写入数据, 坐标系必须变换
 			cell := table.cells[i][j]
 			if cell.element == nil {
 				continue
