@@ -28,6 +28,24 @@ type TextCell struct {
 	rightAlign         bool // 水平居左
 }
 
+func NewCell(width, lineHeight, lineSpace float64, pdf *core.Report) *TextCell {
+	endX := pdf.GetPageEndX()
+	curX, _ := pdf.GetXY()
+	if width > endX-curX {
+		width = endX - curX
+	}
+
+	cell := &TextCell{
+		width:      width,
+		height:     0,
+		pdf:        pdf,
+		lineHeight: lineHeight,
+		lineSpace:  lineSpace,
+	}
+
+	return cell
+}
+
 func (cell *TextCell) VerticalCentered() *TextCell {
 	cell.verticalCentered = true
 	return cell
@@ -140,7 +158,7 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) error {
 
 	// 背景颜色
 	if !util.IsEmpty(cell.backColor) {
-		cell.pdf.BackgroundColor(sx, sy, cell.width, maxheight, cell.backColor, "1010")
+		cell.pdf.BackgroundColor(sx, sy, cell.width, maxheight, cell.backColor, "1111")
 	}
 
 	if maxheight > cell.height {

@@ -2,7 +2,6 @@ package gopdf
 
 import (
 	"github.com/tiechui1994/gopdf/core"
-	"fmt"
 )
 
 // 构建表格
@@ -37,7 +36,7 @@ type FormCell struct {
 func (cell *FormCell) SetElement(e *TextCell) *FormCell {
 	cell.element = e
 	cell.height = cell.element.GetHeight()
-	if cell.colspan+cell.rowspan == 2 {
+	if cell.rowspan == 1 {
 		cell.selfheight = cell.height
 	}
 	return cell
@@ -110,7 +109,6 @@ func (form *Form) NewCell() *FormCell {
 		form.nextcol = -1
 		form.nextrow = -1
 	}
-	fmt.Println("w,h", 1, 1, "cur:", row, col, "next: ", form.nextrow, form.nextcol)
 	return cell
 }
 
@@ -256,8 +254,8 @@ func (form *Form) GenerateAtomicCell() error {
 		if y1 < pageEndY && y2 > pageEndY {
 			// 1) 写入部分数据, 坐标系必须变换
 			var (
-				needSetHLine              bool
-				allRowCellWriteEverything = true // 当前的行不存在空白,且rowspan=1,且全部写完正行
+				needSetHLine       bool
+				currentRowWriteOut = true // 当前的行不存在空白,且rowspan=1,且全部写完正行
 			)
 
 			if i == 0 {
@@ -271,38 +269,15 @@ func (form *Form) GenerateAtomicCell() error {
 			for k := 0; k < form.cols; k++ {
 				cell := form.cells[i][k]
 				if cell.element == nil {
-					allRowCellWriteEverything = false
 					continue
 				}
 
-				if cell.rowspan > 1 {
-					allRowCellWriteEverything = false
-				}
-
-				cellOriginHeight := cell.height
+				originHeight := cell.element.GetHeight()
 				x1, y1, _, _ := form.getHLinePosition(sx, sy, k, i)
 				cell.form.pdf.SetXY(x1, y1)
-				cell.element.GenerateAtomicCell() // 会修改element的高度
-
-				// todo: 只能说明当前的cell已经写完,但是没有更新height, div的逻辑本身如此, 这里需要手动同步一下div当中的contents
-				if cellOriginHeight == cell.element.GetHeight() {
-					cell.height = 0
-					cell.element.ClearContents()
-				} else {
-					cell.height = cell.element.GetHeight() // 将修改后的高度同步到本地的Cell当中, element -> form
-				}
-
-				if cell.rowspan == 1 {
-					cell.selfheight = cell.height
-				}
-				cell.form.pdf.SetXY(sx, sy)
-
-				if cellOriginHeight-cell.element.GetHeight() > 0 {
+				cell.element.GenerateAtomicCell(pageEndY - y1) // 会修改element的高度
+				if originHeight != cell.element.GetHeight() {
 					needSetHLine = true
-				}
-
-				if cell.element.GetHeight() != 0 {
-					allRowCellWriteEverything = false
 				}
 
 				// 2) 垂直线
@@ -327,10 +302,17 @@ func (form *Form) GenerateAtomicCell() error {
 			form.pdf.LineH(x1, pageEndY, x1+form.width)
 			form.pdf.LineV(x1+form.width, y1, pageEndY)
 
+			for k := 0; k < form.cols; k++ {
+				cell := form.cells[i][k]
+				if cell.rowspan != 1 || cell.element.GetHeight() != 0 {
+					currentRowWriteOut = false
+				}
+			}
+
 			// 5) 增加新页面
 			form.pdf.AddNewPage(false)
 			form.margin.Top = 0
-			if allRowCellWriteEverything {
+			if currentRowWriteOut {
 				form.cells = form.cells[i+1:]
 			} else {
 				form.cells = form.cells[i:]
@@ -408,38 +390,25 @@ func (form *Form) checkTable() {
 // todo: 重新计算tablecell的高度, 必须是所有的cell已经到位
 func (form *Form) replaceCellHeight() {
 	form.checkTable()
+
 	cells := form.cells
 
-	// element -> tablecell, 只进行一次
-	if form.isFirstCalTableCellHeight {
-		for i := 0; i < form.rows; i++ {
-			for j := 0; j < form.cols; j++ {
-				if cells[i][j] != nil && cells[i][j].element != nil && cells[i][j].colspan > 0 {
-					cells[i][j].height = cells[i][j].element.GetHeight()
-					if cells[i][j].rowspan == 1 {
-						cells[i][j].selfheight = cells[i][j].height
-					}
-				}
-			}
-		}
-	}
-
-	// 第一遍计算行高度
+	// 第一遍计算rowspan是1的高度
 	for i := 0; i < form.rows; i++ {
-		var maxHeight float64 // 当前行的最大高度
+		var max float64 // 当前行的最大高度
 		for j := 0; j < form.cols; j++ {
-			if cells[i][j] != nil && maxHeight < cells[i][j].selfheight {
-				maxHeight = cells[i][j].selfheight
+			if cells[i][j] != nil && max < cells[i][j].selfheight {
+				max = cells[i][j].selfheight
 			}
 		}
 
 		for j := 0; j < form.cols; j++ {
 			if cells[i][j] != nil {
-				cells[i][j].selfheight = maxHeight
-			}
+				cells[i][j].selfheight = max // todo: 当前行(包括空白)的自身高度
 
-			if cells[i][j].rowspan == 1 {
-				cells[i][j].height = cells[i][j].selfheight
+				if cells[i][j].rowspan == 1 {
+					cells[i][j].height = cells[i][j].selfheight
+				}
 			}
 		}
 	}
@@ -449,48 +418,38 @@ func (form *Form) replaceCellHeight() {
 		for j := 0; j < form.cols; j++ {
 			if cells[i][j] != nil && cells[i][j].rowspan > 1 {
 				var totalHeight float64
-				for v := 0; v < cells[i][j].rowspan; v++ {
-					totalHeight += cells[i+v][j].selfheight
+				for k := 0; k < cells[i][j].rowspan; k++ {
+					totalHeight += cells[i+k][j].selfheight // todo: 计算所有行的高度
 				}
 
 				// 真实的高度 > 和的高度, 调整最后一行
 				if totalHeight < cells[i][j].height {
 					h := cells[i][j].height - totalHeight
-					row := cells[i][j].row + cells[i][j].rowspan - 1
+
+					row := cells[i][j].row + cells[i][j].rowspan - 1 // 最后一行
 					for col := 0; col < form.cols; col++ {
 						cells[row][col].selfheight += h
-						// 1行的开始
+
+						// 1行的开始元素
 						if cells[row][col].rowspan == 1 {
 							cells[row][col].height = cells[row][col].selfheight
 						}
-						// 多行的开始
-						if cells[row][col].rowspan > 1 {
-							cells[row][col].height += h
-							cells[row][col].selfheight += h
-						}
 
-						// 空白, 导致它的父cell高度增加
-						if cells[row][col].rowspan < 0 {
-							cells[row][col].selfheight += h
-							cells[-cells[row][col].rowspan][-cells[row][col].colspan].height += h
-						}
+						//// 多行的开始元素
+						//if cells[row][col].rowspan > 1 {
+						//	cells[row][col].height += h
+						//	cells[row][col].selfheight += h
+						//}
+						//
+						//// 空白, 导致它的父cell高度增加
+						//if cells[row][col].rowspan < 0 {
+						//	cells[row][col].selfheight += h
+						//	cells[-cells[row][col].rowspan][-cells[row][col].colspan].height += h
+						//}
 					}
 				}
 			}
 		}
-	}
-
-	// tablecell -> element 只能同步操作一次
-	if form.isFirstCalTableCellHeight {
-		for i := 0; i < form.rows; i++ {
-			for j := 0; j < form.cols; j++ {
-				if cells[i][j] != nil && cells[i][j].element != nil {
-					cells[i][j].element.SetHeight(cells[i][j].height)
-				}
-			}
-		}
-
-		form.isFirstCalTableCellHeight = false
 	}
 
 	form.cells = cells
