@@ -76,7 +76,9 @@ func ComplexTableReportWithDataExecutor(report *core.Report) {
 			w := table.GetColWidth(i+2, j)
 			e := NewTextCell(w, lineHeight, lineSpace, report)
 			e.SetFont(f1)
-			e.SetBackColor("255,192,203")
+			if i%2 == 0 {
+				e.SetBackColor("255,192,203")
+			}
 			e.SetBorder(border)
 			e.SetContent(s)
 			cells[j].SetElement(e)
@@ -143,7 +145,9 @@ func ComplexTableReportExecutor(report *core.Report) {
 			// todo: div执行的严格顺序
 			e := NewTextCell(w, lineHeight, lineSpace, report)
 			e.SetFont(f1)
-			//e.SetBackColor("255,192,203")
+			if i%2 == 0 {
+				e.SetBackColor("255,192,203")
+			}
 			e.SetBorder(border)
 			e.SetContent(GetRandStr())
 			cells[j].SetElement(e)
@@ -158,7 +162,7 @@ func TestFormWithdata(t *testing.T) {
 }
 
 func TestForm(t *testing.T) {
-	//ComplexTableReport()
+	ComplexTableReport()
 }
 
 func GetRandStr() string {

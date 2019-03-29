@@ -177,11 +177,6 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) error {
 	cell.pdf.Font(cell.font.Family, cell.font.Size, cell.font.Style)
 	cell.pdf.SetFontWithStyle(cell.font.Family, cell.font.Style, cell.font.Size)
 
-	// 背景颜色
-	if !util.IsEmpty(cell.backColor) {
-		cell.pdf.BackgroundColor(sx, sy, cell.width, maxheight, cell.backColor, "0000")
-	}
-
 	// 计算需要打印的行数
 	if maxheight > cell.height || math.Abs(maxheight-cell.height) < 0.01 {
 		lines = len(cell.contents)
@@ -194,6 +189,11 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) error {
 	}
 	if lines == 0 {
 		return nil
+	}
+
+	// 背景颜色
+	if !util.IsEmpty(cell.backColor) {
+		cell.pdf.BackgroundColor(sx, sy, cell.width, maxheight, cell.backColor, "0000")
 	}
 
 	// 写入cell数据
