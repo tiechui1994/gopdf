@@ -288,6 +288,10 @@ func (table *Table) GenerateAtomicCell() error {
 
 		// todo: 当前页
 		for j := 0; j < table.cols; j++ {
+			if table.cells[i][j].element == nil {
+				continue
+			}
+
 			table.writeCurrentPageCell(i, j, sx, sy)
 		}
 	}
@@ -327,7 +331,7 @@ func (table *Table) writeCurrentPageRestContent(row int, sx, sy float64) bool {
 		cell.element.GenerateAtomicCell(pageEndY - y1) // 写入内容, 写完之后会修正其高度
 
 		// 使用math.Abs减少误差
-		if math.Abs(originHeight-cell.element.GetHeight()) > 0.1 {
+		if math.Abs(originHeight-cell.element.GetHeight()) > 0.01 {
 			needHLine = true
 		}
 
@@ -368,18 +372,8 @@ func (table *Table) writeCurrentPageCell(row, col int, sx, sy float64) {
 	var (
 		x1, y1, x2, y2 float64
 	)
-	if table.hasHLine(col, row) {
-		x1, y1, x2, y2 = table.getHLinePosition(sx, sy, col, row)
-		table.pdf.Line(x1, y1, x2, y2)
-	}
 
-	// 2. 垂直线
-	if table.hasVLine(col, row) {
-		x1, y1, x2, y2 = table.getVLinePosition(sx, sy, col, row)
-		table.pdf.Line(x1, y1, x2, y2)
-	}
-
-	// 3. 写入数据, 坐标系必须变换
+	// 1. 写入数据, 坐标系必须变换
 	cell := table.cells[row][col]
 	if cell.element == nil {
 		return
@@ -388,6 +382,19 @@ func (table *Table) writeCurrentPageCell(row, col int, sx, sy float64) {
 	x1, y1, x2, y2 = table.getVLinePosition(sx, sy, col, row) // 垂直线
 	cell.table.pdf.SetXY(x1, y1)
 	cell.element.GenerateAtomicCell(y2 - y1)
+
+	// 2. 水平线
+	if table.hasHLine(col, row) {
+		x1, y1, x2, y2 = table.getHLinePosition(sx, sy, col, row)
+		table.pdf.Line(x1, y1, x2, y2)
+	}
+
+	// 3. 垂直线
+	if table.hasVLine(col, row) {
+		x1, y1, x2, y2 = table.getVLinePosition(sx, sy, col, row)
+		table.pdf.Line(x1, y1, x2, y2)
+	}
+
 	cell.table.pdf.SetXY(sx, sy)
 }
 
@@ -502,6 +509,7 @@ func (table *Table) getVLinePosition(sx, sy float64, col, row int) (x1, y1 float
 func (table *Table) getHLinePosition(sx, sy float64, col, row int) (x1, y1 float64, x2, y2 float64) {
 	var (
 		x, y float64
+		w    float64
 	)
 
 	for i := 0; i < col; i++ {
@@ -514,7 +522,15 @@ func (table *Table) getHLinePosition(sx, sy float64, col, row int) (x1, y1 float
 	}
 	y += sy + table.margin.Top
 
-	return x, y, x + table.colwidths[col]*table.width, y
+	if table.cells[row][col].colspan > 1 {
+		for k := 0; k < table.cells[row][col].colspan; k++ {
+			w += table.colwidths[col+k] * table.width
+		}
+	} else {
+		w = table.colwidths[col] * table.width
+	}
+
+	return x, y, x + w, y
 }
 
 // 节点垂直平线

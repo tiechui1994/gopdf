@@ -104,9 +104,10 @@ func (cell *TextCell) SetFontWithColor(font core.Font, color string) *TextCell {
 	return cell
 }
 
-func (cell *TextCell) SetBorder(border core.Scope) {
+func (cell *TextCell) SetBorder(border core.Scope) *TextCell {
 	border.ReplaceBorder()
 	cell.border = border
+	return cell
 }
 
 func (cell *TextCell) SetContent(s string) *TextCell {
@@ -178,7 +179,7 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) error {
 
 	// 背景颜色
 	if !util.IsEmpty(cell.backColor) {
-		cell.pdf.BackgroundColor(sx, sy, cell.width, maxheight, cell.backColor, "1111")
+		cell.pdf.BackgroundColor(sx, sy, cell.width, maxheight, cell.backColor, "0000")
 	}
 
 	// 计算需要打印的行数
@@ -199,11 +200,11 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) error {
 	for i := 0; i < lines; i++ {
 		width := cell.pdf.MeasureTextWidth(cell.contents[i]) / cell.pdf.GetUnit()
 		x = sx + cell.border.Left // 水平居左
-		if cell.rightAlign {      //  水平居右
+		if cell.rightAlign { //  水平居右
 			x = sx + (cell.width - width - cell.border.Right)
 		}
 		if cell.horizontalCentered { // 水平居中
-			x = sx + cell.border.Left + (cell.width-width)/2
+			x = sx + (cell.width-width)/2
 		}
 
 		y = sy + float64(i)*(cell.lineHeight+cell.lineSpace) + cell.border.Top

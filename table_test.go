@@ -55,13 +55,14 @@ func ComplexTableReportWithDataExecutor(report *core.Report) {
 	c10 := table.NewCellByRange(3, 1)
 
 	f1 := core.Font{Family: fORM_MY, Size: 15, Style: ""}
-	c00.SetElement(NewTextCell(table.GetColWidth(0, 0), lineHeight, lineSpace, report).SetFont(f1).HorizontalCentered().SetContent("0-0"))
-	c01.SetElement(NewTextCell(table.GetColWidth(0, 1), lineHeight, lineSpace, report).SetFont(f1).RightAlign().SetContent("0-1"))
-	c03.SetElement(NewTextCell(table.GetColWidth(0, 3), lineHeight, lineSpace, report).SetFont(f1).RightAlign().SetContent("0-3-近日，江苏苏州市姑苏区市场监督管理局向苏州定园旅游服务有限公司送达行政处罚决定书，对定园进行处罚，吊销其营业执照，此举开创了我国旅游景点因虚假宣传被吊销营业执照的先河"))
-	c10.SetElement(NewTextCell(table.GetColWidth(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent("1-0-近日，江苏苏州市姑苏区市场监督管理局向苏州定园旅游服务有限公司送达行政处罚决定书了我国旅游景点因虚假宣传被吊销营业执照的先河"))
+	border := core.NewScope(0.8*unit, 0.8*unit, 0.8*unit, 0.8*unit)
+	c00.SetElement(NewTextCell(table.GetColWidth(0, 0), lineHeight, lineSpace, report).SetFont(f1).SetBorder(border).HorizontalCentered().SetContent("0-0"))
+	c01.SetElement(NewTextCell(table.GetColWidth(0, 1), lineHeight, lineSpace, report).SetFont(f1).SetBorder(border).RightAlign().SetContent("0-1"))
+	c03.SetElement(NewTextCell(table.GetColWidth(0, 3), lineHeight, lineSpace, report).SetFont(f1).SetBorder(border).RightAlign().SetContent("0-3近日，江苏苏州市姑苏区市场监督管理局向苏州定园旅游服务有限公司送达行政处罚决定书，对定园进行处罚，吊销其营业执照，此举开创了我国旅游景点因虚假宣传被吊销营业执照的先河"))
+	c10.SetElement(NewTextCell(table.GetColWidth(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetBorder(border).SetContent("1-0近日，江苏苏州市姑苏区市场监督管理局向苏州定园旅游服务有限公司送达行政处罚决定书了我国旅游景点因虚假宣传被吊销营业执照的先河"))
 
 	f1 = core.Font{Family: fORM_MY, Size: 10}
-	border := core.NewScope(0.5*unit, 0.5*unit, 0, 0)
+	border = core.NewScope(0.5*unit, 0.5*unit, 0, 0)
 
 	for i := 0; i < 98; i++ {
 		cells := make([]*TableCell, 5)
@@ -157,7 +158,7 @@ func TestFormWithdata(t *testing.T) {
 }
 
 func TestForm(t *testing.T) {
-	ComplexTableReport()
+	//ComplexTableReport()
 }
 
 func GetRandStr() string {
