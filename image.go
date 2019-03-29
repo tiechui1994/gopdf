@@ -43,7 +43,7 @@ func NewImage(path string, pdf *core.Report) *Image {
 		tempFilePath: tempFilePath,
 	}
 	if tempFilePath != "" {
-		pdf.AddCallBack(image.deleteTempImage)
+		pdf.AddCallBack(image.delTempImage)
 	}
 
 	return image
@@ -91,18 +91,10 @@ func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Re
 	}
 
 	if tempFilePath != "" {
-		pdf.AddCallBack(image.deleteTempImage)
+		pdf.AddCallBack(image.delTempImage)
 	}
 
 	return image
-}
-
-func (image *Image) GetHeight() float64 {
-	return image.height
-}
-
-func (image *Image) GetWidth() float64 {
-	return image.width
 }
 
 func (image *Image) SetMargin(margin core.Scope) *Image {
@@ -111,10 +103,11 @@ func (image *Image) SetMargin(margin core.Scope) *Image {
 	return image
 }
 
-func (image *Image) getImagePostion(sx, sy float64) (x, y float64) {
-	x = sx + image.margin.Left
-	y = sy + image.margin.Top
-	return x, y
+func (image *Image) GetHeight() float64 {
+	return image.height
+}
+func (image *Image) GetWidth() float64 {
+	return image.width
 }
 
 // 自动换行
@@ -123,7 +116,7 @@ func (image *Image) GenerateAtomicCell() error {
 		sx, sy = image.pdf.GetXY()
 	)
 
-	x, y := image.getImagePostion(sx, sy)
+	x, y := image.getPostion(sx, sy)
 	pageEndY := image.pdf.GetPageEndY()
 	if y < pageEndY && y+float64(image.height) > pageEndY {
 		image.pdf.AddNewPage(false)
@@ -135,7 +128,13 @@ func (image *Image) GenerateAtomicCell() error {
 	return nil
 }
 
-func (image *Image) deleteTempImage(report *core.Report) {
+func (image *Image) getPostion(sx, sy float64) (x, y float64) {
+	x = sx + image.margin.Left
+	y = sy + image.margin.Top
+	return x, y
+}
+
+func (image *Image) delTempImage(report *core.Report) {
 	if image.tempFilePath == "" {
 		return
 	}

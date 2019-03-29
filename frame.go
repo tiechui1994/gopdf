@@ -26,7 +26,7 @@ type Frame struct {
 	lineSpace     float64
 
 	fontColor string
-	backColor string // 灰度颜色, 0-1.0
+	backColor string
 
 	margin core.Scope
 	border core.Scope
@@ -79,7 +79,7 @@ func NewFrameWithWidth(width float64, lineHeight, lineSpce float64, pdf *core.Re
 	return f
 }
 
-func (frame *Frame) CopyWithContent(content string) *Frame {
+func (frame *Frame) Copy(content string) *Frame {
 	f := &Frame{
 		pdf:        frame.pdf,
 		frameType:  frame.frameType,
@@ -95,6 +95,16 @@ func (frame *Frame) CopyWithContent(content string) *Frame {
 	f.SetContent(content)
 
 	return f
+}
+
+func (frame *Frame) SetFrameType(frameType int) *Frame {
+	if frameType < FRAME_STRAIGHT || frameType > FRAME_NONE {
+		return frame
+	}
+
+	frame.frameType = frameType
+
+	return frame
 }
 
 func (frame *Frame) SetMarign(margin core.Scope) *Frame {
@@ -115,7 +125,6 @@ func (frame *Frame) SetMarign(margin core.Scope) *Frame {
 
 	return frame
 }
-
 func (frame *Frame) SetBorder(border core.Scope) *Frame {
 	border.ReplaceBorder()
 	currX, _ := frame.pdf.GetXY()
@@ -131,41 +140,36 @@ func (frame *Frame) SetBorder(border core.Scope) *Frame {
 	return frame
 }
 
-func (frame *Frame) SetFrameType(frameType int) *Frame {
-	if frameType < FRAME_STRAIGHT || frameType > FRAME_NONE {
-		return frame
-	}
-
-	frame.frameType = frameType
-
-	return frame
-}
-
 func (frame *Frame) GetHeight() (height float64) {
 	return frame.height
 }
-
 func (frame *Frame) GetWidth() (width float64) {
 	return frame.width
 }
 
-// 水平居中
-func (frame *Frame) SetHorizontalCentered() *Frame {
+func (frame *Frame) HorizontalCentered() *Frame {
 	frame.horizontalCentered = true
 	frame.rightAlign = false
 	return frame
 }
-
-// 垂直居中
-func (frame *Frame) SetVerticalCentered() *Frame {
+func (frame *Frame) VerticalCentered() *Frame {
 	frame.verticalCentered = true
 	return frame
 }
-
-// 居右
-func (frame *Frame) SetRightAlign() *Frame {
+func (frame *Frame) RightAlign() *Frame {
 	frame.rightAlign = true
 	frame.horizontalCentered = false
+	return frame
+}
+
+func (frame *Frame) SetFontColor(color string) *Frame {
+	util.CheckColor(color)
+	frame.fontColor = color
+	return frame
+}
+func (frame *Frame) SetBackColor(color string) *Frame {
+	util.CheckColor(color)
+	frame.backColor = color
 	return frame
 }
 
@@ -177,10 +181,9 @@ func (frame *Frame) SetFont(font core.Font) *Frame {
 
 	return frame
 }
-
-func (frame *Frame) SetFontColor(color string) *Frame {
-	util.CheckColor(color)
-	frame.fontColor = color
+func (frame *Frame) SetFontWithColor(font core.Font, color string) *Frame {
+	frame.SetFont(font)
+	frame.SetFontColor(color)
 	return frame
 }
 

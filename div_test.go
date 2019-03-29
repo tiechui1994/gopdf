@@ -39,10 +39,10 @@ func DivReportExecutor(report *core.Report) {
 	lineSpace := 0.1 * unit
 	lineHeight := report.MeasureTextWidth("中") / unit
 
-	div := NewDivWithWidth(48*unit, lineHeight, lineSpace, report)
+	div := NewDiv(48*unit, lineHeight, lineSpace, report)
 	div.SetFont(font)
 	div.SetBackColor("11,123,244")
-	div.SetRightAlign()
+	div.RightAlign()
 	div.SetMarign(core.NewScope(10, 20, 0, 0))
 
 	div.SetBorder(core.NewScope(10, 50, 0, 0))

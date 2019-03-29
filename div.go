@@ -11,26 +11,19 @@ import (
 type Div struct {
 	pdf           *core.Report
 	width, height float64
+	contents      []string // 内容
 
-	// 行高
-	lineHeight float64
-	// 行间距
-	lineSpace float64
+	lineHeight float64 // 行高
+	lineSpace  float64 // 行间距
 
 	// div的位置调整和内容调整
 	margin core.Scope
 	border core.Scope
 
-	// 内容
-	contents []string
-
 	// 颜色控制
 	font      core.Font
 	fontColor string
 	backColor string
-
-	// 辅助作用
-	isFirstSetHeight bool
 
 	// 居中
 	horizontalCentered bool
@@ -38,7 +31,7 @@ type Div struct {
 	rightAlign         bool
 }
 
-func NewDivWithWidth(width, lineHeight, lineSpace float64, pdf *core.Report) *Div {
+func NewDiv(width, lineHeight, lineSpace float64, pdf *core.Report) *Div {
 	// 最大宽度控制
 	endX := pdf.GetPageEndX()
 	curX, _ := pdf.GetXY()
@@ -47,48 +40,54 @@ func NewDivWithWidth(width, lineHeight, lineSpace float64, pdf *core.Report) *Di
 	}
 
 	div := &Div{
-		width:            width,
-		height:           0,
-		pdf:              pdf,
-		lineHeight:       lineHeight,
-		lineSpace:        lineSpace,
-		isFirstSetHeight: true,
+		width:      width,
+		height:     0,
+		pdf:        pdf,
+		lineHeight: lineHeight,
+		lineSpace:  lineSpace,
 	}
 	(*div).pdf = pdf
 
 	return div
 }
 
-func (div *Div) CopyWithContent(content string) *Div {
-	d := div.Copy()
+func (div *Div) Copy(content string) *Div {
+	d := &Div{
+		pdf:        div.pdf,
+		width:      div.width,
+		height:     0,
+		lineHeight: div.lineHeight,
+		lineSpace:  div.lineSpace,
+		margin:     div.margin,
+		border:     div.border,
+		fontColor:  div.fontColor,
+	}
+
+	d.SetFont(div.font)
 	d.SetContent(content)
 
 	return d
 }
 
-func (div *Div) Copy() *Div {
-	d := &Div{
-		pdf:              div.pdf,
-		width:            div.width,
-		height:           0,
-		lineHeight:       div.lineHeight,
-		lineSpace:        div.lineSpace,
-		margin:           div.margin,
-		border:           div.border,
-		fontColor:        div.fontColor,
-		isFirstSetHeight: true,
-	}
-
-	d.contents = nil
-	d.SetFont(div.font)
-	return d
+func (div *Div) HorizontalCentered() *Div {
+	div.horizontalCentered = true
+	div.rightAlign = false
+	return div
+}
+func (div *Div) VerticalCentered() *Div {
+	div.verticalCentered = true
+	return div
+}
+func (div *Div) RightAlign() *Div {
+	div.rightAlign = true
+	div.horizontalCentered = false
+	return div
 }
 
 func (div *Div) SetLineSpace(lineSpace float64) *Div {
 	div.lineSpace = lineSpace
 	return div
 }
-
 func (div *Div) SetLineHeight(lineHeight float64) *Div {
 	div.lineHeight = lineHeight
 	return div
@@ -109,13 +108,16 @@ func (div *Div) SetMarign(marign core.Scope) *Div {
 
 	return div
 }
+func (div *Div) SetBorder(border core.Scope) {
+	border.ReplaceBorder()
+	div.border = border
+}
 
 func (div *Div) SetFontColor(color string) *Div {
 	util.CheckColor(color)
 	div.fontColor = color
 	return div
 }
-
 func (div *Div) SetBackColor(color string) *Div {
 	util.CheckColor(color)
 	div.backColor = color
@@ -130,36 +132,10 @@ func (div *Div) SetFont(font core.Font) *Div {
 	div.pdf.SetFontWithStyle(font.Family, font.Style, font.Size)
 	return div
 }
-
 func (div *Div) SetFontWithColor(font core.Font, color string) *Div {
 	div.SetFont(font)
 	div.SetFontColor(color)
 
-	return div
-}
-
-func (div *Div) SetBorder(border core.Scope) {
-	border.ReplaceBorder()
-	div.border = border
-}
-
-// 水平居中
-func (div *Div) SetHorizontalCentered() *Div {
-	div.horizontalCentered = true
-	div.rightAlign = false
-	return div
-}
-
-// 垂直居中
-func (div *Div) SetVerticalCentered() *Div {
-	div.verticalCentered = true
-	return div
-}
-
-// 居右
-func (div *Div) SetRightAlign() *Div {
-	div.rightAlign = true
-	div.horizontalCentered = false
 	return div
 }
 
@@ -226,23 +202,8 @@ func (div *Div) SetContent(s string) *Div {
 	return div
 }
 
-// 同步操作, 只能操作一次, 操作要小心使用
-func (div *Div) SetHeight(height float64) {
-	if div.isFirstSetHeight {
-		div.height = height
-		div.isFirstSetHeight = false
-		return
-	}
-
-	panic("olny one time set height")
-}
-
 func (div *Div) GetHeight() float64 {
 	return div.height
-}
-
-func (div *Div) ClearContents() {
-	div.contents = nil
 }
 
 // 自动换行
