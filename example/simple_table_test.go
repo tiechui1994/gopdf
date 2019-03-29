@@ -320,7 +320,7 @@ func SimpleTableReportExecutor(report *core.Report) {
 		if !isTable && key != "" {
 			report.SetMargin(4*unit, 0)
 			content := fmt.Sprintf("%s: %s", key, value)
-			contentDiv := gopdf.NewDivWithWidth(80*unit, lineHight, lineSpace, report)
+			contentDiv := gopdf.NewDiv(80*unit, lineHight, lineSpace, report)
 			contentDiv.SetFont(textFont).SetContent(content).GenerateAtomicCellWithAutoPage()
 			report.SetMargin(0, 1*unit)
 
@@ -330,7 +330,7 @@ func SimpleTableReportExecutor(report *core.Report) {
 		if isTable {
 			report.SetMargin(4*unit, 0)
 			content := fmt.Sprintf("%s:", key)
-			contentDiv := gopdf.NewDivWithWidth(80*unit, lineHight, lineSpace, report)
+			contentDiv := gopdf.NewDiv(80*unit, lineHight, lineSpace, report)
 			contentDiv.SetFont(textFont).SetContent(content).GenerateAtomicCellWithAutoPage()
 			report.SetMargin(0, 0.5*unit)
 
@@ -339,11 +339,11 @@ func SimpleTableReportExecutor(report *core.Report) {
 			for i := 0; i < rows; i++ {
 				for j := 0; j < cols; j++ {
 					cell := table.NewCell()
-					element := gopdf.NewDivWithWidth(table.GetColWidth(i, j), lineHight, lineSpace, report)
+					element := gopdf.NewTextCell(table.GetColWidth(i, j), lineHight, lineSpace, report)
 					element.SetFont(textFont)
 					element.SetBorder(core.Scope{Left: 0.5 * unit, Top: 0.5 * unit})
 					if i == 0 || j == 0 && hasRowName {
-						element.SetHorizontalCentered()
+						element.HorizontalCentered()
 					}
 					element.SetContent(cells[i][j])
 					cell.SetElement(element)

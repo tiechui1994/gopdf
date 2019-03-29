@@ -40,9 +40,7 @@ type Font struct {
 	Size   int    // 字体大小
 }
 
-type Element interface {
-	GenerateAtomicCell() error
+type Cell interface {
+	GenerateAtomicCell(height float64) error
 	GetHeight() float64
-	SetHeight(height float64)
-	ClearContents()
 }

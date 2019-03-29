@@ -1,10 +1,11 @@
 package gopdf
 
 import (
+	"math"
+	"strings"
+
 	"github.com/tiechui1994/gopdf/core"
 	"github.com/tiechui1994/gopdf/util"
-	"strings"
-	"math"
 )
 
 type TextCell struct {
@@ -28,7 +29,7 @@ type TextCell struct {
 	rightAlign         bool // 水平居左
 }
 
-func NewCell(width, lineHeight, lineSpace float64, pdf *core.Report) *TextCell {
+func NewTextCell(width, lineHeight, lineSpace float64, pdf *core.Report) *TextCell {
 	endX := pdf.GetPageEndX()
 	curX, _ := pdf.GetXY()
 	if width > endX-curX {
@@ -44,6 +45,24 @@ func NewCell(width, lineHeight, lineSpace float64, pdf *core.Report) *TextCell {
 	}
 
 	return cell
+}
+
+func (cell *TextCell) Copy(content string) *TextCell {
+	text := &TextCell{
+		pdf:        cell.pdf,
+		width:      cell.width,
+		height:     0,
+		lineHeight: cell.lineHeight,
+		lineSpace:  cell.lineSpace,
+		border:     cell.border,
+		fontColor:  cell.fontColor,
+	}
+
+	text.SetFont(cell.font)
+
+	text.SetContent(content)
+
+	return text
 }
 
 func (cell *TextCell) VerticalCentered() *TextCell {
@@ -92,7 +111,6 @@ func (cell *TextCell) SetBorder(border core.Scope) {
 
 func (cell *TextCell) SetContent(s string) *TextCell {
 	convertStr := strings.Replace(s, "\t", "    ", -1)
-
 	var (
 		unit         = cell.pdf.GetUnit()
 		blocks       = strings.Split(convertStr, "\n") // 分行
@@ -143,7 +161,6 @@ func (cell *TextCell) SetContent(s string) *TextCell {
 			cell.contents = append(cell.contents, string(line))
 		}
 	}
-
 	length := float64(len(cell.contents))
 	cell.height = cell.border.Top + math.Abs(cell.border.Bottom) + cell.lineHeight*length + cell.lineSpace*(length-1)
 	return cell
@@ -156,34 +173,40 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) error {
 		x, y   float64            //  实际开始的坐标
 	)
 
+	cell.pdf.Font(cell.font.Family, cell.font.Size, cell.font.Style)
+	cell.pdf.SetFontWithStyle(cell.font.Family, cell.font.Style, cell.font.Size)
+
 	// 背景颜色
 	if !util.IsEmpty(cell.backColor) {
 		cell.pdf.BackgroundColor(sx, sy, cell.width, maxheight, cell.backColor, "1111")
 	}
 
-	if maxheight > cell.height {
+	// 计算需要打印的行数
+	if maxheight > cell.height || math.Abs(maxheight-cell.height) < 0.01 {
 		lines = len(cell.contents)
 
-		if cell.verticalCentered {
+		if cell.verticalCentered { // 垂直居中
 			sy += (maxheight - cell.height) / 2
 		}
+	} else {
+		lines = int((maxheight + cell.lineSpace) / (cell.lineHeight + cell.lineSpace))
 	}
-
-	lines = int((maxheight + cell.lineSpace) / (cell.lineHeight + cell.lineSpace))
-	cell.pdf.SetFontWithStyle(cell.font.Family, cell.font.Style, cell.font.Size)
+	if lines == 0 {
+		return nil
+	}
 
 	// 写入cell数据
 	for i := 0; i < lines; i++ {
 		width := cell.pdf.MeasureTextWidth(cell.contents[i]) / cell.pdf.GetUnit()
-		x = sx + cell.border.Left // 居左
-		if cell.rightAlign {
+		x = sx + cell.border.Left // 水平居左
+		if cell.rightAlign {      //  水平居右
 			x = sx + (cell.width - width - cell.border.Right)
 		}
-		if cell.horizontalCentered {
+		if cell.horizontalCentered { // 水平居中
 			x = sx + cell.border.Left + (cell.width-width)/2
 		}
 
-		y = sy + float64(i)*(cell.lineHeight+cell.lineSpace)
+		y = sy + float64(i)*(cell.lineHeight+cell.lineSpace) + cell.border.Top
 
 		if !util.IsEmpty(cell.fontColor) {
 			cell.pdf.TextColor(util.GetColorRGB(cell.fontColor))
@@ -197,9 +220,13 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) error {
 	}
 
 	// cell的height和contents重置
-	cell.border.Top = 0
-	cell.contents = cell.contents[:lines]
-	if len(cell.contents) == 0 {
+	if lines >= len(cell.contents) {
+		cell.contents = nil
+	} else {
+		cell.contents = cell.contents[lines:]
+	}
+
+	if cell.contents == nil {
 		cell.height = 0
 	} else {
 		length := float64(len(cell.contents))
