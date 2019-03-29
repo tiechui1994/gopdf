@@ -24,3 +24,8 @@ go get -u github.com/tiechui1994/gopdf
 案例: [案例代码](./example/complex_report_test.go)
 
 ![](./example/pictures/example.png)
+
+
+[案例代码](./table_test.go#L19)
+
+![](./example/pictures/table.png)
