@@ -254,13 +254,13 @@ func (table *Table) GenerateAtomicCell() error {
 			)
 
 			// table首行, 直接分页
-			//if i == 0 {
-			//	table.pdf.AddNewPage(false)
-			//	table.margin.Top = 0
-			//	table.pdf.SetXY(table.pdf.GetPageStartXY())
-			//
-			//	return table.GenerateAtomicCell()
-			//}
+			if i == 0 {
+				table.pdf.AddNewPage(false)
+				table.margin.Top = 0
+				table.pdf.SetXY(table.pdf.GetPageStartXY())
+
+				return table.GenerateAtomicCell()
+			}
 
 			currentRowWriteAll = table.writeCurrentPageRestContent(i, sx, sy)
 
