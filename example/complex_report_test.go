@@ -138,7 +138,7 @@ func ComplexReportFooterExecutor(report *core.Report) {
 	footer.SetFont(textFont)
 	footer.SetFontColor("60, 179, 113")
 	footer.SetBorder(core.Scope{Top: 10})
-	footer.SetHorizontalCentered().SetVerticalCentered().SetContent(content).GenerateAtomicCell()
+	footer.HorizontalCentered().VerticalCentered().SetContent(content).GenerateAtomicCell()
 }
 
 func ComplexReportHeaderExecutor(report *core.Report) {
@@ -147,7 +147,7 @@ func ComplexReportHeaderExecutor(report *core.Report) {
 	footer.SetFont(textFont)
 	footer.SetFontColor("255,0,0")
 	footer.SetBorder(core.Scope{Top: 10})
-	footer.SetHorizontalCentered().SetVerticalCentered().SetContent(content).GenerateAtomicCell()
+	footer.HorizontalCentered().VerticalCentered().SetContent(content).GenerateAtomicCell()
 }
 
 type ExportInfo struct {
