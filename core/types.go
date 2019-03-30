@@ -41,6 +41,6 @@ type Font struct {
 }
 
 type Cell interface {
-	GenerateAtomicCell(height float64) error
+	GenerateAtomicCell(height float64) (int, error)
 	GetHeight() float64
 }

@@ -167,7 +167,7 @@ func (cell *TextCell) SetContent(s string) *TextCell {
 	return cell
 }
 
-func (cell *TextCell) GenerateAtomicCell(maxheight float64) error {
+func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, error) {
 	var (
 		sx, sy = cell.pdf.GetXY() // 基准坐标
 		lines  int                // 可以写入的行数
@@ -181,14 +181,11 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) error {
 	if maxheight > cell.height || math.Abs(maxheight-cell.height) < 0.01 {
 		lines = len(cell.contents)
 
-		if cell.verticalCentered { // 垂直居中
+		if maxheight > cell.height && cell.verticalCentered { // 垂直居中
 			sy += (maxheight - cell.height) / 2
 		}
 	} else {
 		lines = int((maxheight + cell.lineSpace) / (cell.lineHeight + cell.lineSpace))
-	}
-	if lines == 0 {
-		return nil
 	}
 
 	// 背景颜色
@@ -234,7 +231,7 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) error {
 		cell.height = cell.border.Top + math.Abs(cell.border.Bottom) + cell.lineHeight*length + cell.lineSpace*(length-1)
 	}
 
-	return nil
+	return lines, nil
 }
 
 func (cell *TextCell) GetHeight() float64 {

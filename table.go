@@ -1,8 +1,6 @@
 package gopdf
 
 import (
-	"math"
-
 	"github.com/tiechui1994/gopdf/core"
 )
 
@@ -19,9 +17,6 @@ type Table struct {
 	margin     core.Scope // 位置调整
 
 	nextrow, nextcol int // 下一个位置
-
-	// 辅助作用
-	isFirstCalTableCellHeight bool
 }
 
 type TableCell struct {
@@ -66,8 +61,6 @@ func NewTable(cols, rows int, width, lineHeight float64, pdf *core.Report) *Tabl
 		lineHeight: lineHeight,
 		colwidths:  []float64{},
 		rowheights: []float64{},
-
-		isFirstCalTableCellHeight: true,
 	}
 
 	for i := 0; i < cols; i++ {
@@ -148,7 +141,6 @@ func (table *Table) NewCellByRange(w, h int) *TableCell {
 	table.cells[row][col] = cell
 
 	// 构建空白单元格
-
 	for i := 0; i < rowspan; i++ {
 		var j int
 		if i == 0 {
@@ -245,7 +237,10 @@ func (table *Table) GenerateAtomicCell() error {
 	table.replaceCellHeight()
 
 	for i := 0; i < table.rows; i++ {
-		x1, y1, _, y2 = table.getVLinePosition(sx, sy, 0, i) // 垂直线
+		x1, y1, _, y2 = table.getVLinePosition(sx, sy, 0, i) // 真实的垂直线
+		if table.cells[i][0].rowspan > 1 {
+			y2 = y1 + table.cells[i][0].minheight
+		}
 
 		// todo: 换页
 		if y1 < pageEndY && y2 > pageEndY {
@@ -311,10 +306,10 @@ func (table *Table) GenerateAtomicCell() error {
 // 当前页面的剩余内容
 func (table *Table) writeCurrentPageRestContent(row int, sx, sy float64) bool {
 	var (
-		x1, y1, x2, y2     float64
-		needHLine          bool   // 是否需要设置水平线
-		currentRowWriteAll = true // 条件: 当前的行不存在空白(即rowspan=1),且每个单元格全部写完
-		pageEndY           = table.pdf.GetPageEndY()
+		x1, y1, x2, _ float64
+		needHLine     bool // 是否需要设置水平线, 条件: 有内容写入
+		pageEndY      = table.pdf.GetPageEndY()
+		curPageEndY   float64 // 当前页面的endY值
 	)
 
 	for col := 0; col < table.cols; col++ {
@@ -324,41 +319,39 @@ func (table *Table) writeCurrentPageRestContent(row int, sx, sy float64) bool {
 		}
 
 		// 1) 变换坐标系, 计算新的初始点
-		originHeight := cell.element.GetHeight()
 		x1, y1, _, _ := table.getHLinePosition(sx, sy, col, row)
 		cell.table.pdf.SetXY(x1, y1)
+		pageEndY = table.pdf.GetPageEndY()
+		n, _ := cell.element.GenerateAtomicCell(pageEndY - y1) // 写入内容, 写完之后会修正其高度
 
-		cell.element.GenerateAtomicCell(pageEndY - y1) // 写入内容, 写完之后会修正其高度
-
-		// 使用math.Abs减少误差
-		if math.Abs(originHeight-cell.element.GetHeight()) > 0.01 {
+		curPageEndY = y1
+		if n > 0 {
+			curPageEndY = pageEndY
 			needHLine = true
-		}
-
-		// 2) 垂直线
-		if table.hasVLine(col, row) {
-			x1, y1, x2, y2 = table.getVLinePosition(sx, sy, col, row)
-			table.pdf.Line(x1, y1, x2, pageEndY)
 		}
 	}
 
-	// 3) 只有当一个有写入则必须有水平线
+	// 3) 当有一个写入则必须有垂直线
 	if needHLine {
 		for k := 0; k < table.cols; k++ {
-			if table.hasHLine(k, row) {
-				x1, y1, x2, y2 = table.getHLinePosition(sx, sy, k, row)
-				table.pdf.Line(x1, y1, x2, y2)
+			if table.hasVLine(k, row) {
+				x1, y1, x2, _ = table.getVLinePosition(sx, sy, k, row)
+				table.pdf.Line(x1, y1, x2, curPageEndY)
 			}
 		}
 	}
 
-	// 4) 补全右侧垂直线 和 底层水平线
-	x1, y1, x2, y2 = table.getVLinePosition(sx, sy, 0, 0)
-	table.pdf.LineH(x1, pageEndY, x1+table.width)
-	table.pdf.LineV(x1+table.width, y1, pageEndY)
+	// 4) 右侧垂直线
+	x1, y1, x2, _ = table.getVLinePosition(sx, sy, 0, 0)
+	table.pdf.LineV(x1+table.width, y1, curPageEndY)
 
-	for k := 0; k < table.cols; k++ {
-		cell := table.cells[row][k]
+	// 5) 底层水平线
+	table.pdf.Line(x1, curPageEndY, x1+table.width, curPageEndY)
+
+	// 6) 返回条件
+	var currentRowWriteAll = true // 条件: 当前的行不存在空白(即rowspan=1),且每个单元格全部写完
+	for col := 0; col < table.cols; col++ {
+		cell := table.cells[row][col]
 		if cell.rowspan != 1 || cell.element.GetHeight() != 0 {
 			currentRowWriteAll = false
 		}
@@ -375,13 +368,12 @@ func (table *Table) writeCurrentPageCell(row, col int, sx, sy float64) {
 
 	// 1. 写入数据, 坐标系必须变换
 	cell := table.cells[row][col]
-	if cell.element == nil {
-		return
-	}
 
 	x1, y1, x2, y2 = table.getVLinePosition(sx, sy, col, row) // 垂直线
 	cell.table.pdf.SetXY(x1, y1)
-	cell.element.GenerateAtomicCell(y2 - y1)
+	if cell.element != nil {
+		cell.element.GenerateAtomicCell(y2 - y1)
+	}
 
 	// 2. 水平线
 	if table.hasHLine(col, row) {
@@ -485,7 +477,7 @@ func (table *Table) replaceCellHeight() {
 	table.cells = cells
 }
 
-// 垂直线
+// 垂直线, table单元格的垂直线
 func (table *Table) getVLinePosition(sx, sy float64, col, row int) (x1, y1 float64, x2, y2 float64) {
 	var (
 		x, y float64
@@ -505,7 +497,7 @@ func (table *Table) getVLinePosition(sx, sy float64, col, row int) (x1, y1 float
 	return x, y, x, y + cell.height
 }
 
-// 水平线
+// 水平线, table单元格的水平线
 func (table *Table) getHLinePosition(sx, sy float64, col, row int) (x1, y1 float64, x2, y2 float64) {
 	var (
 		x, y float64
