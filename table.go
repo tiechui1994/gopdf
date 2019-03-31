@@ -512,7 +512,7 @@ func (table *Table) replaceCellHeight() {
 				if totalHeight < cells[i][j].height {
 					h := cells[i][j].height - totalHeight
 
-					row := cells[i][j].row + cells[i][j].rowspan - 1 // 最后一行
+					row := (cells[i][j].row - cells[0][0].row) + cells[i][j].rowspan - 1 // 最后一行
 					for col := 0; col < table.cols; col++ {
 						// 更新minheight
 						cells[row][col].minheight += h

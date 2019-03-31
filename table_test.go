@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/tiechui1994/gopdf/core"
-	"strings"
 )
 
 const (
@@ -179,7 +178,6 @@ func ManyTableReportWithData() {
 
 	r.Execute("many_table_data.pdf")
 	r.SaveAtomicCellText("many_table_data.txt")
-	fmt.Println(r.GetCurrentPageNo())
 }
 func ManyTableReportWithDataExecutor(report *core.Report) {
 	unit := report.GetUnit()
@@ -192,7 +190,6 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 	rows, cols := 100, 5
 	for i := 0; i < rows; i += 5 {
 		key := mrand.Intn(3)
-		fmt.Println(key, strings.Repeat("-", 50))
 
 		f1 := core.Font{Family: TABLE_MY, Size: 10}
 		border := core.NewScope(0.5*unit, 0.5*unit, 0, 0)
@@ -278,10 +275,7 @@ func TestTableWithdata(t *testing.T) {
 }
 
 func TestTable(t *testing.T) {
-	for i := 0; i < 1000; i++ {
-		//ManyTableReportWithData()
-		ComplexTableReportWithData()
-	}
+	ManyTableReportWithData()
 }
 
 func GetRandStr() string {
