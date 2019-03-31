@@ -110,6 +110,10 @@ func (table *Table) NewCell() *TableCell {
 // 创建固定长度的单元格
 func (table *Table) NewCellByRange(w, h int) *TableCell {
 	colspan, rowspan := w, h
+	if colspan <= 0 || rowspan <= 0 {
+		panic("w and h must more than 0")
+	}
+
 	if colspan == 1 && rowspan == 1 {
 		return table.NewCell()
 	}
@@ -117,14 +121,7 @@ func (table *Table) NewCellByRange(w, h int) *TableCell {
 	row, col := table.nextrow, table.nextcol
 
 	// 防止非法的宽度
-	if colspan >= table.cols-col {
-		colspan = table.cols - col
-	}
-	if rowspan >= table.rows-row {
-		rowspan = table.rows - row
-	}
-
-	if colspan <= 0 || rowspan <= 0 {
+	if !table.checkspan(row, col, rowspan, colspan) {
 		panic("inlivid layout, please check w and h")
 	}
 
@@ -181,9 +178,10 @@ func (table *Table) NewCellByRange(w, h int) *TableCell {
 	return nil
 }
 
-func (table *Table) getMax(row, col int, rowspan, colspan int) (maxrow, maxcol int) {
+func (table *Table) checkspan(row, col int, rowspan, colspan int) bool {
 	var (
-		cells = table.cells
+		cells          = table.cells
+		maxrow, maxcol int
 	)
 
 	// 获取单方面的最大maxrow和maxcol
@@ -191,26 +189,56 @@ func (table *Table) getMax(row, col int, rowspan, colspan int) (maxrow, maxcol i
 		if cells[row][i] != nil {
 			maxcol = table.cols - col + 1
 		}
+
+		if i == table.cols-1 {
+			maxcol = table.cols
+		}
 	}
 
 	for i := row; i < table.rows; i++ {
 		if cells[i][col] != nil {
-			maxcol = table.rows - row + 1
+			maxrow = table.rows - row + 1
+		}
+
+		if i == table.rows-1 {
+			maxrow = table.rows
 		}
 	}
 
-	// todo:判断
-	if rowspan == 1 {
-		return
-	}
+	// 检测合法性
+	if colspan <= maxcol && rowspan <= maxrow {
+		for i := row; i < table.rows; i++ {
+			for j := col; j < table.cols; j++ {
 
-	for i := row; i < table.rows; i++ {
-		var j int
-		for ; j < table.cols; j++ {
+				// cells[i][j]不为nil, 可以继续向下搜索
+				if cells[i][j] == nil {
+					if rowspan == i-row+1 && colspan <= j-col+1 {
+						return true
+					}
 
+					if colspan == j-col+1 && rowspan <= i-row+1 {
+						return true
+					}
+					continue
+				}
+
+				// cells[i][j]为nil, 不能向下搜索, 需要改变行号
+				if cells[i][j] != nil {
+					if rowspan == i-row+1 && colspan <= j-col+1 {
+						return true
+					}
+
+					if colspan == j-col+1 && rowspan <= i-row+1 {
+						return true
+					}
+
+					break
+				}
+			}
 		}
 	}
-	return
+
+	return false
 }
 
 // 创建长宽为1的空白单元格
