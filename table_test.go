@@ -157,6 +157,57 @@ func ComplexTableReportExecutor(report *core.Report) {
 	form.GenerateAtomicCell()
 }
 
+func ManyTableReportWithData() {
+	r := core.CreateReport()
+	font1 := core.FontMap{
+		FontName: TABLE_IG,
+		FileName: "example//ttf/ipaexg.ttf",
+	}
+	font2 := core.FontMap{
+		FontName: TABLE_MD,
+		FileName: "example//ttf/mplus-1p-bold.ttf",
+	}
+	font3 := core.FontMap{
+		FontName: TABLE_MY,
+		FileName: "example//ttf/microsoft.ttf",
+	}
+	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
+	r.SetPage("A4", "mm", "P")
+
+	r.RegisterExecutor(core.Executor(ManyTableReportWithDataExecutor), core.Detail)
+
+	r.Execute("many_table_data.pdf")
+	r.SaveAtomicCellText("many_table_data.txt")
+	fmt.Println(r.GetCurrentPageNo())
+}
+func ManyTableReportWithDataExecutor(report *core.Report) {
+	unit := report.GetUnit()
+
+	lineSpace := 0.01 * unit
+	lineHeight := 2 * unit
+
+	table := NewTable(5, 100, 80*unit, lineHeight, report)
+	table.SetMargin(core.Scope{0, 0, 0, 0})
+	rows, cols := 100, 5
+	for i := 0; i < rows; i += 5 {
+		key := mrand.Intn(5)
+		switch key {
+		case 0:
+			for row := 0; row < 5; row++ {
+				for col := 0; col < cols; col++ {
+					cell := table.NewCell()
+					txt := NewTextCell(table.GetColWidth(i+row, col), lineHeight, lineSpace, report)
+					cell.SetElement(txt)
+				}
+			}
+		case 1:
+
+		}
+
+	}
+	table.GenerateAtomicCell()
+}
+
 func TestTableWithdata(t *testing.T) {
 	ComplexTableReportWithData()
 }

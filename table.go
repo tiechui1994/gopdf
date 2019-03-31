@@ -181,6 +181,38 @@ func (table *Table) NewCellByRange(w, h int) *TableCell {
 	return nil
 }
 
+func (table *Table) getMax(row, col int, rowspan, colspan int) (maxrow, maxcol int) {
+	var (
+		cells = table.cells
+	)
+
+	// 获取单方面的最大maxrow和maxcol
+	for i := col; i < table.cols; i++ {
+		if cells[row][i] != nil {
+			maxcol = table.cols - col + 1
+		}
+	}
+
+	for i := row; i < table.rows; i++ {
+		if cells[i][col] != nil {
+			maxcol = table.rows - row + 1
+		}
+	}
+
+	// todo:判断
+	if rowspan == 1 {
+		return
+	}
+
+	for i := row; i < table.rows; i++ {
+		var j int
+		for ; j < table.cols; j++ {
+
+		}
+	}
+	return
+}
+
 // 创建长宽为1的空白单元格
 func (table *Table) newSpaceCell(col, row int, pr, pc int) *TableCell {
 	cell := &TableCell{
