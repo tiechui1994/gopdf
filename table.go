@@ -80,7 +80,6 @@ func NewTable(cols, rows int, width, lineHeight float64, pdf *core.Report) *Tabl
 // 创建长宽为1的单元格
 func (table *Table) NewCell() *TableCell {
 	row, col := table.nextrow, table.nextcol
-
 	cell := &TableCell{
 		row:       row,
 		col:       col,
@@ -94,16 +93,8 @@ func (table *Table) NewCell() *TableCell {
 	table.cells[row][col] = cell
 
 	// 计算nextcol, nextrow
-	table.nextcol += 1
-	if table.nextcol == table.cols {
-		table.nextcol = 0
-		table.nextrow += 1
-	}
+	table.setnext(1, 1)
 
-	if table.nextrow == table.rows {
-		table.nextcol = -1
-		table.nextrow = -1
-	}
 	return cell
 }
 
@@ -150,32 +141,9 @@ func (table *Table) NewCellByRange(w, h int) *TableCell {
 	}
 
 	// 计算nextcol, nextrow, 需要遍历处理
-	table.nextcol += colspan
-	if table.nextcol == table.cols {
-		table.nextcol = 0
-		table.nextrow += 1
-	}
+	table.setnext(colspan, rowspan)
 
-	for i := table.nextrow; i < table.rows; i++ {
-		var j int
-		if i == table.nextrow {
-			j = table.nextcol
-		}
-
-		for ; j < table.cols; j++ {
-			if table.cells[i][j] == nil {
-				table.nextrow, table.nextcol = i, j
-				return cell
-			}
-		}
-	}
-
-	if table.nextrow == table.rows {
-		table.nextcol = -1
-		table.nextrow = -1
-	}
-
-	return nil
+	return cell
 }
 
 func (table *Table) checkspan(row, col int, rowspan, colspan int) bool {
@@ -239,6 +207,33 @@ func (table *Table) checkspan(row, col int, rowspan, colspan int) bool {
 	}
 
 	return false
+}
+
+func (table *Table) setnext(colspan, rowspan int) {
+	table.nextcol += colspan
+	if table.nextcol == table.cols {
+		table.nextcol = 0
+		table.nextrow += 1
+	}
+
+	for i := table.nextrow; i < table.rows; i++ {
+		var j int
+		if i == table.nextrow {
+			j = table.nextcol
+		}
+
+		for ; j < table.cols; j++ {
+			if table.cells[i][j] == nil {
+				table.nextrow, table.nextcol = i, j
+				return
+			}
+		}
+	}
+
+	if table.nextrow == table.rows {
+		table.nextcol = -1
+		table.nextrow = -1
+	}
 }
 
 // 创建长宽为1的空白单元格

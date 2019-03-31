@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/tiechui1994/gopdf/core"
+	"strings"
 )
 
 const (
@@ -190,30 +191,97 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 	table.SetMargin(core.Scope{0, 0, 0, 0})
 	rows, cols := 100, 5
 	for i := 0; i < rows; i += 5 {
-		key := mrand.Intn(5)
+		key := mrand.Intn(3)
+		fmt.Println(key, strings.Repeat("-", 50))
+
+		f1 := core.Font{Family: TABLE_MY, Size: 10}
+		border := core.NewScope(0.5*unit, 0.5*unit, 0, 0)
+
 		switch key {
 		case 0:
 			for row := 0; row < 5; row++ {
 				for col := 0; col < cols; col++ {
+					conent := fmt.Sprintf("%v-(%v,%v)", 0, i+row, col)
 					cell := table.NewCell()
 					txt := NewTextCell(table.GetColWidth(i+row, col), lineHeight, lineSpace, report)
+					txt.SetFont(f1).SetBorder(border).SetContent(conent + GetRandStr())
 					cell.SetElement(txt)
 				}
 			}
-		case 1:
 
+		case 1:
+			c00 := table.NewCellByRange(1, 5)
+			c01 := table.NewCellByRange(2, 2)
+			c03 := table.NewCellByRange(2, 3)
+			c21 := table.NewCellByRange(2, 1)
+			c31 := table.NewCellByRange(4, 1)
+			c41 := table.NewCellByRange(4, 1)
+
+			t00 := NewTextCell(table.GetColWidth(i+0, 0), lineHeight, lineSpace, report)
+			t01 := NewTextCell(table.GetColWidth(i+0, 1), lineHeight, lineSpace, report)
+			t03 := NewTextCell(table.GetColWidth(i+0, 3), lineHeight, lineSpace, report)
+			t21 := NewTextCell(table.GetColWidth(i+2, 1), lineHeight, lineSpace, report)
+			t31 := NewTextCell(table.GetColWidth(i+3, 1), lineHeight, lineSpace, report)
+			t41 := NewTextCell(table.GetColWidth(i+4, 1), lineHeight, lineSpace, report)
+
+			t00.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+0, 0) + GetRandStr())
+			t01.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+0, 1) + GetRandStr())
+			t03.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+0, 3) + GetRandStr())
+			t21.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+2, 1) + GetRandStr())
+			t31.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+3, 1) + GetRandStr())
+			t41.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+4, 1) + GetRandStr())
+
+			c00.SetElement(t00)
+			c01.SetElement(t01)
+			c03.SetElement(t03)
+			c21.SetElement(t21)
+			c31.SetElement(t31)
+			c41.SetElement(t41)
+
+		case 2:
+			c00 := table.NewCellByRange(3, 2)
+			c03 := table.NewCellByRange(2, 3)
+			c20 := table.NewCellByRange(1, 2)
+			c21 := table.NewCellByRange(2, 3)
+			c33 := table.NewCellByRange(2, 2)
+			c40 := table.NewCellByRange(1, 1)
+
+			t00 := NewTextCell(table.GetColWidth(i+0, 0), lineHeight, lineSpace, report)
+			t03 := NewTextCell(table.GetColWidth(i+0, 3), lineHeight, lineSpace, report)
+			t20 := NewTextCell(table.GetColWidth(i+2, 0), lineHeight, lineSpace, report)
+			t21 := NewTextCell(table.GetColWidth(i+2, 1), lineHeight, lineSpace, report)
+			t33 := NewTextCell(table.GetColWidth(i+3, 3), lineHeight, lineSpace, report)
+			t40 := NewTextCell(table.GetColWidth(i+4, 0), lineHeight, lineSpace, report)
+
+			t00.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+0, 0) + GetRandStr())
+			t03.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+0, 3) + GetRandStr())
+			t20.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+2, 0) + GetRandStr())
+			t21.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+2, 1) + GetRandStr())
+			t33.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+3, 3) + GetRandStr())
+			t40.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+4, 0) + GetRandStr())
+
+			c00.SetElement(t00)
+			c03.SetElement(t03)
+			c20.SetElement(t20)
+			c21.SetElement(t21)
+			c33.SetElement(t33)
+			c40.SetElement(t40)
 		}
 
 	}
+
 	table.GenerateAtomicCell()
 }
 
 func TestTableWithdata(t *testing.T) {
-	ComplexTableReportWithData()
+	//ComplexTableReportWithData()
 }
 
 func TestTable(t *testing.T) {
-	ComplexTableReport()
+	for i := 0; i < 1000; i++ {
+		//ManyTableReportWithData()
+		ComplexTableReportWithData()
+	}
 }
 
 func GetRandStr() string {
