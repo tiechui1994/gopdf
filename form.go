@@ -524,8 +524,12 @@ func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) bool
 
 		x1, y1, _, _ = table.getHLinePosition(sx, sy, i, row) // 计算初始点
 		cell.table.pdf.SetXY(x1, y1)
-		pageEndY = table.pdf.GetPageEndY()
-		n, _ := cell.element.GenerateAtomicCell(pageEndY - y1) // 写入内容, 写完之后会修正其高度
+		if y1 > pageEndY {
+			table.states[row][i] = 0
+			continue
+		}
+		fmt.Println(pageEndY, y1)
+		n, _ := cell.element.GenerateAtomicCell(pageEndY - y1) //11 写入内容, 写完之后会修正其高度
 
 		if n > 0 {
 			table.states[row][i] = 1
@@ -543,6 +547,7 @@ func (table *Table) drawPageLineByStates(sx, sy float64) {
 		rows, cols           = len(table.states), len(table.states[0])
 		pageEndY             = table.pdf.GetPageEndY()
 		x, y, x1, y1, x2, y2 float64
+		maxEndY              float64
 	)
 
 	table.pdf.LineType("straight", 0.1)
@@ -559,19 +564,26 @@ func (table *Table) drawPageLineByStates(sx, sy float64) {
 			}
 
 			x, y, x1, y1 = table.getHLinePosition(sx, sy, col, row)
-			fmt.Println("HLine: ", x, y, x1, y1, pageEndY)
+			//fmt.Println("HLine: ", x, y, x1, y1, pageEndY)
 			x, y, x2, y2 = table.getVLinePosition(sx, sy, col, row)
-			fmt.Println("VLine: ", x, y, x2, y2, pageEndY)
+			//fmt.Println("VLine: ", x, y, x2, y2, pageEndY)
 
 			if y2 < pageEndY {
 				table.pdf.LineV(x1, y1, y2)
 				table.pdf.LineH(x, y2, x1)
+
 			}
 
 			if y2 >= pageEndY {
+				fmt.Println("-->", x2)
+				maxEndY = pageEndY
 				//table.pdf.LineV(x1, y1, pageEndY)
 			}
 		}
+	}
+	if maxEndY != 0 {
+		x, y, _, _ = table.getHLinePosition(sx, sy, 0, 0)
+		table.pdf.LineV(x, y, maxEndY)
 	}
 }
 

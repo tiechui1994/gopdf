@@ -1,13 +1,12 @@
 package gopdf
 
 import (
-	crand "crypto/rand"
-	"encoding/hex"
 	"fmt"
 	mrand "math/rand"
 	"testing"
 
 	"github.com/tiechui1994/gopdf/core"
+	"strings"
 )
 
 const (
@@ -280,14 +279,13 @@ func TestTableWithdata(t *testing.T) {
 
 func TestTable(t *testing.T) {
 	//for i := 0; i < 1000; i++ {
-		ManyTableReportWithData()
+	ManyTableReportWithData()
 	//}
 }
 
 func GetRandStr(l ...int) string {
-	l = append(l, 8)
-	length := l[0] * 10
-	data := make([]byte, length)
-	n, _ := crand.Read(data)
-	return hex.EncodeToString(data[:n]) + "---"
+	str := "0123456789ABCDEFGHIGKLMNOPQRSTUVWXYZ"
+	r := mrand.Intn(100) + 5
+	data := strings.Repeat(str, r/36+1)
+	return data[:r] + "---"
 }
