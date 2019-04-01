@@ -268,6 +268,10 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 	}
 
 	table.Generate()
+	//fmt.Println(report.GetCurrentPageNo())
+	if report.GetCurrentPageNo() == 1 {
+		//panic("www")
+	}
 }
 
 func TestTableWithdata(t *testing.T) {
@@ -275,7 +279,9 @@ func TestTableWithdata(t *testing.T) {
 }
 
 func TestTable(t *testing.T) {
-	ManyTableReportWithData()
+	//for i := 0; i < 1000; i++ {
+		ManyTableReportWithData()
+	//}
 }
 
 func GetRandStr(l ...int) string {
