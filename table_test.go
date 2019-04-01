@@ -201,7 +201,7 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 					conent := fmt.Sprintf("%v-(%v,%v)", 0, i+row, col)
 					cell := table.NewCell()
 					txt := NewTextCell(table.GetColWidth(i+row, col), lineHeight, lineSpace, report)
-					txt.SetFont(f1).SetBorder(border).SetContent(conent + GetRandStr())
+					txt.SetFont(f1).SetBorder(border).SetContent(conent + GetRandStr(1))
 					cell.SetElement(txt)
 				}
 			}
@@ -221,12 +221,12 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 			t31 := NewTextCell(table.GetColWidth(i+3, 1), lineHeight, lineSpace, report)
 			t41 := NewTextCell(table.GetColWidth(i+4, 1), lineHeight, lineSpace, report)
 
-			t00.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+0, 0) + GetRandStr())
-			t01.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+0, 1) + GetRandStr())
-			t03.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+0, 3) + GetRandStr())
-			t21.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+2, 1) + GetRandStr())
-			t31.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+3, 1) + GetRandStr())
-			t41.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+4, 1) + GetRandStr())
+			t00.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+0, 0) + GetRandStr(5))
+			t01.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+0, 1) + GetRandStr(4))
+			t03.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+0, 3) + GetRandStr(6))
+			t21.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+2, 1) + GetRandStr(2))
+			t31.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+3, 1) + GetRandStr(4))
+			t41.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+4, 1) + GetRandStr(4))
 
 			c00.SetElement(t00)
 			c01.SetElement(t01)
@@ -250,12 +250,12 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 			t33 := NewTextCell(table.GetColWidth(i+3, 3), lineHeight, lineSpace, report)
 			t40 := NewTextCell(table.GetColWidth(i+4, 0), lineHeight, lineSpace, report)
 
-			t00.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+0, 0) + GetRandStr())
-			t03.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+0, 3) + GetRandStr())
-			t20.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+2, 0) + GetRandStr())
-			t21.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+2, 1) + GetRandStr())
-			t33.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+3, 3) + GetRandStr())
-			t40.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+4, 0) + GetRandStr())
+			t00.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+0, 0) + GetRandStr(6))
+			t03.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+0, 3) + GetRandStr(6))
+			t20.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+2, 0) + GetRandStr(2))
+			t21.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+2, 1) + GetRandStr(6))
+			t33.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+3, 3) + GetRandStr(4))
+			t40.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+4, 0) + GetRandStr(1))
 
 			c00.SetElement(t00)
 			c03.SetElement(t03)
@@ -267,7 +267,7 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 
 	}
 
-	table.GenerateAtomicCell()
+	table.Generate()
 }
 
 func TestTableWithdata(t *testing.T) {
@@ -278,8 +278,9 @@ func TestTable(t *testing.T) {
 	ManyTableReportWithData()
 }
 
-func GetRandStr() string {
-	length := mrand.Intn(80) + 3
+func GetRandStr(l ...int) string {
+	l = append(l, 8)
+	length := l[0] * 10
 	data := make([]byte, length)
 	n, _ := crand.Read(data)
 	return hex.EncodeToString(data[:n]) + "---"

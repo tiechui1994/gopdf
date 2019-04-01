@@ -17,6 +17,7 @@ type Table struct {
 	margin     core.Scope // 位置调整
 
 	nextrow, nextcol int // 下一个位置
+	hasWrited        int // 当前页面已经写入的行数
 }
 
 type TableCell struct {
@@ -61,6 +62,7 @@ func NewTable(cols, rows int, width, lineHeight float64, pdf *core.Report) *Tabl
 		lineHeight: lineHeight,
 		colwidths:  []float64{},
 		rowheights: []float64{},
+		hasWrited:  1000,
 	}
 
 	for i := 0; i < cols; i++ {
@@ -93,7 +95,7 @@ func (table *Table) NewCell() *TableCell {
 	table.cells[row][col] = cell
 
 	// 计算nextcol, nextrow
-	table.setnext(1, 1)
+	table.setNext(1, 1)
 
 	return cell
 }
@@ -112,7 +114,7 @@ func (table *Table) NewCellByRange(w, h int) *TableCell {
 	row, col := table.nextrow, table.nextcol
 
 	// 防止非法的宽度
-	if !table.checkspan(row, col, rowspan, colspan) {
+	if !table.checkSpan(row, col, rowspan, colspan) {
 		panic("inlivid layout, please check w and h")
 	}
 
@@ -136,17 +138,26 @@ func (table *Table) NewCellByRange(w, h int) *TableCell {
 		}
 
 		for ; j < colspan; j++ {
-			table.newSpaceCell(col+j, row+i, -row, -col)
+			table.cells[row+i][col+j] = &TableCell{
+				row:       row + i,
+				col:       col + j,
+				rowspan:   -row,
+				colspan:   -col,
+				table:     table,
+				height:    table.lineHeight,
+				minheight: table.lineHeight,
+			}
 		}
 	}
 
 	// 计算nextcol, nextrow, 需要遍历处理
-	table.setnext(colspan, rowspan)
+	table.setNext(colspan, rowspan)
 
 	return cell
 }
 
-func (table *Table) checkspan(row, col int, rowspan, colspan int) bool {
+// 检测当前cell的宽和高
+func (table *Table) checkSpan(row, col int, rowspan, colspan int) bool {
 	var (
 		cells          = table.cells
 		maxrow, maxcol int
@@ -209,7 +220,8 @@ func (table *Table) checkspan(row, col int, rowspan, colspan int) bool {
 	return false
 }
 
-func (table *Table) setnext(colspan, rowspan int) {
+// 设置下一个单元格开始坐标
+func (table *Table) setNext(colspan, rowspan int) {
 	table.nextcol += colspan
 	if table.nextcol == table.cols {
 		table.nextcol = 0
@@ -234,21 +246,6 @@ func (table *Table) setnext(colspan, rowspan int) {
 		table.nextcol = -1
 		table.nextrow = -1
 	}
-}
-
-// 创建长宽为1的空白单元格
-func (table *Table) newSpaceCell(col, row int, pr, pc int) *TableCell {
-	cell := &TableCell{
-		row:     row,
-		col:     col,
-		colspan: pc,
-		rowspan: pr,
-		table:   table,
-		height:  table.lineHeight,
-	}
-
-	table.cells[row][col] = cell
-	return cell
 }
 
 /********************************************************************************************************************/
@@ -279,6 +276,100 @@ func (table *Table) SetMargin(margin core.Scope) {
 }
 
 /********************************************************************************************************************/
+
+func (table *Table) Generate() error {
+	var (
+		sx, sy        = table.pdf.GetXY() // 基准坐标
+		pageEndY      = table.pdf.GetPageEndY()
+		x1, y1, _, y2 float64 // 当前位置
+	)
+
+	// 重新计算行高
+	table.replaceCellHeight()
+
+	for i := 0; i < table.rows; i++ {
+		for j := 0; j < table.cols; j++ {
+
+			// cell的rowspan是1的y1,y2
+			_, y1, _, y2 = table.getVLinePosition(sx, sy, j, i) // 真实的垂直线
+			if table.cells[i][j].rowspan > 1 {
+				y2 = y1 + table.cells[i][j].minheight
+			}
+
+			// 进入换页操作
+			if y1 < pageEndY && y2 > pageEndY {
+				if i == 0 {
+					table.pdf.AddNewPage(false)
+					table.hasWrited = 10000
+					table.margin.Top = 0
+					table.pdf.SetXY(table.pdf.GetPageStartXY())
+
+					return table.Generate()
+				}
+
+				// 当前单元的rowspan == 1,
+				// 当前单元的rowspan != 1 并且 col == table.cols-1 (说明前面没有rowspan==1)
+				if (table.cells[i][j].rowspan == 1) || (table.cells[i][j].rowspan != 1 && j == table.cols-1) {
+					table.writeCurrentPageRestContent(i, j, sx, sy)
+
+					// 当上半部分完整, 突然分页的状况
+					if table.hasWrited > table.cells[i][j].row-table.cells[0][0].row {
+						table.hasWrited = table.cells[i][j].row - table.cells[0][0].row
+					}
+
+					table.pdf.AddNewPage(false)
+					table.margin.Top = 0
+					table.cells = table.cells[table.hasWrited:]
+					table.rows = len(table.cells)
+					table.hasWrited = 1000
+
+					table.pdf.LineType("straight", 0.1)
+					table.pdf.GrayStroke(0)
+					table.pdf.SetXY(table.pdf.GetPageStartXY())
+
+					if table.rows == 0 {
+						return nil
+					}
+
+					// 写入剩下页面
+					return table.Generate()
+				}
+
+			}
+
+			// 拦截空白cell
+			if table.cells[i][j].element == nil {
+				continue
+			}
+
+			x1, y1, _, y2 = table.getVLinePosition(sx, sy, j, i) // 真实的垂直线
+
+			// 当前cell高度跨页
+			if y1 < pageEndY && y2 > pageEndY {
+				if table.hasWrited > table.cells[i][j].row-table.cells[0][0].row {
+					table.hasWrited = table.cells[i][j].row - table.cells[0][0].row
+				}
+				table.writeCrossPageCell(i, j, sx, sy) // 部分写入
+			}
+
+			// 当前celll没有跨页
+			if y1 < pageEndY && y2 < pageEndY {
+				table.writeCurrentPageCell(i, j, sx, sy)
+			}
+		}
+	}
+
+	// todo: 最后一个页面的最后部分
+	height := table.getTableHeight()
+	x1, y1, _, y2 = table.getVLinePosition(sx, sy, 0, 0)
+	table.pdf.LineH(x1, y1+height+table.margin.Top, x1+table.width)
+	table.pdf.LineV(x1+table.width, y1, y1+height+table.margin.Top)
+
+	x1, _ = table.pdf.GetPageStartXY()
+	table.pdf.SetXY(x1, y1+height+table.margin.Top+table.margin.Bottom) // 定格最终的位置
+
+	return nil
+}
 
 // 自动换行生成
 func (table *Table) GenerateAtomicCell() error {
@@ -312,7 +403,7 @@ func (table *Table) GenerateAtomicCell() error {
 				return table.GenerateAtomicCell()
 			}
 
-			currentRowWriteAll = table.writeCurrentPageRestContent(i, sx, sy)
+			currentRowWriteAll = table.writeCurrentPageRestContent(i, 0, sx, sy)
 
 			// 增加新页面
 			table.pdf.AddNewPage(false)
@@ -359,60 +450,198 @@ func (table *Table) GenerateAtomicCell() error {
 }
 
 // 当前页面的剩余内容
-func (table *Table) writeCurrentPageRestContent(row int, sx, sy float64) bool {
+func (table *Table) writeCurrentPageRestContent(row, col int, sx, sy float64) bool {
 	var (
-		x1, y1, x2, _ float64
-		needHLine     bool // 是否需要设置水平线, 条件: 有内容写入
-		pageEndY      = table.pdf.GetPageEndY()
-		curPageEndY   float64 // 当前页面的endY值
+		x1, y1, x2, y2 float64
+		pageEndY       = table.pdf.GetPageEndY()
 	)
 
-	for col := 0; col < table.cols; col++ {
-		cell := table.cells[row][col]
-		if cell.element == nil {
-			continue
+	cell := table.cells[row][col]
+
+	// 方式一进行分页
+	if cell.rowspan == 1 {
+		var (
+			states = make([]int, table.cols) // 0:空格  1:没写  2:写入
+
+			blankNum int // 空白数量
+			writeNum int // 写入的数量
+		)
+
+		for i := col; i < table.cols; i++ {
+			cell := table.cells[row][i]
+
+			if cell.element == nil {
+				states[i] = 0
+				blankNum += 1
+				continue
+			}
+
+			x1, y1, _, _ := table.getHLinePosition(sx, sy, i, row) // 计算初始点
+			cell.table.pdf.SetXY(x1, y1)
+			pageEndY = table.pdf.GetPageEndY()
+			n, _ := cell.element.GenerateAtomicCell(pageEndY - y1) // 写入内容, 写完之后会修正其高度
+
+			if n > 0 {
+				states[i] = 2
+				writeNum += 1
+			} else {
+				states[i] = 1
+			}
 		}
 
-		// 1) 变换坐标系, 计算新的初始点
-		x1, y1, _, _ := table.getHLinePosition(sx, sy, col, row)
-		cell.table.pdf.SetXY(x1, y1)
-		pageEndY = table.pdf.GetPageEndY()
-		n, _ := cell.element.GenerateAtomicCell(pageEndY - y1) // 写入内容, 写完之后会修正其高度
+		// 综合分析:
+		if col == 0 && blankNum == 0 {
+			// 情况1: 空行, 截止到上一行的内容全部写完
+			if writeNum == 0 {
+				// 侧边线, 注意y坐标
+				x1, y1, x2, y2 = table.getHLinePosition(sx, sy, col, row)
+				table.pdf.LineV(x1+table.width, y1, y2)
+				return true
+			}
 
-		curPageEndY = y1
-		if n > 0 {
-			curPageEndY = pageEndY
-			needHLine = true
+			// 情况2: 有内容写入, 截止到上一行的内容全部写完
+			if writeNum > 0 {
+				// 需要垂线, 底层线, 侧边线
+				table.writeBottomAndRightLine(0, table.cols-1, row, sx, sy)
+				return true
+			}
 		}
-	}
 
-	// 3) 当有一个写入则必须有垂直线
-	if needHLine {
-		for k := 0; k < table.cols; k++ {
-			if table.hasVLine(k, row) {
-				x1, y1, x2, _ = table.getVLinePosition(sx, sy, k, row)
-				table.pdf.Line(x1, y1, x2, curPageEndY)
+		if col > 0 && blankNum == 0 {
+			// 情况3: 当前行是某个多行单元当中的一行, 且当前行没有内容写入
+			if writeNum == 0 {
+				// 需要清除上一个底层线,  需要垂线, 底层线, 侧边线
+				table.clearPreviewBottomLine(col, table.cols-1, row, sx, sy)
+
+				table.writeBottomAndRightLine(col, table.cols-1, row, sx, sy)
+
+				return true
+			}
+
+			// 情况4: 当前行是某个多行单元当中的一行, 且当前行有内容写入
+			if writeNum > 0 {
+				// 需要垂线, 底层线, 侧边线
+				table.writeBottomAndRightLine(col, table.cols-1, row, sx, sy)
+				return true
+			}
+		}
+
+		// 情况5: 间隔性空白
+		if blankNum > 0 {
+			lastIndex := 0
+			for i := col; i < table.cols; i++ {
+				if col == 0 && i == 0 && states[i] == 0 {
+					// 补全底线(短)
+					x1, _, _, _ = table.getHLinePosition(sx, sy, col, row)
+					table.pdf.LineH(x1, pageEndY, x1+table.colwidths[col]*table.width)
+
+					lastIndex = 0
+					continue
+				}
+
+				if col > 0 && i == col && states[i] == 0 {
+					// 补全之前的底线(包括当前)
+					x1, _, _, _ = table.getHLinePosition(sx, sy, 0, row)
+					_, _, x2, _ = table.getHLinePosition(sx, sy, col, row)
+
+					table.pdf.LineH(x1, pageEndY, x2+table.colwidths[col]*table.width)
+
+					lastIndex = col
+					continue
+				}
+
+				// 下一个空白
+				if states[i] == 0 {
+					writeNum = 0
+					for k := lastIndex; k < i; k++ {
+						if states[k] == 2 {
+							writeNum++
+						}
+					}
+
+					if writeNum == 0 {
+						// 需要清除上一个底层线,  需要垂线, 底层线
+						table.clearPreviewBottomLine(lastIndex, i, row, sx, sy)
+
+						table.writeBottomAndRightLine(lastIndex, i, row, sx, sy)
+					}
+
+					if writeNum > 0 {
+						// 需要垂线, 底层线
+						table.writeBottomAndRightLine(lastIndex, i, row, sx, sy)
+					}
+
+					lastIndex = i
+				}
+
+				// 最后一个
+				if states[i] != 0 && i == table.cols-1 {
+					writeNum = 0
+					for k := lastIndex; k < i; k++ {
+						if states[k] == 2 {
+							writeNum++
+						}
+					}
+
+					if writeNum == 0 {
+						// 需要清除上一个底层线,  需要垂线, 底层线, 侧边线
+						table.clearPreviewBottomLine(lastIndex, i, row, sx, sy)
+
+						table.writeBottomAndRightLine(lastIndex, i, row, sx, sy)
+					}
+
+					if writeNum > 0 {
+						// 需要垂线, 底层线, 侧边线
+						table.writeBottomAndRightLine(lastIndex, i, row, sx, sy)
+					}
+				}
 			}
 		}
 	}
 
-	// 4) 右侧垂直线
-	x1, y1, x2, _ = table.getVLinePosition(sx, sy, 0, 0)
-	table.pdf.LineV(x1+table.width, y1, curPageEndY)
+	// 方式二进行分页
+	if cell.rowspan != 1 && col == table.cols-1 {
+		x1, y1, x2, _ = table.getVLinePosition(sx, sy, 0, 0)
+		table.pdf.LineH(x1, pageEndY, x1+table.width)
 
-	// 5) 底层水平线
-	table.pdf.Line(x1, curPageEndY, x1+table.width, curPageEndY)
+		x1, y1, x2, _ = table.getVLinePosition(sx, sy, 0, 0)
+		table.pdf.LineV(x1+table.width, y1, pageEndY)
 
-	// 6) 返回条件
-	var currentRowWriteAll = true // 条件: 当前的行不存在空白(即rowspan=1),且每个单元格全部写完
-	for col := 0; col < table.cols; col++ {
-		cell := table.cells[row][col]
-		if cell.rowspan != 1 || cell.element.GetHeight() != 0 {
-			currentRowWriteAll = false
+		return true
+	}
+
+	return true
+}
+
+func (table *Table) clearPreviewBottomLine(col1, col2, row int, sx, sy float64) {
+	x1, y1, _, _ := table.getHLinePosition(sx, sy, col1, row)
+	x2, _, _, _ := table.getHLinePosition(sx, sy, col2, row)
+	table.pdf.LineColor(255, 255, 255)
+	table.pdf.LineH(x1, y1, x2+table.colwidths[col2]*table.width)
+	table.pdf.LineColor(0, 0, 1)
+}
+
+func (table *Table) writeBottomAndRightLine(col1, col2, row int, sx, sy float64) {
+	var (
+		x1, y1, x2 float64
+		pageEndY   = table.pdf.GetPageEndY()
+	)
+
+	for k := col1; k <= col2; k++ {
+		if table.hasVLine(k, row) {
+			x1, y1, x2, _ = table.getVLinePosition(sx, sy, k, row)
+			table.pdf.Line(x1, y1, x2, pageEndY)
 		}
 	}
 
-	return currentRowWriteAll
+	x1, y1, x2, _ = table.getHLinePosition(sx, sy, col1, row)
+	x1, y1, x2, _ = table.getHLinePosition(sx, sy, col2, row)
+	table.pdf.LineH(x1, pageEndY, x2+table.colwidths[col2]*table.width)
+
+	if col2 == table.cols-1 {
+		x1, y1, x2, _ = table.getHLinePosition(sx, sy, 0, 0)
+		table.pdf.LineV(x1+table.width, y1, pageEndY)
+	}
 }
 
 // row,col 定位cell, sx,sy是table基准坐标
@@ -440,6 +669,36 @@ func (table *Table) writeCurrentPageCell(row, col int, sx, sy float64) {
 	if table.hasVLine(col, row) {
 		x1, y1, x2, y2 = table.getVLinePosition(sx, sy, col, row)
 		table.pdf.Line(x1, y1, x2, y2)
+	}
+
+	cell.table.pdf.SetXY(sx, sy)
+}
+
+func (table *Table) writeCrossPageCell(row, col int, sx, sy float64) {
+	var (
+		x1, y1, x2, y2 float64
+		pageEndY       = table.pdf.GetPageEndY()
+	)
+
+	// 1. 写入数据, 坐标系必须变换
+	cell := table.cells[row][col]
+
+	x1, y1, x2, y2 = table.getVLinePosition(sx, sy, col, row) // 垂直线
+	cell.table.pdf.SetXY(x1, y1)
+	if cell.element != nil {
+		cell.element.GenerateAtomicCell(pageEndY - y1)
+	}
+
+	// 2. 水平线
+	if table.hasHLine(col, row) {
+		x1, y1, x2, y2 = table.getHLinePosition(sx, sy, col, row)
+		table.pdf.Line(x1, y1, x2, y2)
+	}
+
+	// 3. 垂直线
+	if table.hasVLine(col, row) {
+		x1, y1, x2, y2 = table.getVLinePosition(sx, sy, col, row)
+		table.pdf.Line(x1, y1, x2, pageEndY)
 	}
 
 	cell.table.pdf.SetXY(sx, sy)
