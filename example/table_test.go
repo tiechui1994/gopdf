@@ -1,13 +1,13 @@
 package example
 
 import (
-	"testing"
-	"math/rand"
-	"time"
 	"fmt"
+	"math/rand"
+	"testing"
+	"time"
 
-	"github.com/tiechui1994/gopdf/core"
 	"github.com/tiechui1994/gopdf"
+	"github.com/tiechui1994/gopdf/core"
 )
 
 const (

@@ -197,7 +197,7 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 	for i := 0; i < lines; i++ {
 		width := cell.pdf.MeasureTextWidth(cell.contents[i]) / cell.pdf.GetUnit()
 		x = sx + cell.border.Left // 水平居左
-		if cell.rightAlign { //  水平居右
+		if cell.rightAlign {      //  水平居右
 			x = sx + (cell.width - width - cell.border.Right)
 		}
 		if cell.horizontalCentered { // 水平居中
