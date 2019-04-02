@@ -167,7 +167,7 @@ func (cell *TextCell) SetContent(s string) *TextCell {
 	return cell
 }
 
-func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, error) {
+func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 	var (
 		sx, sy = cell.pdf.GetXY() // 基准坐标
 		lines  int                // 可以写入的行数
@@ -224,14 +224,14 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, error) {
 		cell.contents = cell.contents[lines:]
 	}
 
-	if cell.contents == nil {
+	if len(cell.contents) == 0 {
 		cell.height = 0
 	} else {
 		length := float64(len(cell.contents))
 		cell.height = cell.border.Top + math.Abs(cell.border.Bottom) + cell.lineHeight*length + cell.lineSpace*(length-1)
 	}
 
-	return lines, nil
+	return lines, len(cell.contents), nil
 }
 
 func (cell *TextCell) GetHeight() float64 {

@@ -41,6 +41,6 @@ type Font struct {
 }
 
 type Cell interface {
-	GenerateAtomicCell(height float64) (int, error)
+	GenerateAtomicCell(height float64) (int, int, error) // 写入的行数, 剩余的行数,错误
 	GetHeight() float64
 }

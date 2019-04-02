@@ -5,6 +5,12 @@ import (
 	"fmt"
 )
 
+const (
+	state_writed  = 1
+	state_nowrite = 2
+	state_blank   = 3
+)
+
 // 构建表格
 type Table struct {
 	pdf           *core.Report
@@ -20,7 +26,7 @@ type Table struct {
 	nextrow, nextcol int // 下一个位置
 	hasWrited        int // 当前页面已经写入的行数
 
-	states [][]int // 当前页面的table单元格状态, 0,表示写入内容, 1表示未写入内容
+	states [][]int // 当前页面的table单元格状态, 1,表示写入内容, 2表示未写入内容 3表示空白
 }
 
 type TableCell struct {
@@ -65,7 +71,7 @@ func NewTable(cols, rows int, width, lineHeight float64, pdf *core.Report) *Tabl
 		lineHeight: lineHeight,
 		colwidths:  []float64{},
 		rowheights: []float64{},
-		hasWrited:  1000,
+		hasWrited:  2 ^ 32,
 
 		states: make([][]int, 0),
 	}
@@ -305,14 +311,10 @@ func (table *Table) Generate() error {
 			}
 
 			// 进入换页操作
-			if y1 > pageEndY {
-				fmt.Println("pos", table.cells[i][j].row, table.cells[i][j].col, y1-pageEndY)
-			}
-
 			if y1 < pageEndY && y2 > pageEndY || y1 > pageEndY {
 				if i == 0 {
 					table.pdf.AddNewPage(false)
-					table.hasWrited = 10000
+					table.hasWrited = 2 ^ 32
 					table.margin.Top = 0
 					table.pdf.SetXY(table.pdf.GetPageStartXY())
 					return table.Generate()
@@ -324,6 +326,10 @@ func (table *Table) Generate() error {
 				if table.hasWrited > table.cells[i][j].row-table.cells[0][0].row {
 					table.hasWrited = table.cells[i][j].row - table.cells[0][0].row
 				}
+
+				// 调整
+				fmt.Println(table.adjustmentHasWrited(), table.hasWrited)
+				table.hasWrited = table.adjustmentHasWrited()
 
 				// 划线
 				table.drawPageLineByStates(sx, sy)
@@ -349,7 +355,7 @@ func (table *Table) Generate() error {
 
 			// 拦截空白cell
 			if table.cells[i][j].element == nil {
-				table.states[i][j] = 1
+				table.states[i][j] = state_blank
 				continue
 			}
 
@@ -380,6 +386,50 @@ func (table *Table) Generate() error {
 	table.pdf.SetXY(x1, y1+height+table.margin.Top+table.margin.Bottom) // 定格最终的位置
 
 	return nil
+}
+
+// 调整haswrited的值
+func (table *Table) adjustmentHasWrited() int {
+	var (
+		flag   bool
+		max    int
+		origin = table.cells[0][0] // 原点
+	)
+
+	for row := table.hasWrited + 1; row < len(table.states); row++ {
+		flag = true
+
+		for col := 0; col < table.cols; col++ {
+			cell := table.cells[row][col]
+
+			if cell.element == nil {
+				i, j := (-cell.rowspan)-origin.row, (-cell.colspan)-origin.col
+				if table.cells[i][j].element.GetHeight() != 0 {
+					flag = false
+					break
+				}
+
+				continue
+			}
+
+			if cell.rowspan == 1 && cell.element.GetHeight() != 0 {
+				flag = false
+				break
+			}
+		}
+
+		if flag {
+			max = row + 1
+		} else {
+			break
+		}
+	}
+
+	if max == 0 {
+		return table.hasWrited
+	}
+
+	return max
 }
 
 // 自动换行生成
@@ -473,11 +523,11 @@ func (table *Table) writeCurrentPageCell(row, col int, sx, sy float64) {
 	cell.table.pdf.SetXY(x1, y1)
 
 	if cell.element != nil {
-		n, _ := cell.element.GenerateAtomicCell(y2 - y1)
-		if n > 0 {
-			table.states[row][col] = 1
+		wn, _, _ := cell.element.GenerateAtomicCell(y2 - y1)
+		if wn > 0 {
+			table.states[row][col] = state_writed
 		} else {
-			table.states[row][col] = 0
+			table.states[row][col] = state_nowrite
 		}
 	}
 
@@ -496,11 +546,11 @@ func (table *Table) writePartialPageCell(row, col int, sx, sy float64) {
 	cell.table.pdf.SetXY(x1, y1)
 
 	if cell.element != nil {
-		n, _ := cell.element.GenerateAtomicCell(pageEndY - y1)
+		n, _, _ := cell.element.GenerateAtomicCell(pageEndY - y1)
 		if n > 0 {
-			table.states[row][col] = 1
+			table.states[row][col] = state_writed
 		} else {
-			table.states[row][col] = 0
+			table.states[row][col] = state_nowrite
 		}
 	}
 
@@ -518,23 +568,23 @@ func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) bool
 		cell := table.cells[row][i]
 
 		if cell.element == nil {
-			table.states[row][i] = 1
+			table.states[row][i] = state_blank
 			continue
 		}
 
 		x1, y1, _, _ = table.getHLinePosition(sx, sy, i, row) // 计算初始点
 		cell.table.pdf.SetXY(x1, y1)
 		if y1 > pageEndY {
-			table.states[row][i] = 0
+			table.states[row][i] = state_nowrite
 			continue
 		}
-		fmt.Println(pageEndY, y1)
-		n, _ := cell.element.GenerateAtomicCell(pageEndY - y1) //11 写入内容, 写完之后会修正其高度
+		//fmt.Println(pageEndY, y1)
+		n, _, _ := cell.element.GenerateAtomicCell(pageEndY - y1) //11 写入内容, 写完之后会修正其高度
 
 		if n > 0 {
-			table.states[row][i] = 1
+			table.states[row][i] = state_writed
 		} else {
-			table.states[row][i] = 0
+			table.states[row][i] = state_nowrite
 		}
 	}
 
@@ -544,10 +594,10 @@ func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) bool
 // 划线
 func (table *Table) drawPageLineByStates(sx, sy float64) {
 	var (
-		rows, cols           = len(table.states), len(table.states[0])
-		pageEndY             = table.pdf.GetPageEndY()
-		x, y, x1, y1, x2, y2 float64
-		maxEndY              float64
+		rows, cols          = len(table.states), len(table.states[0])
+		pageEndY            = table.pdf.GetPageEndY()
+		x, y, x1, y1, _, y2 float64
+		origin              = table.cells[0][0]
 	)
 
 	table.pdf.LineType("straight", 0.1)
@@ -555,36 +605,87 @@ func (table *Table) drawPageLineByStates(sx, sy float64) {
 
 	x, y, _, _ = table.getHLinePosition(sx, sy, 0, 0)
 	table.pdf.LineH(x, y, x+table.width)
+	table.pdf.LineH(x, pageEndY, x+table.width)
 
 	for row := 0; row < rows; row++ {
 		for col := 0; col < cols; col++ {
 			cell := table.cells[row][col]
+
+			x, y, x1, y1 = table.getHLinePosition(sx, sy, col, row)
+			x, y, _, y2 = table.getVLinePosition(sx, sy, col, row)
+
 			if cell.element == nil {
+				i, j := (-cell.rowspan)-origin.row, (-cell.colspan)-origin.col
+				if i < 0 || j < 0 { // 这是历史遗留的空白
+					table.pdf.LineV(x1, y1, y2)
+					table.pdf.LineH(x, y2, x1)
+				}
 				continue
 			}
 
-			x, y, x1, y1 = table.getHLinePosition(sx, sy, col, row)
-			//fmt.Println("HLine: ", x, y, x1, y1, pageEndY)
-			x, y, x2, y2 = table.getVLinePosition(sx, sy, col, row)
-			//fmt.Println("VLine: ", x, y, x2, y2, pageEndY)
+			// 当前行已经是分界线
+			if row >= table.hasWrited-1 {
+				index := cell.row - origin.row + cell.rowspan - 1
+				if index < rows-1 {
+					for i := col; i < col+cell.colspan; i++ {
+						if table.states[index+1][i] == state_writed {
+							table.pdf.LineH(x, y2, x1)
+							break
+						}
+					}
+				}
 
-			if y2 < pageEndY {
-				table.pdf.LineV(x1, y1, y2)
-				table.pdf.LineH(x, y2, x1)
+				// 如果是最后一列, 必须有竖线
+				if col == cols-1 {
+					continue
+				}
 
+				// 如果相邻的两个列之间有一个写入, 必须有竖线
+				if table.states[row][col] == state_writed || table.states[row][col+1] == state_writed {
+					if y2 > pageEndY {
+						table.pdf.LineV(x1, y1, pageEndY)
+					} else {
+						table.pdf.LineV(x1, y1, y2)
+					}
+					continue
+				}
 			}
 
-			if y2 >= pageEndY {
-				fmt.Println("-->", x2)
-				maxEndY = pageEndY
-				//table.pdf.LineV(x1, y1, pageEndY)
+			// 当前元素存在有子元素跨界
+			if cell.rowspan > 1 && cell.element.GetHeight() == 0 && cell.row-origin.row+cell.rowspan-1 >= table.hasWrited-1 {
+				// 底线该不该划
+				index := cell.row - origin.row + cell.rowspan - 1
+				if index < rows-1 {
+					for i := col; i < col+cell.colspan; i++ {
+						if table.states[index+1][i] == state_writed {
+							table.pdf.LineH(x, y2, x1)
+							fmt.Println(x, y2, x1, row, col)
+							break
+						}
+					}
+				}
+
+				// 竖线必须划, hasWrited是完整的行数,切割点, 对于多块的,超过hasWrited意味着分割
+				if col < cols-1 {
+					table.pdf.LineV(x1, y1, pageEndY)
+				}
+
+				continue
+			}
+
+			if y2 < pageEndY {
+				if col < cols-1 {
+					table.pdf.LineV(x1, y1, y2)
+				}
+
+				table.pdf.LineH(x, y2, x1)
 			}
 		}
 	}
-	if maxEndY != 0 {
-		x, y, _, _ = table.getHLinePosition(sx, sy, 0, 0)
-		table.pdf.LineV(x, y, maxEndY)
-	}
+
+	x, y, _, _ = table.getHLinePosition(sx, sy, 0, 0)
+	table.pdf.LineV(x, y, pageEndY)
+	table.pdf.LineV(x+table.width, y, pageEndY)
 }
 
 // 校验table是否合法
@@ -612,6 +713,11 @@ func (table *Table) replaceCellHeight() {
 	// 对于cells的元素重新赋值height和minheight
 	for i := 0; i < table.rows; i++ {
 		for j := 0; j < table.cols; j++ {
+			if cells[i][j] != nil && cells[i][j].element == nil {
+				cells[i][j].minheight = 0
+				cells[i][j].height = 0
+			}
+
 			if cells[i][j] != nil && cells[i][j].element != nil {
 				cells[i][j].height = cells[i][j].element.GetHeight()
 				if cells[i][j].rowspan == 1 || cells[i][j].rowspan < 0 {

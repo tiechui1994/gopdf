@@ -285,7 +285,7 @@ func TestTable(t *testing.T) {
 
 func GetRandStr(l ...int) string {
 	str := "0123456789ABCDEFGHIGKLMNOPQRSTUVWXYZ"
-	r := mrand.Intn(100) + 5
+	r := mrand.Intn(200)
 	data := strings.Repeat(str, r/36+1)
 	return data[:r] + "---"
 }
