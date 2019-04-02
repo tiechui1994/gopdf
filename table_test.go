@@ -184,11 +184,12 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 	lineSpace := 0.01 * unit
 	lineHeight := 2 * unit
 
-	table := NewTable(5, 100, 80*unit, lineHeight, report)
+	rows, cols := 350, 5
+	table := NewTable(cols, rows, 80*unit, lineHeight, report)
 	table.SetMargin(core.Scope{0, 0, 0, 0})
-	rows, cols := 100, 5
+
 	for i := 0; i < rows; i += 5 {
-		key := mrand.Intn(3)
+		key := mrand.Intn(2)+1
 
 		f1 := core.Font{Family: TABLE_MY, Size: 10}
 		border := core.NewScope(0.5*unit, 0.5*unit, 0, 0)

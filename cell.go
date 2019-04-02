@@ -230,7 +230,6 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 		length := float64(len(cell.contents))
 		cell.height = cell.border.Top + math.Abs(cell.border.Bottom) + cell.lineHeight*length + cell.lineSpace*(length-1)
 	}
-
 	return lines, len(cell.contents), nil
 }
 

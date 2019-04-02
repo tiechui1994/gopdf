@@ -329,7 +329,7 @@ func (table *Table) GenerateAtomicCell() error {
 				table.hasWrited = table.adjustmentHasWrited()
 
 				// 划线
-				table.drawPageLineByStates(sx, sy)
+				table.drawPageLines(sx, sy)
 
 				table.pdf.AddNewPage(false)
 				table.margin.Top = 0
@@ -472,7 +472,6 @@ func (table *Table) adjustmentHasWrited() int {
 	)
 
 	for row := table.hasWrited + 1; row < len(table.states); row++ {
-		flag = true
 
 		for col := 0; col < table.cols; col++ {
 			cell := table.cells[row][col]
@@ -603,6 +602,101 @@ func (table *Table) drawPageLineByStates(sx, sy float64) {
 	table.pdf.LineV(x+table.width, y, pageEndY)
 }
 
+func (table *Table) drawPageLines(sx, sy float64) {
+	var (
+		rows, cols          = len(table.states), len(table.states[0])
+		pageEndY            = table.pdf.GetPageEndY()
+		x, y, x1, y1, _, y2 float64
+		origin              = table.cells[0][0]
+	)
+
+	table.pdf.LineType("straight", 0.1)
+	table.pdf.GrayStroke(0)
+
+	x, y, _, _ = table.getHLinePosition(sx, sy, 0, 0)
+	table.pdf.LineH(x, y, x+table.width)
+	table.pdf.LineH(x, pageEndY, x+table.width)
+
+	table.pdf.LineV(x, y, pageEndY)
+	table.pdf.LineV(x+table.width, y, pageEndY)
+
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
+			cell := table.cells[row][col]
+
+			x, y, x1, y1 = table.getHLinePosition(sx, sy, col, row)
+			x, y, _, y2 = table.getVLinePosition(sx, sy, col, row)
+
+			if cell.element == nil {
+				i, j := (-cell.rowspan)-origin.row, (-cell.colspan)-origin.col
+				if i < 0 || j < 0 { // 这是历史遗留的空白
+					table.pdf.LineV(x1, y1, y2)
+					table.pdf.LineH(x, y2, x1)
+				}
+				continue
+			}
+
+			// 当前行已经是分界线
+			if row >= table.hasWrited-1 {
+				index := cell.row - origin.row + cell.rowspan - 1
+				if index < rows-1 {
+					for i := col; i < col+cell.colspan; i++ {
+						if table.states[index+1][i] == state_writed {
+							table.pdf.LineH(x, y2, x1)
+							break
+						}
+					}
+				}
+
+				// 如果是最后一列, 必须有竖线
+				if col == cols-1 {
+					continue
+				}
+
+				// 如果相邻的两个列之间有一个写入, 必须有竖线
+				if table.states[row][col] == state_writed || table.states[row][col+1] == state_writed {
+					if y2 > pageEndY {
+						table.pdf.LineV(x1, y1, pageEndY)
+					} else {
+						table.pdf.LineV(x1, y1, y2)
+					}
+					continue
+				}
+			}
+
+			// 当前元素存在有子元素跨界
+			if cell.rowspan > 1 && cell.element.GetHeight() == 0 && cell.row-origin.row+cell.rowspan-1 >= table.hasWrited-1 {
+				// 底线该不该划
+				index := cell.row - origin.row + cell.rowspan - 1
+				if index < rows-1 {
+					for i := col; i < col+cell.colspan; i++ {
+						if table.states[index+1][i] == state_writed {
+							table.pdf.LineH(x, y2, x1)
+							break
+						}
+					}
+				}
+
+				// 竖线必须划, hasWrited是完整的行数,切割点, 对于多块的,超过hasWrited意味着分割
+				if col < cols-1 {
+					table.pdf.LineV(x1, y1, pageEndY)
+				}
+
+				continue
+			}
+
+			if y2 < pageEndY {
+				if col < cols-1 {
+					table.pdf.LineV(x1, y1, y2)
+				}
+
+				table.pdf.LineH(x, y2, x1)
+			}
+		}
+	}
+
+}
+
 // 校验table是否合法
 func (table *Table) checkTable() {
 	var count int
@@ -623,10 +717,16 @@ func (table *Table) checkTable() {
 func (table *Table) resetCellHeight() {
 	table.checkTable()
 
+	x1, _ := table.pdf.GetPageStartXY()
+	x2 := table.pdf.GetPageEndY()
+	rows := table.rows
+	if rows > int((x2-x1)/table.lineHeight)+1 {
+		rows = int((x2-x1)/table.lineHeight) + 1
+	}
 	cells := table.cells
 
 	// 对于cells的元素重新赋值height和minheight
-	for i := 0; i < table.rows; i++ {
+	for i := 0; i < rows; i++ {
 		for j := 0; j < table.cols; j++ {
 			if cells[i][j] != nil && cells[i][j].element == nil {
 				cells[i][j].minheight = 0
@@ -643,7 +743,7 @@ func (table *Table) resetCellHeight() {
 	}
 
 	// 第一遍计算rowspan是1的高度
-	for i := 0; i < table.rows; i++ {
+	for i := 0; i < rows; i++ {
 		var max float64 // 当前行的最大高度
 		for j := 0; j < table.cols; j++ {
 			if cells[i][j] != nil && max < cells[i][j].minheight {
@@ -663,7 +763,7 @@ func (table *Table) resetCellHeight() {
 	}
 
 	// 第二遍计算rowsapn非1的行高度
-	for i := 0; i < table.rows; i++ {
+	for i := 0; i < rows; i++ {
 		for j := 0; j < table.cols; j++ {
 			if cells[i][j] != nil && cells[i][j].rowspan > 1 {
 
@@ -741,6 +841,50 @@ func (table *Table) getHLinePosition(sx, sy float64, col, row int) (x1, y1 float
 	}
 
 	return x, y, x + w, y
+}
+
+// 节点垂直平线
+func (table *Table) hasVLine(col, row int) bool {
+	if col == 0 {
+		return true
+	}
+
+	cell := table.cells[row][col]
+	// 单独或者多个, 肯定是第一个
+	if cell.rowspan+cell.colspan >= 2 {
+		return true
+	}
+
+	// 距离"原点"的高度
+	h := cell.col + cell.colspan
+	if h == 0 {
+		return true
+	}
+
+	return false
+}
+
+// 节点水平线
+func (table *Table) hasHLine(col, row int) bool {
+	if row == 0 {
+		return true
+	}
+
+	var (
+		cell = table.cells[row][col]
+	)
+
+	// 单独或者多个, 肯定是第一个
+	if cell.rowspan+cell.colspan >= 2 {
+		return true
+	}
+
+	v := cell.row + cell.rowspan
+	if v == 0 {
+		return true
+	}
+
+	return false
 }
 
 // 获取表的垂直高度
