@@ -266,11 +266,7 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 
 	}
 
-	table.Generate()
-	//fmt.Println(report.GetCurrentPageNo())
-	if report.GetCurrentPageNo() == 1 {
-		//panic("www")
-	}
+	table.GenerateAtomicCell()
 }
 
 func TestTableWithdata(t *testing.T) {

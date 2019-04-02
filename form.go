@@ -2,7 +2,6 @@ package gopdf
 
 import (
 	"github.com/tiechui1994/gopdf/core"
-	"fmt"
 )
 
 const (
@@ -288,7 +287,7 @@ func (table *Table) SetMargin(margin core.Scope) {
 
 /********************************************************************************************************************/
 
-func (table *Table) Generate() error {
+func (table *Table) GenerateAtomicCell() error {
 	var (
 		sx, sy        = table.pdf.GetXY() // 基准坐标
 		pageEndY      = table.pdf.GetPageEndY()
@@ -296,14 +295,12 @@ func (table *Table) Generate() error {
 	)
 
 	// 重新计算行高
-	table.replaceCellHeight()
+	table.resetCellHeight()
 
 	for i := 0; i < table.rows; i++ {
-
 		table.states = append(table.states, make([]int, table.cols))
 
 		for j := 0; j < table.cols; j++ {
-
 			// cell的rowspan是1的y1,y2
 			_, y1, _, y2 = table.getVLinePosition(sx, sy, j, i) // 真实的垂直线
 			if table.cells[i][j].rowspan > 1 {
@@ -317,9 +314,10 @@ func (table *Table) Generate() error {
 					table.hasWrited = 2 ^ 32
 					table.margin.Top = 0
 					table.pdf.SetXY(table.pdf.GetPageStartXY())
-					return table.Generate()
+					return table.GenerateAtomicCell()
 				}
 
+				// 写完剩余的
 				table.writeCurrentPageRestCells(i, j, sx, sy)
 
 				// 当上半部分完整, 突然分页的状况
@@ -328,7 +326,6 @@ func (table *Table) Generate() error {
 				}
 
 				// 调整
-				fmt.Println(table.adjustmentHasWrited(), table.hasWrited)
 				table.hasWrited = table.adjustmentHasWrited()
 
 				// 划线
@@ -339,7 +336,7 @@ func (table *Table) Generate() error {
 				table.cells = table.cells[table.hasWrited:]
 				table.rows = len(table.cells)
 				table.states = nil
-				table.hasWrited = 1000
+				table.hasWrited = 2 ^ 32
 
 				table.pdf.LineType("straight", 0.1)
 				table.pdf.GrayStroke(0)
@@ -350,7 +347,7 @@ func (table *Table) Generate() error {
 				}
 
 				// 写入剩下页面
-				return table.Generate()
+				return table.GenerateAtomicCell()
 			}
 
 			// 拦截空白cell
@@ -373,128 +370,6 @@ func (table *Table) Generate() error {
 			if y1 < pageEndY && y2 < pageEndY {
 				table.writeCurrentPageCell(i, j, sx, sy)
 			}
-		}
-	}
-
-	// todo: 最后一个页面的最后部分
-	height := table.getTableHeight()
-	x1, y1, _, y2 = table.getVLinePosition(sx, sy, 0, 0)
-	table.pdf.LineH(x1, y1+height+table.margin.Top, x1+table.width)
-	table.pdf.LineV(x1+table.width, y1, y1+height+table.margin.Top)
-
-	x1, _ = table.pdf.GetPageStartXY()
-	table.pdf.SetXY(x1, y1+height+table.margin.Top+table.margin.Bottom) // 定格最终的位置
-
-	return nil
-}
-
-// 调整haswrited的值
-func (table *Table) adjustmentHasWrited() int {
-	var (
-		flag   bool
-		max    int
-		origin = table.cells[0][0] // 原点
-	)
-
-	for row := table.hasWrited + 1; row < len(table.states); row++ {
-		flag = true
-
-		for col := 0; col < table.cols; col++ {
-			cell := table.cells[row][col]
-
-			if cell.element == nil {
-				i, j := (-cell.rowspan)-origin.row, (-cell.colspan)-origin.col
-				if table.cells[i][j].element.GetHeight() != 0 {
-					flag = false
-					break
-				}
-
-				continue
-			}
-
-			if cell.rowspan == 1 && cell.element.GetHeight() != 0 {
-				flag = false
-				break
-			}
-		}
-
-		if flag {
-			max = row + 1
-		} else {
-			break
-		}
-	}
-
-	if max == 0 {
-		return table.hasWrited
-	}
-
-	return max
-}
-
-// 自动换行生成
-func (table *Table) GenerateAtomicCell() error {
-	var (
-		sx, sy        = table.pdf.GetXY() // 基准坐标
-		pageEndY      = table.pdf.GetPageEndY()
-		x1, y1, _, y2 float64 // 当前位置
-	)
-
-	// 重新计算行高
-	table.replaceCellHeight()
-
-	for i := 0; i < table.rows; i++ {
-		x1, y1, _, y2 = table.getVLinePosition(sx, sy, 0, i) // 真实的垂直线
-		if table.cells[i][0].rowspan > 1 {
-			y2 = y1 + table.cells[i][0].minheight
-		}
-
-		// todo: 换页
-		if y1 < pageEndY && y2 > pageEndY {
-			var (
-				currentRowWriteAll = true // 条件: 当前的行不存在空白(即rowspan=1),且每个单元格全部写完
-			)
-
-			// table首行, 直接分页
-			if i == 0 {
-				table.pdf.AddNewPage(false)
-				table.margin.Top = 0
-				table.pdf.SetXY(table.pdf.GetPageStartXY())
-
-				return table.GenerateAtomicCell()
-			}
-
-			currentRowWriteAll = table.writeCurrentPageRestCells(i, 0, sx, sy)
-
-			// 增加新页面
-			table.pdf.AddNewPage(false)
-			table.margin.Top = 0
-			if currentRowWriteAll {
-				table.cells = table.cells[i+1:]
-			} else {
-				table.cells = table.cells[i:]
-			}
-			table.rows = len(table.cells)
-
-			table.pdf.LineType("straight", 0.1)
-			table.pdf.GrayStroke(0)
-			table.pdf.SetXY(table.pdf.GetPageStartXY())
-
-			if table.rows == 0 {
-				return nil
-			}
-
-			// 写入剩下页面
-			return table.GenerateAtomicCell()
-		}
-
-		// todo: 当前页
-		for j := 0; j < table.cols; j++ {
-			if table.cells[i][j].element == nil {
-				continue
-			}
-
-			table.writeCurrentPageCell(i, j, sx, sy)
 		}
 	}
 
@@ -558,7 +433,7 @@ func (table *Table) writePartialPageCell(row, col int, sx, sy float64) {
 }
 
 // 当前页面的剩余内容
-func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) bool {
+func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) {
 	var (
 		x1, y1   float64
 		pageEndY = table.pdf.GetPageEndY()
@@ -578,7 +453,6 @@ func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) bool
 			table.states[row][i] = state_nowrite
 			continue
 		}
-		//fmt.Println(pageEndY, y1)
 		n, _, _ := cell.element.GenerateAtomicCell(pageEndY - y1) //11 写入内容, 写完之后会修正其高度
 
 		if n > 0 {
@@ -587,11 +461,53 @@ func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) bool
 			table.states[row][i] = state_nowrite
 		}
 	}
-
-	return true
 }
 
-// 划线
+// 调整haswrited的值
+func (table *Table) adjustmentHasWrited() int {
+	var (
+		flag   bool
+		max    int
+		origin = table.cells[0][0] // 原点
+	)
+
+	for row := table.hasWrited + 1; row < len(table.states); row++ {
+		flag = true
+
+		for col := 0; col < table.cols; col++ {
+			cell := table.cells[row][col]
+
+			if cell.element == nil {
+				i, j := (-cell.rowspan)-origin.row, (-cell.colspan)-origin.col
+				if table.cells[i][j].element.GetHeight() != 0 {
+					flag = false
+					break
+				}
+
+				continue
+			}
+
+			if cell.rowspan == 1 && cell.element.GetHeight() != 0 {
+				flag = false
+				break
+			}
+		}
+
+		if flag {
+			max = row + 1
+		} else {
+			break
+		}
+	}
+
+	if max == 0 {
+		return table.hasWrited
+	}
+
+	return max
+}
+
+// 对当前的Page进行划线
 func (table *Table) drawPageLineByStates(sx, sy float64) {
 	var (
 		rows, cols          = len(table.states), len(table.states[0])
@@ -659,7 +575,6 @@ func (table *Table) drawPageLineByStates(sx, sy float64) {
 					for i := col; i < col+cell.colspan; i++ {
 						if table.states[index+1][i] == state_writed {
 							table.pdf.LineH(x, y2, x1)
-							fmt.Println(x, y2, x1, row, col)
 							break
 						}
 					}
@@ -704,8 +619,8 @@ func (table *Table) checkTable() {
 	}
 }
 
-// todo: 重新计算tablecell的高度
-func (table *Table) replaceCellHeight() {
+// 重新计算tablecell的高度
+func (table *Table) resetCellHeight() {
 	table.checkTable()
 
 	cells := table.cells
@@ -826,50 +741,6 @@ func (table *Table) getHLinePosition(sx, sy float64, col, row int) (x1, y1 float
 	}
 
 	return x, y, x + w, y
-}
-
-// 节点垂直平线
-func (table *Table) hasVLine(col, row int) bool {
-	if col == 0 {
-		return true
-	}
-
-	cell := table.cells[row][col]
-	// 单独或者多个, 肯定是第一个
-	if cell.rowspan+cell.colspan >= 2 {
-		return true
-	}
-
-	// 距离"原点"的高度
-	h := cell.col + cell.colspan
-	if h == 0 {
-		return true
-	}
-
-	return false
-}
-
-// 节点水平线
-func (table *Table) hasHLine(col, row int) bool {
-	if row == 0 {
-		return true
-	}
-
-	var (
-		cell = table.cells[row][col]
-	)
-
-	// 单独或者多个, 肯定是第一个
-	if cell.rowspan+cell.colspan >= 2 {
-		return true
-	}
-
-	v := cell.row + cell.rowspan
-	if v == 0 {
-		return true
-	}
-
-	return false
 }
 
 // 获取表的垂直高度
