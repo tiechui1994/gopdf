@@ -2,6 +2,8 @@ package gopdf
 
 import (
 	"github.com/tiechui1994/gopdf/core"
+	"fmt"
+	"strings"
 )
 
 const (
@@ -24,8 +26,6 @@ type Table struct {
 
 	nextrow, nextcol int // 下一个位置
 	hasWrited        int // 当前页面已经写入的行数
-
-	states [][]int // 当前页面的table单元格状态, 1,表示写入内容, 2表示未写入内容 3表示空白
 }
 
 type TableCell struct {
@@ -36,6 +36,7 @@ type TableCell struct {
 	element   core.Cell // 单元格元素
 	minheight float64   // 当前最小单元格的高度, rowspan=1, 辅助计算
 	height    float64   // 当前表格单元真实高度, rowspan >= 1, 实际计算垂直线高度的时候使用
+	haswrited int
 }
 
 func (cell *TableCell) SetElement(e core.Cell) *TableCell {
@@ -71,8 +72,6 @@ func NewTable(cols, rows int, width, lineHeight float64, pdf *core.Report) *Tabl
 		colwidths:  []float64{},
 		rowheights: []float64{},
 		hasWrited:  2 ^ 32,
-
-		states: make([][]int, 0),
 	}
 
 	for i := 0; i < cols; i++ {
@@ -298,8 +297,6 @@ func (table *Table) GenerateAtomicCell() error {
 	table.resetCellHeight()
 
 	for i := 0; i < table.rows; i++ {
-		table.states = append(table.states, make([]int, table.cols))
-
 		for j := 0; j < table.cols; j++ {
 			// cell的rowspan是1的y1,y2
 			_, y1, _, y2 = table.getVLinePosition(sx, sy, j, i) // 真实的垂直线
@@ -326,16 +323,24 @@ func (table *Table) GenerateAtomicCell() error {
 				}
 
 				// 调整
-				table.hasWrited = table.adjustmentHasWrited()
+				fmt.Println(table.hasWrited, table.adjustmentHasWrited())
+				for i, v := range table.cells {
+					fmt.Printf("=%0.2d=  ", i)
+					for _, p := range v {
+						fmt.Printf("%3d-%0.2d   ", p.rowspan, p.haswrited)
+					}
+					fmt.Println()
+				}
+				fmt.Println(strings.Repeat("-", 50) + "\n")
+				//table.hasWrited = table.adjustmentHasWrited()
 
 				// 划线
-				table.drawPageLines(sx, sy)
+				//table.drawPageLineByStates(sx, sy)
 
 				table.pdf.AddNewPage(false)
 				table.margin.Top = 0
 				table.cells = table.cells[table.hasWrited:]
 				table.rows = len(table.cells)
-				table.states = nil
 				table.hasWrited = 2 ^ 32
 
 				table.pdf.LineType("straight", 0.1)
@@ -352,7 +357,6 @@ func (table *Table) GenerateAtomicCell() error {
 
 			// 拦截空白cell
 			if table.cells[i][j].element == nil {
-				table.states[i][j] = state_blank
 				continue
 			}
 
@@ -398,12 +402,8 @@ func (table *Table) writeCurrentPageCell(row, col int, sx, sy float64) {
 	cell.table.pdf.SetXY(x1, y1)
 
 	if cell.element != nil {
-		wn, _, _ := cell.element.GenerateAtomicCell(y2 - y1)
-		if wn > 0 {
-			table.states[row][col] = state_writed
-		} else {
-			table.states[row][col] = state_nowrite
-		}
+		cell.element.GenerateAtomicCell(y2 - y1)
+		cell.haswrited = cell.rowspan
 	}
 
 	cell.table.pdf.SetXY(sx, sy)
@@ -422,10 +422,23 @@ func (table *Table) writePartialPageCell(row, col int, sx, sy float64) {
 
 	if cell.element != nil {
 		n, _, _ := cell.element.GenerateAtomicCell(pageEndY - y1)
-		if n > 0 {
-			table.states[row][col] = state_writed
-		} else {
-			table.states[row][col] = state_nowrite
+		if n > 0 && cell.element.GetHeight() == 0 {
+			cell.haswrited = cell.rowspan
+		}
+
+		if n > 0 && cell.rowspan > 1 && cell.element.GetHeight() != 0 {
+			count := 0
+			for i := row; i < row+cell.rowspan; i++ {
+				_, y1, _, y2 := table.getVLinePosition(sx, sy, col, i)
+				if y2 < pageEndY {
+					count++
+				}
+				if y1 > pageEndY {
+					break
+				}
+			}
+
+			cell.haswrited = count
 		}
 	}
 
@@ -443,22 +456,32 @@ func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) {
 		cell := table.cells[row][i]
 
 		if cell.element == nil {
-			table.states[row][i] = state_blank
 			continue
 		}
 
 		x1, y1, _, _ = table.getHLinePosition(sx, sy, i, row) // 计算初始点
 		cell.table.pdf.SetXY(x1, y1)
 		if y1 > pageEndY {
-			table.states[row][i] = state_nowrite
 			continue
 		}
 		n, _, _ := cell.element.GenerateAtomicCell(pageEndY - y1) //11 写入内容, 写完之后会修正其高度
+		if n > 0 && cell.element.GetHeight() == 0 {
+			cell.haswrited = cell.rowspan
+		}
 
-		if n > 0 {
-			table.states[row][i] = state_writed
-		} else {
-			table.states[row][i] = state_nowrite
+		if n > 0 && cell.rowspan > 1 && cell.element.GetHeight() != 0 {
+			count := 0
+			for i := row; i < row+cell.rowspan; i++ {
+				_, y1, _, y2 := table.getVLinePosition(sx, sy, col, i)
+				if y2 < pageEndY {
+					count++
+				}
+				if y1 > pageEndY {
+					break
+				}
+			}
+
+			cell.haswrited = count
 		}
 	}
 }
@@ -471,7 +494,7 @@ func (table *Table) adjustmentHasWrited() int {
 		origin = table.cells[0][0] // 原点
 	)
 
-	for row := table.hasWrited + 1; row < len(table.states); row++ {
+	for row := table.hasWrited + 1; row < table.rows; row++ {
 
 		for col := 0; col < table.cols; col++ {
 			cell := table.cells[row][col]
@@ -509,7 +532,7 @@ func (table *Table) adjustmentHasWrited() int {
 // 对当前的Page进行划线
 func (table *Table) drawPageLineByStates(sx, sy float64) {
 	var (
-		rows, cols          = len(table.states), len(table.states[0])
+		rows, cols          = table.rows, table.cols
 		pageEndY            = table.pdf.GetPageEndY()
 		x, y, x1, y1, _, y2 float64
 		origin              = table.cells[0][0]
@@ -540,50 +563,10 @@ func (table *Table) drawPageLineByStates(sx, sy float64) {
 
 			// 当前行已经是分界线
 			if row >= table.hasWrited-1 {
-				index := cell.row - origin.row + cell.rowspan - 1
-				if index < rows-1 {
-					for i := col; i < col+cell.colspan; i++ {
-						if table.states[index+1][i] == state_writed {
-							table.pdf.LineH(x, y2, x1)
-							break
-						}
-					}
-				}
-
-				// 如果是最后一列, 必须有竖线
-				if col == cols-1 {
-					continue
-				}
-
-				// 如果相邻的两个列之间有一个写入, 必须有竖线
-				if table.states[row][col] == state_writed || table.states[row][col+1] == state_writed {
-					if y2 > pageEndY {
-						table.pdf.LineV(x1, y1, pageEndY)
-					} else {
-						table.pdf.LineV(x1, y1, y2)
-					}
-					continue
-				}
 			}
 
 			// 当前元素存在有子元素跨界
 			if cell.rowspan > 1 && cell.element.GetHeight() == 0 && cell.row-origin.row+cell.rowspan-1 >= table.hasWrited-1 {
-				// 底线该不该划
-				index := cell.row - origin.row + cell.rowspan - 1
-				if index < rows-1 {
-					for i := col; i < col+cell.colspan; i++ {
-						if table.states[index+1][i] == state_writed {
-							table.pdf.LineH(x, y2, x1)
-							break
-						}
-					}
-				}
-
-				// 竖线必须划, hasWrited是完整的行数,切割点, 对于多块的,超过hasWrited意味着分割
-				if col < cols-1 {
-					table.pdf.LineV(x1, y1, pageEndY)
-				}
-
 				continue
 			}
 
@@ -600,101 +583,6 @@ func (table *Table) drawPageLineByStates(sx, sy float64) {
 	x, y, _, _ = table.getHLinePosition(sx, sy, 0, 0)
 	table.pdf.LineV(x, y, pageEndY)
 	table.pdf.LineV(x+table.width, y, pageEndY)
-}
-
-func (table *Table) drawPageLines(sx, sy float64) {
-	var (
-		rows, cols          = len(table.states), len(table.states[0])
-		pageEndY            = table.pdf.GetPageEndY()
-		x, y, x1, y1, _, y2 float64
-		origin              = table.cells[0][0]
-	)
-
-	table.pdf.LineType("straight", 0.1)
-	table.pdf.GrayStroke(0)
-
-	x, y, _, _ = table.getHLinePosition(sx, sy, 0, 0)
-	table.pdf.LineH(x, y, x+table.width)
-	table.pdf.LineH(x, pageEndY, x+table.width)
-
-	table.pdf.LineV(x, y, pageEndY)
-	table.pdf.LineV(x+table.width, y, pageEndY)
-
-	for row := 0; row < rows; row++ {
-		for col := 0; col < cols; col++ {
-			cell := table.cells[row][col]
-
-			x, y, x1, y1 = table.getHLinePosition(sx, sy, col, row)
-			x, y, _, y2 = table.getVLinePosition(sx, sy, col, row)
-
-			if cell.element == nil {
-				i, j := (-cell.rowspan)-origin.row, (-cell.colspan)-origin.col
-				if i < 0 || j < 0 { // 这是历史遗留的空白
-					table.pdf.LineV(x1, y1, y2)
-					table.pdf.LineH(x, y2, x1)
-				}
-				continue
-			}
-
-			// 当前行已经是分界线
-			if row >= table.hasWrited-1 {
-				index := cell.row - origin.row + cell.rowspan - 1
-				if index < rows-1 {
-					for i := col; i < col+cell.colspan; i++ {
-						if table.states[index+1][i] == state_writed {
-							table.pdf.LineH(x, y2, x1)
-							break
-						}
-					}
-				}
-
-				// 如果是最后一列, 必须有竖线
-				if col == cols-1 {
-					continue
-				}
-
-				// 如果相邻的两个列之间有一个写入, 必须有竖线
-				if table.states[row][col] == state_writed || table.states[row][col+1] == state_writed {
-					if y2 > pageEndY {
-						table.pdf.LineV(x1, y1, pageEndY)
-					} else {
-						table.pdf.LineV(x1, y1, y2)
-					}
-					continue
-				}
-			}
-
-			// 当前元素存在有子元素跨界
-			if cell.rowspan > 1 && cell.element.GetHeight() == 0 && cell.row-origin.row+cell.rowspan-1 >= table.hasWrited-1 {
-				// 底线该不该划
-				index := cell.row - origin.row + cell.rowspan - 1
-				if index < rows-1 {
-					for i := col; i < col+cell.colspan; i++ {
-						if table.states[index+1][i] == state_writed {
-							table.pdf.LineH(x, y2, x1)
-							break
-						}
-					}
-				}
-
-				// 竖线必须划, hasWrited是完整的行数,切割点, 对于多块的,超过hasWrited意味着分割
-				if col < cols-1 {
-					table.pdf.LineV(x1, y1, pageEndY)
-				}
-
-				continue
-			}
-
-			if y2 < pageEndY {
-				if col < cols-1 {
-					table.pdf.LineV(x1, y1, y2)
-				}
-
-				table.pdf.LineH(x, y2, x1)
-			}
-		}
-	}
-
 }
 
 // 校验table是否合法
