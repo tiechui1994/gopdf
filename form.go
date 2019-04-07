@@ -3,13 +3,6 @@ package gopdf
 import (
 	"github.com/tiechui1994/gopdf/core"
 	"fmt"
-	"strings"
-)
-
-const (
-	state_writed  = 1
-	state_nowrite = 2
-	state_blank   = 3
 )
 
 // 构建表格
@@ -41,11 +34,6 @@ type TableCell struct {
 
 func (cell *TableCell) SetElement(e core.Cell) *TableCell {
 	cell.element = e
-	cell.height = cell.element.GetHeight()
-	if cell.rowspan == 1 {
-		cell.minheight = cell.height
-	}
-
 	return cell
 }
 
@@ -133,7 +121,7 @@ func (table *Table) NewCellByRange(w, h int) *TableCell {
 		rowspan:   rowspan,
 		colspan:   colspan,
 		table:     table,
-		height:    table.lineHeight,
+		height:    table.lineHeight * float64(h),
 		minheight: table.lineHeight,
 	}
 
@@ -299,13 +287,14 @@ func (table *Table) GenerateAtomicCell() error {
 	for i := 0; i < table.rows; i++ {
 		for j := 0; j < table.cols; j++ {
 			// cell的rowspan是1的y1,y2
-			_, y1, _, y2 = table.getVLinePosition(sx, sy, j, i) // 真实的垂直线
+			_, y1, _, y2 = table.getVLinePosition(sx, sy, j, i)
 			if table.cells[i][j].rowspan > 1 {
 				y2 = y1 + table.cells[i][j].minheight
 			}
 
 			// 进入换页操作
-			if y1 < pageEndY && y2 > pageEndY || y1 > pageEndY {
+
+			if y1 < pageEndY && y2 > pageEndY {
 				if i == 0 {
 					table.pdf.AddNewPage(false)
 					table.hasWrited = 2 ^ 32
@@ -322,25 +311,23 @@ func (table *Table) GenerateAtomicCell() error {
 					table.hasWrited = table.cells[i][j].row - table.cells[0][0].row
 				}
 
-				// 调整
-				//fmt.Println(table.hasWrited, table.adjustmentHasWrited())
-				for i, v := range table.cells {
-					fmt.Printf("=%0.2d=  ", i)
-					for _, p := range v {
-						fmt.Printf("%3d-%0.2d   ", p.rowspan, p.haswrited)
-					}
-					fmt.Println()
-				}
-				fmt.Println(strings.Repeat("-", 50) + "\n")
-				//table.hasWrited = table.adjustmentHasWrited()
+				//for i, v := range table.cells {
+				//	fmt.Printf("=%0.2d=  ", i)
+				//	for _, p := range v {
+				//		fmt.Printf("%3d-%0.2d   ", p.rowspan, p.haswrited)
+				//	}
+				//	fmt.Println()
+				//}
+				//fmt.Println(strings.Repeat("-", 50) + "\n")
 
+				fmt.Println("has:", table.hasWrited)
+				table.resetCells()
 				// 划线
 				table.drawPageLineByStates(sx, sy)
 
 				table.pdf.AddNewPage(false)
 				table.margin.Top = 0
-				//table.cells = table.cells[table.hasWrited:]
-				table.resetCells()
+				table.cells = table.cells[table.hasWrited:]
 				table.rows = len(table.cells)
 				table.hasWrited = 2 ^ 32
 
@@ -406,8 +393,6 @@ func (table *Table) writeCurrentPageCell(row, col int, sx, sy float64) {
 		cell.element.GenerateAtomicCell(y2 - y1)
 		cell.haswrited = cell.rowspan
 	}
-
-	cell.table.pdf.SetXY(sx, sy)
 }
 func (table *Table) writePartialPageCell(row, col int, sx, sy float64) {
 	var (
@@ -442,8 +427,6 @@ func (table *Table) writePartialPageCell(row, col int, sx, sy float64) {
 			cell.haswrited = count
 		}
 	}
-
-	cell.table.pdf.SetXY(sx, sy)
 }
 
 // 当前页面的剩余内容
@@ -465,6 +448,7 @@ func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) {
 		if y1 > pageEndY {
 			continue
 		}
+
 		n, _, _ := cell.element.GenerateAtomicCell(pageEndY - y1) //11 写入内容, 写完之后会修正其高度
 		if n > 0 && cell.element.GetHeight() == 0 {
 			cell.haswrited = cell.rowspan
@@ -557,11 +541,13 @@ func (table *Table) drawPageLineByStates(sx, sy float64) {
 			}
 
 			if y2 < pageEndY {
-				if col < cols-1 {
-					table.pdf.LineV(x1, y1, y2)
-				}
-
+				table.pdf.LineV(x1, y1, y2)
 				table.pdf.LineH(x, y2, x1)
+			}
+
+			if y > pageEndY || y2 > pageEndY {
+				table.pdf.LineV(x1, y1, pageEndY)
+				table.pdf.LineH(x, pageEndY, x1)
 			}
 		}
 	}
@@ -587,7 +573,7 @@ func (table *Table) checkTable() {
 	}
 }
 
-// 重新计算tablecell的高度
+// TODO: 重新计算tablecell的高度(精确)
 func (table *Table) resetCellHeight() {
 	table.checkTable()
 
@@ -603,13 +589,13 @@ func (table *Table) resetCellHeight() {
 	for i := 0; i < rows; i++ {
 		for j := 0; j < table.cols; j++ {
 			if cells[i][j] != nil && cells[i][j].element == nil {
-				cells[i][j].minheight = 0
-				cells[i][j].height = 0
+				cells[i][j].minheight = table.lineHeight
+				cells[i][j].height = table.lineHeight
 			}
 
 			if cells[i][j] != nil && cells[i][j].element != nil {
 				cells[i][j].height = cells[i][j].element.GetHeight()
-				if cells[i][j].rowspan == 1 || cells[i][j].rowspan < 0 {
+				if cells[i][j].rowspan == 1 {
 					cells[i][j].minheight = cells[i][j].height
 				}
 			}
@@ -654,9 +640,20 @@ func (table *Table) resetCellHeight() {
 						// 更新minheight
 						cells[row][col].minheight += h
 
-						// 更新height
-						if cells[row][col].rowspan == 1 || cells[i][j].rowspan < 0 {
+						// todo: 更新height, 当rowspan=1
+						if cells[row][col].rowspan == 1 {
 							cells[row][col].height += h
+						}
+
+						// todo: 更新height, 当rowspan<0, 空格,需要更新非当前的实体(前面的)
+						if cells[row][col].rowspan <= 0 {
+							cells[row][col].height += h
+
+							orow := -cells[row][col].rowspan - cells[0][0].row
+							ocol := -cells[row][col].colspan - cells[0][0].col
+							if orow == i && ocol < j || orow < i {
+								cells[orow][ocol].height += h
+							}
 						}
 					}
 				} else {
@@ -671,73 +668,128 @@ func (table *Table) resetCellHeight() {
 
 func (table *Table) resetCells() {
 	var (
-		min = 2 ^ 32
+		min    = 2 ^ 32
+		cells  = table.cells
+		origin = cells[0][0]
 	)
+
+	//fmt.Println("\n" + strings.Repeat("+", 50))
+	//for i, v := range table.cells {
+	//	fmt.Printf("=%0.2d=  ", i)
+	//	for _, p := range v {
+	//		fmt.Printf("%3d-%0.2d   ", p.rowspan, p.haswrited)
+	//	}
+	//	fmt.Println()
+	//}
+	//fmt.Println(strings.Repeat("-", 50) + "\n\n")
 
 	// 获取写入的最小行数
 	for col := 0; col < table.cols; col++ {
-		if table.cells[table.hasWrited][col].element != nil {
-			count := 0
-			for row := table.hasWrited; row < table.rows; row++ {
-				count += table.cells[row][col].haswrited
-				if table.cells[row][col].element != nil && table.cells[row][col].haswrited == 0 {
-					break
-				}
-			}
+		count := 0
+		cell := cells[table.hasWrited][col]
 
-			if min > count {
-				min = count
+		if cell.rowspan <= 0 {
+			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col
+			count += cells[i][j].rowspan - cells[i][j].haswrited + 1
+			fmt.Println("count:", count)
+			if cells[i][j].haswrited == cells[i][j].rowspan {
+				// TODO: 先计算当前的实体(空格->实体), 然后跳跃到下一个实体(条件性)
+				// 后面第一个实体
+				srow := cells[i][j].row - origin.row + cells[i][j].rowspan
+				count += table.count(srow, col)
 			}
+		}
+
+		if cell.rowspan >= 1 {
+			count += cell.haswrited
+			fmt.Println("count:", count)
+			if cell.haswrited == cell.rowspan {
+				// TODO: 先计算当前的实体(空格->实体), 然后跳跃到下一个实体(条件性)
+				srow := cell.row - origin.row + cell.rowspan
+				count += table.count(srow, col)
+			}
+		}
+
+		if min > count {
+			min = count
 		}
 	}
 
+	fmt.Println("min", min)
 	// cell重置
-	for col := 0; col < table.cols; col++ {
-		count := 0
-		for row := table.hasWrited; row < table.hasWrited+min; row++ {
-			cell := table.cells[row][col]
+	//for col := 0; col < table.cols; col++ {
+	//	count := 0
+	//	for row := table.hasWrited; row < table.hasWrited+min; row++ {
+	//		cell := table.cells[row][col]
+	//
+	//		if cell.element != nil {
+	//			// count+cell.haswrited 当前应该需要写的总数
+	//			if count+cell.haswrited >= min {
+	//				remain := cell.rowspan - cell.haswrited
+	//
+	//				if remain > 0 {
+	//					table.cells[row+cell.haswrited][col] = cell
+	//
+	//					for i := row + cell.haswrited; i <= row+cell.rowspan; i++ {
+	//						for j := col; j <= col+cell.colspan; j++ {
+	//							if i == row+cell.haswrited && j == col {
+	//								table.cells[i][j].rowspan = remain
+	//								continue
+	//							}
+	//
+	//							table.cells[i][j].rowspan = -(row + cell.haswrited)
+	//						}
+	//					}
+	//
+	//					table.cells[row+cell.haswrited][col].haswrited = 0
+	//				}
+	//
+	//				break
+	//			}
+	//		}
+	//
+	//		count += cell.haswrited
+	//	}
+	//}
 
-			if cell.element != nil {
-				// count+cell.haswrited 当前应该需要写的总数
-				if count+cell.haswrited >= min {
-					remain := cell.rowspan - cell.haswrited
+}
 
-					if remain > 0 {
-						table.cells[row+cell.haswrited][col] = cell
+func (table *Table) count(srow, scol int) int {
+	var (
+		origin = table.cells[0][0]
+		count  int
+	)
+	for row := srow; row < table.rows; {
+		cell := table.cells[row][scol]
+		if cell.rowspan < 0 {
+			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col
+			if table.cells[i][j].haswrited == 0 {
+				break
+			}
 
-						for i := row + cell.haswrited; i <= row+cell.rowspan; i++ {
-							for j := col; j <= col+cell.colspan; j++ {
-								if i == row+cell.haswrited && j == col {
-									table.cells[i][j].rowspan = remain
-									continue
-								}
+			if cell.row-table.cells[i][j].row+1 <= table.cells[i][j].haswrited {
+				count += table.cells[i][j].haswrited - (cell.row - table.cells[i][j].row)
+			}
 
-								table.cells[i][j].rowspan = -(row + cell.haswrited)
-							}
-						}
+			srow = i + 1
+		}
 
-						table.cells[row+cell.haswrited][col].haswrited = 0
-					}
-
-					break
-				}
+		if cell.rowspan >= 1 {
+			if cell.haswrited == 0 {
+				break
 			}
 
 			count += cell.haswrited
+
+			if cell.haswrited < cell.rowspan {
+				break
+			}
+
+			srow = srow + cell.rowspan
 		}
 	}
-	fmt.Println("min:", table.hasWrited+min, min)
-	table.cells = table.cells[table.hasWrited+min:]
 
-	fmt.Println("\n" + strings.Repeat("+", 50))
-	for i, v := range table.cells {
-		fmt.Printf("=%0.2d=  ", i)
-		for _, p := range v {
-			fmt.Printf("%3d-%0.2d   ", p.rowspan, p.haswrited)
-		}
-		fmt.Println()
-	}
-
+	return count
 }
 
 // 垂直线, table单元格的垂直线

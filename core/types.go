@@ -42,5 +42,6 @@ type Font struct {
 
 type Cell interface {
 	GenerateAtomicCell(height float64) (int, int, error) // 写入的行数, 剩余的行数,错误
+	TryGenerateAtomicCell(height float64) (int, int)     // 假的写入
 	GetHeight() float64
 }

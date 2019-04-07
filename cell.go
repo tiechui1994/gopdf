@@ -197,7 +197,7 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 	for i := 0; i < lines; i++ {
 		width := cell.pdf.MeasureTextWidth(cell.contents[i]) / cell.pdf.GetUnit()
 		x = sx + cell.border.Left // 水平居左
-		if cell.rightAlign {      //  水平居右
+		if cell.rightAlign { //  水平居右
 			x = sx + (cell.width - width - cell.border.Right)
 		}
 		if cell.horizontalCentered { // 水平居中
@@ -231,6 +231,29 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 		cell.height = cell.border.Top + math.Abs(cell.border.Bottom) + cell.lineHeight*length + cell.lineSpace*(length-1)
 	}
 	return lines, len(cell.contents), nil
+}
+
+func (cell *TextCell) TryGenerateAtomicCell(maxheight float64) (int, int) {
+	var (
+		lines int // 可以写入的行数
+	)
+
+	cell.pdf.Font(cell.font.Family, cell.font.Size, cell.font.Style)
+	cell.pdf.SetFontWithStyle(cell.font.Family, cell.font.Style, cell.font.Size)
+
+	// 计算需要打印的行数
+	if maxheight > cell.height || math.Abs(maxheight-cell.height) < 0.01 {
+		lines = len(cell.contents)
+	} else {
+		lines = int((maxheight + cell.lineSpace) / (cell.lineHeight + cell.lineSpace))
+	}
+
+	remain := 0
+	if lines < len(cell.contents) {
+		remain = len(cell.contents) - lines
+	}
+
+	return lines, remain
 }
 
 func (cell *TextCell) GetHeight() float64 {

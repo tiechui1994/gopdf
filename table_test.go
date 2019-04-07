@@ -2,7 +2,6 @@ package gopdf
 
 import (
 	"fmt"
-	mrand "math/rand"
 	"testing"
 
 	"github.com/tiechui1994/gopdf/core"
@@ -176,7 +175,6 @@ func ManyTableReportWithData() {
 	r.RegisterExecutor(core.Executor(ManyTableReportWithDataExecutor), core.Detail)
 
 	r.Execute("many_table_data.pdf")
-	r.SaveAtomicCellText("many_table_data.txt")
 }
 func ManyTableReportWithDataExecutor(report *core.Report) {
 	unit := report.GetUnit()
@@ -189,8 +187,8 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 	table.SetMargin(core.Scope{0, 0, 0, 0})
 
 	for i := 0; i < rows; i += 5 {
-		key := mrand.Intn(2)+1
-
+		//key := rand.Intn(2) + 1
+		key := (i+1)%2 + 1
 		f1 := core.Font{Family: TABLE_MY, Size: 10}
 		border := core.NewScope(0.5*unit, 0.5*unit, 0, 0)
 
@@ -282,7 +280,7 @@ func TestTable(t *testing.T) {
 
 func GetRandStr(l ...int) string {
 	str := "0123456789ABCDEFGHIGKLMNOPQRSTUVWXYZ"
-	r := mrand.Intn(200)
-	data := strings.Repeat(str, r/36+1)
-	return data[:r] + "---"
+	l = append(l, 5)
+	data := strings.Repeat(str, l[0]*8/36+1)
+	return data[:l[0]*8] + "---"
 }
