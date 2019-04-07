@@ -6,6 +6,7 @@ import (
 
 	"github.com/tiechui1994/gopdf/core"
 	"strings"
+	"math/rand"
 )
 
 const (
@@ -182,13 +183,13 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 	lineSpace := 0.01 * unit
 	lineHeight := 2 * unit
 
-	rows, cols := 100, 5
+	rows, cols := 340, 5
 	table := NewTable(cols, rows, 80*unit, lineHeight, report)
 	table.SetMargin(core.Scope{0, 0, 0, 0})
 
 	for i := 0; i < rows; i += 5 {
-		//key := rand.Intn(2) + 1
-		key := (i+1)%2 + 1
+		key := rand.Intn(3)
+		//key := (i+1)%2 + 1
 		f1 := core.Font{Family: TABLE_MY, Size: 10}
 		border := core.NewScope(0.5*unit, 0.5*unit, 0, 0)
 

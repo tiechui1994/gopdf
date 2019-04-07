@@ -465,49 +465,6 @@ func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) {
 	}
 }
 
-// 调整haswrited的值
-func (table *Table) adjustmentHasWrited() int {
-	var (
-		flag   bool
-		max    int
-		origin = table.cells[0][0] // 原点
-	)
-
-	for row := table.hasWrited + 1; row < table.rows; row++ {
-
-		for col := 0; col < table.cols; col++ {
-			cell := table.cells[row][col]
-
-			if cell.element == nil {
-				i, j := (-cell.rowspan)-origin.row, (-cell.colspan)-origin.col
-				if table.cells[i][j].element.GetHeight() != 0 {
-					flag = false
-					break
-				}
-
-				continue
-			}
-
-			if cell.rowspan == 1 && cell.element.GetHeight() != 0 {
-				flag = false
-				break
-			}
-		}
-
-		if flag {
-			max = row + 1
-		} else {
-			break
-		}
-	}
-
-	if max == 0 {
-		return table.hasWrited
-	}
-
-	return max
-}
-
 // 对当前的Page进行划线
 func (table *Table) drawPageLineByStates(sx, sy float64) {
 	var (
@@ -674,7 +631,8 @@ func (table *Table) resetCells() {
 
 		if cell.rowspan <= 0 {
 			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col
-			count += cells[i][j].rowspan - cells[i][j].haswrited + 1
+			// 从cells[table.hasWrite]算起已经写入的行数
+			count += cells[i][j].haswrited - (cell.row-cells[i][j].row)
 			if cells[i][j].haswrited == cells[i][j].rowspan {
 				// TODO: 先计算当前的实体(空格->实体), 然后跳跃到下一个实体(条件性)
 				// 后面第一个实体
@@ -692,7 +650,7 @@ func (table *Table) resetCells() {
 			}
 		}
 
-		fmt.Printf("%0.3d	", count)
+		fmt.Printf("count: %0.3d ", count)
 
 		if min > count {
 			min = count
@@ -702,42 +660,43 @@ func (table *Table) resetCells() {
 	fmt.Println("min: ", min)
 	fmt.Println(strings.Repeat("-", 100) + "\n")
 
-	fmt.Println(strings.Repeat("+", 100))
-	for i, v := range table.cells {
-		fmt.Printf("=%02d=  ", i)
-		for _, p := range v {
-			fmt.Printf("(%02d,%02d)~(%03d-%02d)	", p.row, p.col, p.rowspan, p.haswrited)
-		}
-		fmt.Println()
-	}
-	fmt.Println()
+	//fmt.Println(strings.Repeat("+", 100))
+	//for i, v := range table.cells {
+	//	fmt.Printf("=%02d=  ", i)
+	//	for _, p := range v {
+	//		fmt.Printf("(%02d,%02d)~(%03d-%02d)	", p.row, p.col, p.rowspan, p.haswrited)
+	//	}
+	//	fmt.Println()
+	//}
+	//fmt.Println()
 
 	// cell重置
 	row := table.hasWrited + min
 	for col := 0; col < table.cols; {
 		cell := table.cells[row][col]
-		fmt.Println("当前的rowspan:", cell.rowspan)
+		//fmt.Println("当前的rowspan:", cell.rowspan)
 		if cell.rowspan <= 0 {
 			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col
 			var ox, oy int
 
-			fmt.Println(
-				"空格的原始位置:", i, j,
-				"剩余的cells个数:", cells[i][j].rowspan-cells[i][j].haswrited,
-				"row的最后位置:", row+cells[i][j].rowspan-cells[i][j].haswrited,
-				"当前的col:", col,
-				"结束的col:", col+cells[i][j].colspan,
-			)
+			//fmt.Println(
+			//	"空格的原始位置:", i, j,
+			//	"row的最后位置:", cells[i][j].row+cells[i][j].rowspan-origin.row,
+			//	"当前的col:", col,
+			//	"结束的col:", col+cells[i][j].colspan,
+			//)
 
-			for x := row; x <= row+cells[i][j].rowspan-cells[i][j].haswrited; x++ {
+			for x := row; x < cells[i][j].row+cells[i][j].rowspan-origin.row; x++ {
 				for y := col; y < col+cells[i][j].colspan; y++ {
 					if x == row && y == col {
+						ox, oy = cells[x][y].row, cells[x][y].col
+
 						cells[x][y].element = cells[i][j].element
-						cells[x][y].rowspan = cells[i][j].rowspan - cells[i][j].haswrited
+						cells[x][y].rowspan = cells[i][j].rowspan - (ox - cells[i][j].row)
 						cells[x][y].colspan = cells[i][j].colspan
 						cells[x][y].haswrited = 0
-						fmt.Println("x,y", x, y, cells[x][y].rowspan, cells[x][y].colspan)
-						ox, oy = cells[x][y].row, cells[x][y].col
+						//fmt.Println("x,y", x, y, cells[x][y].rowspan, cells[x][y].colspan)
+
 						continue
 					}
 
@@ -747,25 +706,27 @@ func (table *Table) resetCells() {
 			}
 
 			col += cells[i][j].colspan
+			continue
 		}
 
 		if cell.rowspan >= 1 {
 			col += cell.colspan
 			cell.haswrited = 0
+			continue
 		}
 
 		fmt.Println()
 	}
 
-	fmt.Println(strings.Repeat("=", 100))
-	for i, v := range table.cells {
-		fmt.Printf("=%02d=  ", i)
-		for _, p := range v {
-			fmt.Printf("(%02d,%02d)~(%03d-%02d)	", p.row, p.col, p.rowspan, p.haswrited)
-		}
-		fmt.Println()
-	}
-	fmt.Println()
+	//fmt.Println(strings.Repeat("=", 100))
+	//for i, v := range table.cells {
+	//	fmt.Printf("=%02d=  ", i)
+	//	for _, p := range v {
+	//		fmt.Printf("(%02d,%02d)~(%03d-%02d)	", p.row, p.col, p.rowspan, p.haswrited)
+	//	}
+	//	fmt.Println()
+	//}
+	//fmt.Println()
 
 	table.cells = table.cells[table.hasWrited+min:]
 }
