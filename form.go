@@ -3,6 +3,7 @@ package gopdf
 import (
 	"github.com/tiechui1994/gopdf/core"
 	"fmt"
+	"strings"
 )
 
 // 构建表格
@@ -311,23 +312,16 @@ func (table *Table) GenerateAtomicCell() error {
 					table.hasWrited = table.cells[i][j].row - table.cells[0][0].row
 				}
 
-				//for i, v := range table.cells {
-				//	fmt.Printf("=%0.2d=  ", i)
-				//	for _, p := range v {
-				//		fmt.Printf("%3d-%0.2d   ", p.rowspan, p.haswrited)
-				//	}
-				//	fmt.Println()
-				//}
-				//fmt.Println(strings.Repeat("-", 50) + "\n")
+				fmt.Printf("has:%v \n", table.hasWrited)
 
-				fmt.Println("has:", table.hasWrited)
-				table.resetCells()
 				// 划线
 				table.drawPageLineByStates(sx, sy)
 
 				table.pdf.AddNewPage(false)
 				table.margin.Top = 0
-				table.cells = table.cells[table.hasWrited:]
+				table.resetCells()
+				//table.cells = table.cells[table.hasWrited:]
+				fmt.Println("===>", table.cells[0][0].row)
 				table.rows = len(table.cells)
 				table.hasWrited = 2 ^ 32
 
@@ -673,16 +667,6 @@ func (table *Table) resetCells() {
 		origin = cells[0][0]
 	)
 
-	//fmt.Println("\n" + strings.Repeat("+", 50))
-	//for i, v := range table.cells {
-	//	fmt.Printf("=%0.2d=  ", i)
-	//	for _, p := range v {
-	//		fmt.Printf("%3d-%0.2d   ", p.rowspan, p.haswrited)
-	//	}
-	//	fmt.Println()
-	//}
-	//fmt.Println(strings.Repeat("-", 50) + "\n\n")
-
 	// 获取写入的最小行数
 	for col := 0; col < table.cols; col++ {
 		count := 0
@@ -691,7 +675,6 @@ func (table *Table) resetCells() {
 		if cell.rowspan <= 0 {
 			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col
 			count += cells[i][j].rowspan - cells[i][j].haswrited + 1
-			fmt.Println("count:", count)
 			if cells[i][j].haswrited == cells[i][j].rowspan {
 				// TODO: 先计算当前的实体(空格->实体), 然后跳跃到下一个实体(条件性)
 				// 后面第一个实体
@@ -702,7 +685,6 @@ func (table *Table) resetCells() {
 
 		if cell.rowspan >= 1 {
 			count += cell.haswrited
-			fmt.Println("count:", count)
 			if cell.haswrited == cell.rowspan {
 				// TODO: 先计算当前的实体(空格->实体), 然后跳跃到下一个实体(条件性)
 				srow := cell.row - origin.row + cell.rowspan
@@ -710,48 +692,82 @@ func (table *Table) resetCells() {
 			}
 		}
 
+		fmt.Printf("%0.3d	", count)
+
 		if min > count {
 			min = count
 		}
 	}
 
-	fmt.Println("min", min)
-	// cell重置
-	//for col := 0; col < table.cols; col++ {
-	//	count := 0
-	//	for row := table.hasWrited; row < table.hasWrited+min; row++ {
-	//		cell := table.cells[row][col]
-	//
-	//		if cell.element != nil {
-	//			// count+cell.haswrited 当前应该需要写的总数
-	//			if count+cell.haswrited >= min {
-	//				remain := cell.rowspan - cell.haswrited
-	//
-	//				if remain > 0 {
-	//					table.cells[row+cell.haswrited][col] = cell
-	//
-	//					for i := row + cell.haswrited; i <= row+cell.rowspan; i++ {
-	//						for j := col; j <= col+cell.colspan; j++ {
-	//							if i == row+cell.haswrited && j == col {
-	//								table.cells[i][j].rowspan = remain
-	//								continue
-	//							}
-	//
-	//							table.cells[i][j].rowspan = -(row + cell.haswrited)
-	//						}
-	//					}
-	//
-	//					table.cells[row+cell.haswrited][col].haswrited = 0
-	//				}
-	//
-	//				break
-	//			}
-	//		}
-	//
-	//		count += cell.haswrited
-	//	}
-	//}
+	fmt.Println("min: ", min)
+	fmt.Println(strings.Repeat("-", 100) + "\n")
 
+	fmt.Println(strings.Repeat("+", 100))
+	for i, v := range table.cells {
+		fmt.Printf("=%02d=  ", i)
+		for _, p := range v {
+			fmt.Printf("(%02d,%02d)~(%03d-%02d)	", p.row, p.col, p.rowspan, p.haswrited)
+		}
+		fmt.Println()
+	}
+	fmt.Println()
+
+	// cell重置
+	row := table.hasWrited + min
+	for col := 0; col < table.cols; {
+		cell := table.cells[row][col]
+		fmt.Println("当前的rowspan:", cell.rowspan)
+		if cell.rowspan <= 0 {
+			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col
+			var ox, oy int
+
+			fmt.Println(
+				"空格的原始位置:", i, j,
+				"剩余的cells个数:", cells[i][j].rowspan-cells[i][j].haswrited,
+				"row的最后位置:", row+cells[i][j].rowspan-cells[i][j].haswrited,
+				"当前的col:", col,
+				"结束的col:", col+cells[i][j].colspan,
+			)
+
+			for x := row; x <= row+cells[i][j].rowspan-cells[i][j].haswrited; x++ {
+				for y := col; y < col+cells[i][j].colspan; y++ {
+					if x == row && y == col {
+						cells[x][y].element = cells[i][j].element
+						cells[x][y].rowspan = cells[i][j].rowspan - cells[i][j].haswrited
+						cells[x][y].colspan = cells[i][j].colspan
+						cells[x][y].haswrited = 0
+						fmt.Println("x,y", x, y, cells[x][y].rowspan, cells[x][y].colspan)
+						ox, oy = cells[x][y].row, cells[x][y].col
+						continue
+					}
+
+					cells[x][y].rowspan = -ox
+					cells[x][y].colspan = -oy
+				}
+			}
+
+			col += cells[i][j].colspan
+		}
+
+		if cell.rowspan >= 1 {
+			col += cell.colspan
+			cell.haswrited = 0
+		}
+
+		fmt.Println()
+	}
+
+	fmt.Println(strings.Repeat("=", 100))
+	for i, v := range table.cells {
+		fmt.Printf("=%02d=  ", i)
+		for _, p := range v {
+			fmt.Printf("(%02d,%02d)~(%03d-%02d)	", p.row, p.col, p.rowspan, p.haswrited)
+		}
+		fmt.Println()
+	}
+	fmt.Println()
+
+	table.cells = table.cells[table.hasWrited+min:]
 }
 
 func (table *Table) count(srow, scol int) int {
@@ -761,31 +777,32 @@ func (table *Table) count(srow, scol int) int {
 	)
 	for row := srow; row < table.rows; {
 		cell := table.cells[row][scol]
-		if cell.rowspan < 0 {
-			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col
-			if table.cells[i][j].haswrited == 0 {
+
+		if cell.rowspan <= 0 {
+			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col // 实体
+			if table.cells[i][j].haswrited == 0 { // 当前的实体未写
 				break
 			}
 
-			if cell.row-table.cells[i][j].row+1 <= table.cells[i][j].haswrited {
+			if table.cells[i][j].haswrited >= cell.row-table.cells[i][j].row+1 {
 				count += table.cells[i][j].haswrited - (cell.row - table.cells[i][j].row)
 			}
 
-			srow = i + 1
+			row = table.cells[i][j].row - origin.row + table.cells[i][j].rowspan // 实体的下一个"实体"
 		}
 
 		if cell.rowspan >= 1 {
-			if cell.haswrited == 0 {
+			if cell.haswrited == 0 { // 当前的实体未写
 				break
 			}
 
 			count += cell.haswrited
 
-			if cell.haswrited < cell.rowspan {
+			if cell.rowspan > cell.haswrited { // 当前的实体未写完
 				break
 			}
 
-			srow = srow + cell.rowspan
+			row += cell.rowspan
 		}
 	}
 
