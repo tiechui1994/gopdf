@@ -487,16 +487,16 @@ func (table *Table) drawPageLineByStates(sx, sy float64) {
 			x, y, x1, y1 = table.getHLinePosition(sx, sy, col, row)
 			x, y, _, y2 = table.getVLinePosition(sx, sy, col, row)
 
-			if cell.element == nil {
+			if cell.element == nil || col == table.cols-1 {
 				continue
 			}
 
-			if y2 < pageEndY {
-				table.pdf.LineV(x1, y1, y2)
-				table.pdf.LineH(x, y2, x1)
+			if y1 < pageEndY && y2 < pageEndY {
+				table.pdf.LineV(x1, y1, y2) // 需要判断竖线否
+				table.pdf.LineH(x, y2, x1)  // 需要判断底线否
 			}
 
-			if y > pageEndY || y2 > pageEndY {
+			if y1 < pageEndY && y2 >= pageEndY {
 				table.pdf.LineV(x1, y1, pageEndY)
 				table.pdf.LineH(x, pageEndY, x1)
 			}
@@ -632,7 +632,7 @@ func (table *Table) resetCells() {
 		if cell.rowspan <= 0 {
 			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col
 			// 从cells[table.hasWrite]算起已经写入的行数
-			count += cells[i][j].haswrited - (cell.row-cells[i][j].row)
+			count += cells[i][j].haswrited - (cell.row - cells[i][j].row)
 			if cells[i][j].haswrited == cells[i][j].rowspan {
 				// TODO: 先计算当前的实体(空格->实体), 然后跳跃到下一个实体(条件性)
 				// 后面第一个实体
