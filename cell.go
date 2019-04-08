@@ -13,6 +13,7 @@ type TextCell struct {
 	width    float64 // 宽度, 必须
 	height   float64
 	contents []string // 内容
+	origin   int
 
 	lineHeight float64 // 行高
 	lineSpace  float64 // 行间距
@@ -164,6 +165,7 @@ func (cell *TextCell) SetContent(s string) *TextCell {
 	}
 	length := float64(len(cell.contents))
 	cell.height = cell.border.Top + math.Abs(cell.border.Bottom) + cell.lineHeight*length + cell.lineSpace*(length-1)
+	cell.origin = len(cell.contents)
 	return cell
 }
 
@@ -258,4 +260,8 @@ func (cell *TextCell) TryGenerateAtomicCell(maxheight float64) (int, int) {
 
 func (cell *TextCell) GetHeight() float64 {
 	return cell.height
+}
+
+func (cell *TextCell) GetLines() (origin, current int) {
+	return cell.origin, len(cell.contents)
 }
