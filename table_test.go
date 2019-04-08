@@ -7,6 +7,7 @@ import (
 	"github.com/tiechui1994/gopdf/core"
 	"strings"
 	"math/rand"
+	"time"
 )
 
 const (
@@ -183,7 +184,7 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 	lineSpace := 0.01 * unit
 	lineHeight := 2 * unit
 
-	rows, cols := 3545, 5
+	rows, cols := 800, 5
 	table := NewTable(cols, rows, 80*unit, lineHeight, report)
 	table.SetMargin(core.Scope{0, 0, 0, 0})
 
@@ -274,14 +275,16 @@ func TestTableWithdata(t *testing.T) {
 }
 
 func TestTable(t *testing.T) {
-	//for i := 0; i < 10; i++ {
+	for i := 0; i < 500; i++ {
 		ManyTableReportWithData()
-	//}
+	}
 }
 
 func GetRandStr(l ...int) string {
+	seed := rand.New(rand.NewSource(time.Now().UnixNano()))
 	str := "0123456789ABCDEFGHIGKLMNOPQRSTUVWXYZ"
-	l = append(l, 5)
-	data := strings.Repeat(str, l[0]*8/36+1)
-	return data[:l[0]*8] + "---"
+	l = append(l, 8)
+	r := seed.Intn(l[0]*11) + 8
+	data := strings.Repeat(str, r/36+1)
+	return data[:r] + "---"
 }

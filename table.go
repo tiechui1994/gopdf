@@ -568,7 +568,7 @@ func (table *Table) drawPageLines(sx, sy float64) {
 			}
 
 			if y1 < pageEndY && y2 < pageEndY {
-				// 判断当前的cell的下面的实体是否写入, TODO: 还需要判断是否需要竖线, 当前只是解决了是否需要水平线
+				// 判断当前的cell的下面的实体是否写入
 				i, j := cell.row+cell.rowspan-table.cells[0][0].row, cell.col-table.cells[0][0].col
 				_, y3, _, y4 := table.getVLinePosition(sx, sy, j, i)
 				if y3 < pageEndY && y4 >= pageEndY {
@@ -584,8 +584,11 @@ func (table *Table) drawPageLines(sx, sy float64) {
 				table.pdf.LineH(x, y2, x1)  // 需要判断底线否
 			}
 
+			// TODO: 需要先判断是否需要竖线
 			if y1 < pageEndY && y2 >= pageEndY {
-				table.pdf.LineV(x1, y1, pageEndY)
+				if table.checkNeedVline(row, col) {
+					table.pdf.LineV(x1, y1, pageEndY)
+				}
 				table.pdf.LineH(x, pageEndY, x1)
 			}
 		}
@@ -680,6 +683,60 @@ func (table *Table) checkNextCellWrite(row, col int) bool {
 	}
 
 	return cellwrited
+}
+
+func (table *Table) checkNeedVline(row, col int) bool {
+	var (
+		needvline bool
+		curwrited bool
+		cells     = table.cells
+		origin    = cells[0][0]
+	)
+
+	if cells[row][col].rowspan <= 0 {
+		return needvline
+	}
+
+	// 当前的cell
+	if cells[row][col].rowspan == 1 {
+		origin, remian := cells[row][col].element.GetLines()
+		if cells[row][col].element.GetHeight() == 0 || origin-remian > 0 {
+			curwrited = true
+		}
+	}
+	if cells[row][col].rowspan > 1 {
+		if cells[row][col].cellwrited > 0 {
+			curwrited = true
+		}
+	}
+
+	// 邻居cell
+	nextcol := cells[row][col].col + cells[row][col].colspan - cells[0][0].col
+	if nextcol == table.cols {
+		needvline = true
+		return needvline && curwrited
+	}
+
+	if cells[row][nextcol].rowspan <= 0 {
+		row, nextcol = -cells[row][nextcol].rowspan-origin.row, -cells[row][nextcol].colspan-origin.col
+	}
+
+	if cells[row][nextcol].rowspan == 1 {
+		origin, remian := cells[row][nextcol].element.GetLines()
+		if cells[row][nextcol].element.GetHeight() == 0 || origin-remian > 0 {
+			needvline = true
+			return needvline && curwrited
+		}
+	}
+
+	if cells[row][nextcol].rowspan > 1 {
+		if cells[row][nextcol].cellwrited > 0 {
+			needvline = true
+			return needvline && curwrited
+		}
+	}
+
+	return needvline && curwrited
 }
 
 // 校验table是否合法
@@ -844,6 +901,9 @@ func (table *Table) resetTableCells() {
 
 	// cell重置
 	row := table.hasWrited + min
+	if row >= len(table.cells) { // TODO: 这里的判断是修复未知的错误
+		row = len(table.cells) - 1
+	}
 	for col := 0; col < table.cols; {
 		cell := table.cells[row][col]
 		if cell.rowspan <= 0 {
