@@ -183,7 +183,7 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 	lineSpace := 0.01 * unit
 	lineHeight := 2 * unit
 
-	rows, cols := 340, 5
+	rows, cols := 3545, 5
 	table := NewTable(cols, rows, 80*unit, lineHeight, report)
 	table.SetMargin(core.Scope{0, 0, 0, 0})
 
@@ -274,8 +274,8 @@ func TestTableWithdata(t *testing.T) {
 }
 
 func TestTable(t *testing.T) {
-	//for i := 0; i < 1000; i++ {
-	ManyTableReportWithData()
+	//for i := 0; i < 10; i++ {
+		ManyTableReportWithData()
 	//}
 }
 
