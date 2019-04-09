@@ -19,7 +19,9 @@ type Table struct {
 	nextrow, nextcol int // 下一个位置
 	hasWrited        int // 当前页面已经写入的行数
 
-	tableCheck bool // table 完整性检查
+	tableCheck bool      // table 完整性检查
+	cachedRow  []float64 // 缓存行
+	cachedCol  []float64 // 缓存列
 }
 
 type TableCell struct {
@@ -289,8 +291,9 @@ func (table *Table) GenerateAtomicCell() error {
 		x1, y1, _, y2 float64 // 当前位置
 	)
 
-	// 重新计算行高
+	// 重新计算行高, 并且缓存每个位置的开始坐标
 	table.resetCellHeight()
+	table.cachedPoints(sx, sy)
 
 	for i := 0; i < table.rows; i++ {
 		for j := 0; j < table.cols; j++ {
@@ -981,6 +984,31 @@ func (table *Table) count(srow, scol int) int {
 	return count
 }
 
+func (table *Table) cachedPoints(sx, sy float64) {
+	x1, _ := table.pdf.GetPageStartXY()
+	x2 := table.pdf.GetPageEndY()
+	rows := table.rows
+	if rows > int((x2-x1)/table.lineHeight)+1 {
+		rows = int((x2-x1)/table.lineHeight) + 1
+	}
+
+	var (
+		x, y = sx+table.margin.Left, sy+table.margin.Top
+	)
+	table.cachedRow = make([]float64, rows)
+	table.cachedCol = make([]float64, table.cols)
+
+	for col := 0; col < table.cols; col++ {
+		table.cachedCol[col] = x
+		x += table.colwidths[col] * table.width
+	}
+
+	for row := 0; row < rows; row++ {
+		table.cachedRow[row] = y
+		y += table.cells[row][0].minheight
+	}
+}
+
 // 垂直线, table单元格的垂直线
 func (table *Table) getVLinePosition(sx, sy float64, col, row int) (x1, y1 float64, x2, y2 float64) {
 	var (
@@ -988,15 +1016,23 @@ func (table *Table) getVLinePosition(sx, sy float64, col, row int) (x1, y1 float
 		cell = table.cells[row][col]
 	)
 
-	for i := 0; i < col; i++ {
-		x += table.colwidths[i] * table.width
+	if col < len(table.cachedCol) {
+		x = table.cachedCol[col]
+	} else {
+		for i := 0; i < col; i++ {
+			x += table.colwidths[i] * table.width
+		}
+		x += sx + table.margin.Left
 	}
-	x += sx + table.margin.Left
 
-	for i := 0; i < row; i++ {
-		y += table.cells[i][0].minheight
+	if row < len(table.cachedRow) {
+		y = table.cachedRow[row]
+	} else {
+		for i := 0; i < row; i++ {
+			y += table.cells[i][0].minheight
+		}
+		y += sy + table.margin.Top
 	}
-	y = sy + y + table.margin.Top
 
 	return x, y, x, y + cell.height
 }
@@ -1008,15 +1044,23 @@ func (table *Table) getHLinePosition(sx, sy float64, col, row int) (x1, y1 float
 		w    float64
 	)
 
-	for i := 0; i < col; i++ {
-		x += table.colwidths[i] * table.width
+	if col < len(table.cachedCol) {
+		x = table.cachedCol[col]
+	} else {
+		for i := 0; i < col; i++ {
+			x += table.colwidths[i] * table.width
+		}
+		x += sx + table.margin.Left
 	}
-	x += sx + table.margin.Left
 
-	for i := 0; i < row; i++ {
-		y += table.cells[i][0].minheight
+	if row < len(table.cachedRow) {
+		y = table.cachedRow[row]
+	} else {
+		for i := 0; i < row; i++ {
+			y += table.cells[i][0].minheight
+		}
+		y += sy + table.margin.Top
 	}
-	y += sy + table.margin.Top
 
 	if table.cells[row][col].colspan > 1 {
 		for k := 0; k < table.cells[row][col].colspan; k++ {
