@@ -198,16 +198,20 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 	// 写入cell数据
 	for i := 0; i < lines; i++ {
 		width := cell.pdf.MeasureTextWidth(cell.contents[i]) / cell.pdf.GetUnit()
-		x = sx + cell.border.Left // 水平居左
-		if cell.rightAlign { //  水平居右
+		// 水平居左
+		x = sx + cell.border.Left
+		// 水平居右
+		if cell.rightAlign {
 			x = sx + (cell.width - width - cell.border.Right)
 		}
-		if cell.horizontalCentered { // 水平居中
+		// 水平居中
+		if cell.horizontalCentered {
 			x = sx + (cell.width-width)/2
 		}
 
 		y = sy + float64(i)*(cell.lineHeight+cell.lineSpace) + cell.border.Top
 
+		// 字体颜色控制
 		if !util.IsEmpty(cell.fontColor) {
 			cell.pdf.TextColor(util.GetColorRGB(cell.fontColor))
 		}

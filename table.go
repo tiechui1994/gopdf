@@ -7,7 +7,7 @@ import (
 // 构建表格
 type Table struct {
 	pdf           *core.Report
-	rows, cols    int //
+	rows, cols    int // 行数,列数
 	width, height float64
 	colwidths     []float64      // 列宽百分比: 应加起来为1
 	rowheights    []float64      // 保存行高
@@ -45,9 +45,6 @@ func NewTable(cols, rows int, width, lineHeight float64, pdf *core.Report) *Tabl
 	if width > contentWidth {
 		width = contentWidth
 	}
-
-	pdf.LineType("straight", 0.1)
-	pdf.GrayStroke(0)
 
 	t := &Table{
 		pdf:    pdf,
@@ -163,7 +160,7 @@ func (table *Table) NewCellByRange(w, h int) *TableCell {
 	return cell
 }
 
-// 检测当前cell的宽和高
+// 检测当前cell的宽和高是否合法
 func (table *Table) checkSpan(row, col int, rowspan, colspan int) bool {
 	var (
 		cells          = table.cells
@@ -195,7 +192,6 @@ func (table *Table) checkSpan(row, col int, rowspan, colspan int) bool {
 	if colspan <= maxcol && rowspan <= maxrow {
 		for i := row; i < table.rows; i++ {
 			for j := col; j < table.cols; j++ {
-
 				// cells[i][j]不为nil, 可以继续向下搜索
 				if cells[i][j] == nil {
 					if rowspan == i-row+1 && colspan <= j-col+1 {
@@ -210,14 +206,6 @@ func (table *Table) checkSpan(row, col int, rowspan, colspan int) bool {
 
 				// cells[i][j]为nil, 不能向下搜索, 需要改变行号
 				if cells[i][j] != nil {
-					if rowspan == i-row+1 && colspan <= j-col+1 {
-						return true
-					}
-
-					if colspan == j-col+1 && rowspan <= i-row+1 {
-						return true
-					}
-
 					break
 				}
 			}
@@ -235,6 +223,7 @@ func (table *Table) setNext(colspan, rowspan int) {
 		table.nextrow += 1
 	}
 
+	// 获取最近行的空白Cell的坐标
 	for i := table.nextrow; i < table.rows; i++ {
 		var j int
 		if i == table.nextrow {
@@ -291,20 +280,19 @@ func (table *Table) GenerateAtomicCell() error {
 		x1, y1, _, y2 float64 // 当前位置
 	)
 
-	// 重新计算行高, 并且缓存每个位置的开始坐标
+	// todo: 重新计算行高, 并且缓存每个位置的开始坐标
 	table.resetCellHeight()
 	table.cachedPoints(sx, sy)
 
 	for i := 0; i < table.rows; i++ {
 		for j := 0; j < table.cols; j++ {
-			// cell的rowspan是1的y1,y2
+			// cell的rowspan是1
 			_, y1, _, y2 = table.getVLinePosition(sx, sy, j, i)
 			if table.cells[i][j].rowspan > 1 {
 				y2 = y1 + table.cells[i][j].minheight
 			}
 
-			// 进入换页操作
-
+			// 需要进行换页操作
 			if y1 < pageEndY && y2 > pageEndY {
 				if i == 0 {
 					table.pdf.AddNewPage(false)
@@ -314,27 +302,29 @@ func (table *Table) GenerateAtomicCell() error {
 					return table.GenerateAtomicCell()
 				}
 
-				// 写完剩余的
+				// 写完剩余的内容
 				table.writeCurrentPageRestCells(i, j, sx, sy)
 
-				// 当上半部分完整, 突然分页的状况
+				// 调整hasWrited的值
 				if table.hasWrited > table.cells[i][j].row-table.cells[0][0].row {
 					table.hasWrited = table.cells[i][j].row - table.cells[0][0].row
 				}
 
-				// 划线
+				// 画当前页面边框线
 				table.drawPageLines(sx, sy)
 
-				// 分页
+				// 重置tableCells
 				table.resetTableCells()
+
+				// 相关动态变量重置
 				table.pdf.AddNewPage(false)
 				table.margin.Top = 0
 				table.rows = len(table.cells)
 				table.hasWrited = 2 ^ 32
+				table.pdf.SetXY(table.pdf.GetPageStartXY())
 
 				table.pdf.LineType("straight", 0.1)
 				table.pdf.GrayStroke(0)
-				table.pdf.SetXY(table.pdf.GetPageStartXY())
 
 				if table.rows == 0 {
 					return nil
@@ -344,7 +334,7 @@ func (table *Table) GenerateAtomicCell() error {
 				return table.GenerateAtomicCell()
 			}
 
-			// 拦截空白cell
+			// 拦截空格Cell
 			if table.cells[i][j].element == nil {
 				continue
 			}
@@ -369,11 +359,11 @@ func (table *Table) GenerateAtomicCell() error {
 	// todo: 最后一个页面的最后部分
 	table.drawLastPageLines(sx, sy)
 
+	// todo: 重置当前的坐标(非常重要)
 	height := table.getLastPageHeight()
-	x1, y1, _, y2 = table.getVLinePosition(sx, sy, 0, 0)
-
+	_, y1, _, y2 = table.getVLinePosition(sx, sy, 0, 0)
 	x1, _ = table.pdf.GetPageStartXY()
-	table.pdf.SetXY(x1, y1+height+table.margin.Top+table.margin.Bottom) // 定格最终的位置
+	table.pdf.SetXY(x1, y1+height+table.margin.Top+table.margin.Bottom)
 
 	return nil
 }
@@ -383,16 +373,15 @@ func (table *Table) writeCurrentPageCell(row, col int, sx, sy float64) {
 	var (
 		x1, y1, _, y2 float64
 		pageEndY      = table.pdf.GetPageEndY()
+		cell          = table.cells[row][col]
 	)
 
 	// 写入数据前, 必须变换坐标系
-	cell := table.cells[row][col]
-
-	x1, y1, _, y2 = table.getVLinePosition(sx, sy, col, row) // 垂直线
+	x1, y1, _, y2 = table.getVLinePosition(sx, sy, col, row)
 	cell.table.pdf.SetXY(x1, y1)
 
 	if cell.element != nil {
-		// todo: 检查下一个Cell能否写入, 如果不能写入, 需要修正写入的高度值
+		// todo: 检查当前Cell下面的Cell能否写入(下一个Cell跨页), 如果不能写入, 需要修正写入的高度值
 		i, j := cell.row+cell.rowspan-table.cells[0][0].row, cell.col-table.cells[0][0].col
 		if i < len(table.cells) {
 			_, y3, _, y4 := table.getVLinePosition(sx, sy, j, i)
@@ -411,16 +400,15 @@ func (table *Table) writePartialPageCell(row, col int, sx, sy float64) {
 	var (
 		x1, y1   float64
 		pageEndY = table.pdf.GetPageEndY()
+		cell     = table.cells[row][col]
 	)
 
 	// 写入数据前, 必须变换坐标系
-	cell := table.cells[row][col]
-
 	x1, y1, _, _ = table.getVLinePosition(sx, sy, col, row) // 垂直线
 	cell.table.pdf.SetXY(x1, y1)
 
 	if cell.element != nil {
-		// todo:尝试写入, 写不进去就不再写
+		// todo: 尝试写入(跨页的Cell), 写不进去就不再写
 		wn, _ := cell.element.TryGenerateAtomicCell(pageEndY - y1)
 		if wn == 0 {
 			return
@@ -429,11 +417,11 @@ func (table *Table) writePartialPageCell(row, col int, sx, sy float64) {
 		// 真正的写入
 		n, _, _ := cell.element.GenerateAtomicCell(pageEndY - y1)
 
+		// 统计写入的行数
 		if n > 0 && cell.element.GetHeight() == 0 {
 			cell.cellwrited = cell.rowspan
 		}
 
-		// 统计写入的行数
 		if n > 0 && cell.rowspan > 1 && cell.element.GetHeight() != 0 {
 			count := 0
 			for i := row; i < row+cell.rowspan; i++ {
@@ -441,10 +429,11 @@ func (table *Table) writePartialPageCell(row, col int, sx, sy float64) {
 				if table.cells[i][col].element != nil {
 					y2 = y1 + table.cells[i][col].minheight
 				}
-				if y2 < pageEndY {
+
+				if y1 < pageEndY && y2 <= pageEndY {
 					count++
 				}
-				if y1 > pageEndY {
+				if y1 > pageEndY || y2 > pageEndY {
 					break
 				}
 			}
@@ -468,25 +457,29 @@ func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) {
 			continue
 		}
 
+		// 坐标变换
 		x1, y1, _, _ = table.getHLinePosition(sx, sy, i, row) // 计算初始点
 		cell.table.pdf.SetXY(x1, y1)
+
+		// 下一页的Cell
 		if y1 > pageEndY {
 			continue
 		}
-		// todo: 只有不需要写入的才修改高度
+
+		// todo: 尝试写入(跨页的Cell), 写不进去就不再写
 		wn, _ := cell.element.TryGenerateAtomicCell(pageEndY - y1)
 		if wn == 0 {
-			return
+			continue
 		}
 
 		// 真正的写入
-		n, _, _ := cell.element.GenerateAtomicCell(pageEndY - y1) //写入内容
+		n, _, _ := cell.element.GenerateAtomicCell(pageEndY - y1)
 
+		// 统计写入的行数
 		if n > 0 && cell.element.GetHeight() == 0 {
 			cell.cellwrited = cell.rowspan
 		}
 
-		// 统计写入的行数
 		if n > 0 && cell.rowspan > 1 && cell.element.GetHeight() != 0 {
 			count := 0
 			for k := row; k < row+cell.rowspan; k++ {
@@ -494,10 +487,11 @@ func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) {
 				if table.cells[k][i].element != nil {
 					y2 = y1 + table.cells[k][i].minheight
 				}
-				if y2 < pageEndY {
+
+				if y1 < pageEndY && y2 <= pageEndY {
 					count++
 				}
-				if y1 > pageEndY {
+				if y1 > pageEndY || y2 > pageEndY {
 					break
 				}
 			}
@@ -507,6 +501,7 @@ func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) {
 	}
 }
 
+// 检查下一个Cell是否可以写入(当前的Cell必须是非空格Cell)
 func (table *Table) checkNextCellCanWrite(sx, sy float64, row, col int) bool {
 	var (
 		canwrite bool
@@ -518,11 +513,13 @@ func (table *Table) checkNextCellCanWrite(sx, sy float64, row, col int) bool {
 		return canwrite
 	}
 
-	nextrow := cells[row][col].row + cells[row][col].rowspan - cells[0][0].row // 当前cell的下一行
+	// 当前cell的下一行
+	nextrow := cells[row][col].row + cells[row][col].rowspan - cells[0][0].row
 	for k := col; k < table.cols; k++ {
 		cell := cells[nextrow][col]
 		_, y, _, _ := table.getHLinePosition(sx, sy, col, nextrow)
 
+		// 空格Cell -> 寻找非空格Cell
 		if cell.rowspan <= 0 {
 			i, j := -cell.rowspan-cells[0][0].row, -cell.colspan-cells[0][0].col
 			wn, _ := cells[i][j].element.TryGenerateAtomicCell(pageEndY - y)
@@ -532,8 +529,9 @@ func (table *Table) checkNextCellCanWrite(sx, sy float64, row, col int) bool {
 			}
 		}
 
+		// 非空格Cell
 		if cell.rowspan >= 1 {
-			wn, _ := cells[nextrow][col].element.TryGenerateAtomicCell(pageEndY - y)
+			wn, _ := cell.element.TryGenerateAtomicCell(pageEndY - y)
 			if wn > 0 {
 				canwrite = true
 				return canwrite
@@ -555,6 +553,7 @@ func (table *Table) drawPageLines(sx, sy float64) {
 	table.pdf.LineType("straight", 0.1)
 	table.pdf.GrayStroke(0)
 
+	// 两条水平线
 	x, y, _, _ = table.getHLinePosition(sx, sy, 0, 0)
 	table.pdf.LineH(x, y, x+table.width)
 	table.pdf.LineH(x, pageEndY, x+table.width)
@@ -563,15 +562,17 @@ func (table *Table) drawPageLines(sx, sy float64) {
 		for col := 0; col < cols; col++ {
 			cell := table.cells[row][col]
 
-			x, y, x1, y1 = table.getHLinePosition(sx, sy, col, row)
-			x, y, _, y2 = table.getVLinePosition(sx, sy, col, row)
-
 			if cell.element == nil {
 				continue
 			}
 
+			// 坐标化
+			x, y, x1, y1 = table.getHLinePosition(sx, sy, col, row)
+			x, y, _, y2 = table.getVLinePosition(sx, sy, col, row)
+
+			// TODO: 当前的Cell没有跨页
 			if y1 < pageEndY && y2 < pageEndY {
-				// 判断当前的cell的下面的实体是否写入
+				// todo: 当前Cell的下一个Cell跨页, 需要判断下一个Cell是否可以写入
 				i, j := cell.row+cell.rowspan-table.cells[0][0].row, cell.col-table.cells[0][0].col
 				_, y3, _, y4 := table.getVLinePosition(sx, sy, j, i)
 				if y3 < pageEndY && y4 >= pageEndY {
@@ -583,26 +584,28 @@ func (table *Table) drawPageLines(sx, sy float64) {
 					}
 				}
 
-				table.pdf.LineV(x1, y1, y2) // 需要判断竖线否
-				table.pdf.LineH(x, y2, x1)  // 需要判断底线否
+				table.pdf.LineV(x1, y1, y2)
+				table.pdf.LineH(x, y2, x1)
 			}
 
-			// TODO: 需要先判断是否需要竖线
+			// TODO: 当前的Cell跨页, 需要先判断是否需要竖线
 			if y1 < pageEndY && y2 >= pageEndY {
 				if table.checkNeedVline(row, col) {
 					table.pdf.LineV(x1, y1, pageEndY)
 				}
+
 				table.pdf.LineH(x, pageEndY, x1)
 			}
 		}
 	}
 
+	// 两条垂直线
 	x, y, _, _ = table.getHLinePosition(sx, sy, 0, 0)
 	table.pdf.LineV(x, y, pageEndY)
 	table.pdf.LineV(x+table.width, y, pageEndY)
 }
 
-// 最后一页画线
+// 最后一页画线(基本参考了drawPageLines)
 func (table *Table) drawLastPageLines(sx, sy float64) {
 	var (
 		rows, cols          = table.rows, table.cols
@@ -623,12 +626,12 @@ func (table *Table) drawLastPageLines(sx, sy float64) {
 		for col := 0; col < cols; col++ {
 			cell := table.cells[row][col]
 
-			x, y, x1, y1 = table.getHLinePosition(sx, sy, col, row)
-			x, y, _, y2 = table.getVLinePosition(sx, sy, col, row)
-
 			if cell.element == nil {
 				continue
 			}
+
+			x, y, x1, y1 = table.getHLinePosition(sx, sy, col, row)
+			x, y, _, y2 = table.getVLinePosition(sx, sy, col, row)
 
 			if y1 < pageEndY && y2 < pageEndY {
 				table.pdf.LineV(x1, y1, y2)
@@ -663,13 +666,15 @@ func (table *Table) checkNextCellWrite(row, col int) bool {
 
 		if cell.rowspan <= 0 {
 			i, j := -cell.rowspan-cells[0][0].row, -cell.colspan-cells[0][0].col
-			if cells[i][j].cellwrited >= cell.row-cells[i][j].row+1 { // 当前的行被写入
+			// todo: 当前空白Cell已经写入内容
+			if cells[i][j].cellwrited >= cell.row-cells[i][j].row+1 {
 				cellwrited = true
 				return cellwrited
 			}
 		}
 
 		if cell.rowspan == 1 {
+			// todo: 当前的Cell存在写入的内容
 			origin, remian := cell.element.GetLines()
 			if cell.element.GetHeight() == 0 || origin-remian > 0 {
 				cellwrited = true
@@ -678,6 +683,7 @@ func (table *Table) checkNextCellWrite(row, col int) bool {
 		}
 
 		if cell.rowspan > 1 {
+			// todo: 当前的Cell存在写入的内容
 			if cell.cellwrited > 0 {
 				cellwrited = true
 				return cellwrited
@@ -688,18 +694,20 @@ func (table *Table) checkNextCellWrite(row, col int) bool {
 	return cellwrited
 }
 
+// 跨页的Cell
 func (table *Table) checkNeedVline(row, col int) bool {
 	var (
-		needvline bool
+		negwrited bool
 		curwrited bool
 		cells     = table.cells
 		origin    = cells[0][0]
 	)
 
 	if cells[row][col].rowspan <= 0 {
-		return needvline
+		return negwrited || curwrited
 	}
 
+	// todo: 当前cell没有写入 && 邻居Cell没有写入 => 不需要线, 其余的都须要
 	// 当前的cell
 	if cells[row][col].rowspan == 1 {
 		origin, remian := cells[row][col].element.GetLines()
@@ -716,8 +724,8 @@ func (table *Table) checkNeedVline(row, col int) bool {
 	// 邻居cell
 	nextcol := cells[row][col].col + cells[row][col].colspan - cells[0][0].col
 	if nextcol == table.cols {
-		needvline = true
-		return needvline && curwrited
+		negwrited = true
+		return negwrited || curwrited
 	}
 
 	if cells[row][nextcol].rowspan <= 0 {
@@ -727,22 +735,22 @@ func (table *Table) checkNeedVline(row, col int) bool {
 	if cells[row][nextcol].rowspan == 1 {
 		origin, remian := cells[row][nextcol].element.GetLines()
 		if cells[row][nextcol].element.GetHeight() == 0 || origin-remian > 0 {
-			needvline = true
-			return needvline && curwrited
+			negwrited = true
+			return negwrited || curwrited
 		}
 	}
 
 	if cells[row][nextcol].rowspan > 1 {
 		if cells[row][nextcol].cellwrited > 0 {
-			needvline = true
-			return needvline && curwrited
+			negwrited = true
+			return negwrited || curwrited
 		}
 	}
 
-	return needvline && curwrited
+	return negwrited || curwrited
 }
 
-// 校验table是否合法
+// 校验table是否合法(只做一次)
 func (table *Table) checkTableConstraint() {
 	if !table.tableCheck {
 		return
@@ -878,11 +886,11 @@ func (table *Table) resetTableCells() {
 		if cell.rowspan <= 0 {
 			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col
 
-			// 从cells[table.hasWrite]算起已经写入的行数
+			// todo: 从cells[table.hasWrite]算起已经写入的行数
 			count += cells[i][j].cellwrited - (cell.row - cells[i][j].row)
+
 			if cells[i][j].cellwrited == cells[i][j].rowspan {
 				// TODO: 先计算当前的实体(空格->实体), 然后跳跃到下一个实体(条件性)
-				// 后面第一个实体
 				srow := cells[i][j].row - origin.row + cells[i][j].rowspan
 				count += table.count(srow, col)
 			}
@@ -890,6 +898,7 @@ func (table *Table) resetTableCells() {
 
 		if cell.rowspan >= 1 {
 			count += cell.cellwrited
+
 			if cell.cellwrited == cell.rowspan {
 				// TODO: 先计算当前的实体(空格->实体), 然后跳跃到下一个实体(条件性)
 				srow := cell.row - origin.row + cell.rowspan
@@ -902,13 +911,15 @@ func (table *Table) resetTableCells() {
 		}
 	}
 
-	// cell重置
+	// cell重置,需要修正空格Cell
 	row := table.hasWrited + min
 	if row >= len(table.cells) { // TODO: 这里的判断是修复未知的错误
 		row = len(table.cells) - 1
 	}
+
 	for col := 0; col < table.cols; {
 		cell := table.cells[row][col]
+
 		if cell.rowspan <= 0 {
 			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col
 			var ox, oy int
@@ -995,13 +1006,18 @@ func (table *Table) cachedPoints(sx, sy float64) {
 	var (
 		x, y = sx+table.margin.Left, sy+table.margin.Top
 	)
-	table.cachedRow = make([]float64, rows)
-	table.cachedCol = make([]float64, table.cols)
 
-	for col := 0; col < table.cols; col++ {
-		table.cachedCol[col] = x
-		x += table.colwidths[col] * table.width
+	// 只会缓存一次
+	if table.cachedCol == nil {
+		table.cachedCol = make([]float64, table.cols)
+
+		for col := 0; col < table.cols; col++ {
+			table.cachedCol[col] = x
+			x += table.colwidths[col] * table.width
+		}
 	}
+
+	table.cachedRow = make([]float64, rows)
 
 	for row := 0; row < rows; row++ {
 		table.cachedRow[row] = y
