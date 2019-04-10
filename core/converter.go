@@ -88,10 +88,8 @@ func (convert *Converter) Execute() {
 			convert.BackgroundColor(line, elements) // 背景颜色
 		case "GF", "GS":
 			convert.Grey(line, elements)
-		case "C", "C1", "CR":
+		case "C", "CL", "CR":
 			convert.Cell(line, elements) // 单元格
-		case "M":
-			convert.Move(line, elements)
 		case "L", "LV", "LH", "LT":
 			convert.Line(line, elements) // 新行
 		case "R":
@@ -100,7 +98,7 @@ func (convert *Converter) Execute() {
 			convert.Oval(line, elements) //
 		case "I":
 			convert.Image(line, elements) // 图片
-		case "Marign":
+		case "M":
 			convert.Margin(line, elements)
 		default:
 			if len(line) > 0 && line[0:1] != "v" {
@@ -385,7 +383,7 @@ func (convert *Converter) Line(line string, elements []string) {
 
 // 单元格
 // ["C", family, size, x, y, content] // 从(x,y) 位置开始写入content
-// ["C1", x, y, content] // 从(x,y) 位置开始写入content
+// ["CL", x, y, content] // 从(x,y) 位置开始写入content
 // ["CR", x, y, w, content] // 从右往左写入w长度的内容
 func (convert *Converter) Cell(line string, elements []string) {
 	switch elements[0] {
@@ -397,7 +395,7 @@ func (convert *Converter) Cell(line string, elements []string) {
 		}
 		convert.setPosition(elements[3], elements[4], line)
 		convert.pdf.Cell(nil, elements[5])
-	case "C1":
+	case "CL":
 		CheckLength(line, elements, 4)
 		convert.setPosition(elements[1], elements[2], line)
 		convert.pdf.Cell(nil, elements[3])
@@ -415,12 +413,6 @@ func (convert *Converter) Cell(line string, elements []string) {
 		convert.pdf.SetY(y)
 		convert.pdf.Cell(nil, elements[4])
 	}
-}
-
-// 设置新的位置
-func (convert *Converter) Move(line string, eles []string) {
-	CheckLength(line, eles, 3)
-	convert.setPosition(eles[1], eles[2], line)
 }
 
 func (convert *Converter) Margin(line string, eles []string) {

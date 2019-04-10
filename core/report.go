@@ -418,7 +418,7 @@ func (report *Report) Font(fontName string, size int, style string) {
 
 // 写入字符串内容
 func (report *Report) Cell(x float64, y float64, content string) {
-	report.addAtomicCell("C1|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + content)
+	report.addAtomicCell("CL|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + content)
 }
 func (report *Report) CellRight(x float64, y float64, w float64, content string) {
 	report.addAtomicCell("CR|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" +
