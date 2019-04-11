@@ -545,10 +545,17 @@ func (table *Table) checkNextCellCanWrite(sx, sy float64, row, col int) bool {
 // 对当前的Page进行画线
 func (table *Table) drawPageLines(sx, sy float64) {
 	var (
-		rows, cols          = table.rows, table.cols
-		pageEndY            = table.pdf.GetPageEndY()
-		x, y, x1, y1, _, y2 float64
+		rows, cols           = table.rows, table.cols
+		pageEndY             = table.pdf.GetPageEndY()
+		x, y, x1, y1, x2, y2 float64
 	)
+
+	// todo: 只计算当前页面最大的rows
+	x1, _ = table.pdf.GetPageStartXY()
+	x2 = table.pdf.GetPageEndY()
+	if rows > int((x2-x1)/table.lineHeight)+1 {
+		rows = int((x2-x1)/table.lineHeight) + 1
+	}
 
 	table.pdf.LineType("straight", 0.1)
 	table.pdf.GrayStroke(0)
@@ -782,6 +789,7 @@ func (table *Table) checkTableConstraint() {
 func (table *Table) resetCellHeight() {
 	table.checkTableConstraint()
 
+	// todo: 只计算当前页面最大的rows
 	x1, _ := table.pdf.GetPageStartXY()
 	x2 := table.pdf.GetPageEndY()
 	rows := table.rows
@@ -996,6 +1004,7 @@ func (table *Table) count(srow, scol int) int {
 }
 
 func (table *Table) cachedPoints(sx, sy float64) {
+	// todo: 只计算当前页面最大的rows
 	x1, _ := table.pdf.GetPageStartXY()
 	x2 := table.pdf.GetPageEndY()
 	rows := table.rows
@@ -1032,23 +1041,8 @@ func (table *Table) getVLinePosition(sx, sy float64, col, row int) (x1, y1 float
 		cell = table.cells[row][col]
 	)
 
-	if col < len(table.cachedCol) {
-		x = table.cachedCol[col]
-	} else {
-		for i := 0; i < col; i++ {
-			x += table.colwidths[i] * table.width
-		}
-		x += sx + table.margin.Left
-	}
-
-	if row < len(table.cachedRow) {
-		y = table.cachedRow[row]
-	} else {
-		for i := 0; i < row; i++ {
-			y += table.cells[i][0].minheight
-		}
-		y += sy + table.margin.Top
-	}
+	x = table.cachedCol[col]
+	y = table.cachedRow[row]
 
 	return x, y, x, y + cell.height
 }
@@ -1057,36 +1051,23 @@ func (table *Table) getVLinePosition(sx, sy float64, col, row int) (x1, y1 float
 func (table *Table) getHLinePosition(sx, sy float64, col, row int) (x1, y1 float64, x2, y2 float64) {
 	var (
 		x, y float64
-		w    float64
 	)
 
-	if col < len(table.cachedCol) {
-		x = table.cachedCol[col]
-	} else {
-		for i := 0; i < col; i++ {
-			x += table.colwidths[i] * table.width
-		}
-		x += sx + table.margin.Left
-	}
+	x = table.cachedCol[col]
+	y = table.cachedRow[row]
 
-	if row < len(table.cachedRow) {
-		y = table.cachedRow[row]
-	} else {
-		for i := 0; i < row; i++ {
-			y += table.cells[i][0].minheight
-		}
-		y += sy + table.margin.Top
-	}
-
-	if table.cells[row][col].colspan > 1 {
-		for k := 0; k < table.cells[row][col].colspan; k++ {
-			w += table.colwidths[col+k] * table.width
+	cell := table.cells[row][col]
+	if cell.colspan > 1 {
+		if cell.col+cell.colspan == table.cols {
+			x1 = table.cachedCol[0] + table.width
+		} else {
+			x1 = table.cachedCol[cell.col+cell.colspan]
 		}
 	} else {
-		w = table.colwidths[col] * table.width
+		x1 = x + table.colwidths[col]*table.width
 	}
 
-	return x, y, x + w, y
+	return x, y, x1, y
 }
 
 // 获取表的垂直高度
