@@ -9,11 +9,11 @@ import (
 )
 
 type TextCell struct {
-	pdf      *core.Report
-	width    float64 // 宽度, 必须
-	height   float64
-	contents []string // 内容
-	origin   int
+	pdf        *core.Report
+	width      float64 // 宽度, 必须
+	height     float64
+	contents   []string // 内容
+	lastheight float64  // 最近一次操作前的height
 
 	lineHeight float64 // 行高
 	lineSpace  float64 // 行间距
@@ -165,7 +165,7 @@ func (cell *TextCell) SetContent(s string) *TextCell {
 	}
 	length := float64(len(cell.contents))
 	cell.height = cell.border.Top + math.Abs(cell.border.Bottom) + cell.lineHeight*length + cell.lineSpace*(length-1)
-	cell.origin = len(cell.contents)
+	cell.lastheight = cell.height
 	return cell
 }
 
@@ -223,6 +223,8 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 		}
 	}
 
+	cell.lastheight = cell.height
+
 	// cell的height和contents重置
 	if lines >= len(cell.contents) {
 		cell.contents = nil
@@ -266,6 +268,6 @@ func (cell *TextCell) GetHeight() float64 {
 	return cell.height
 }
 
-func (cell *TextCell) GetLines() (origin, current int) {
-	return cell.origin, len(cell.contents)
+func (cell *TextCell) GetLastHeight() float64 {
+	return cell.lastheight
 }

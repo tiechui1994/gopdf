@@ -2,12 +2,12 @@ package gopdf
 
 import (
 	"fmt"
+	"math/rand"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/tiechui1994/gopdf/core"
-	"strings"
-	"math/rand"
-	"time"
 )
 
 const (

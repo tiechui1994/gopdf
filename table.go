@@ -1,6 +1,8 @@
 package gopdf
 
 import (
+	"math"
+
 	"github.com/tiechui1994/gopdf/core"
 )
 
@@ -682,8 +684,9 @@ func (table *Table) checkNextCellWrite(row, col int) bool {
 
 		if cell.rowspan == 1 {
 			// todo: 当前的Cell存在写入的内容
-			origin, remian := cell.element.GetLines()
-			if cell.element.GetHeight() == 0 || origin-remian > 0 {
+			height := cell.element.GetHeight()
+			lastheight := cell.element.GetLastHeight()
+			if cell.element.GetHeight() == 0 || math.Abs(lastheight-height) > 0.1 {
 				cellwrited = true
 				return cellwrited
 			}
@@ -717,8 +720,9 @@ func (table *Table) checkNeedVline(row, col int) bool {
 	// todo: 当前cell没有写入 && 邻居Cell没有写入 => 不需要线, 其余的都须要
 	// 当前的cell
 	if cells[row][col].rowspan == 1 {
-		origin, remian := cells[row][col].element.GetLines()
-		if cells[row][col].element.GetHeight() == 0 || origin-remian > 0 {
+		height := cells[row][col].element.GetHeight()
+		lastheight := cells[row][col].element.GetLastHeight()
+		if cells[row][col].element.GetHeight() == 0 || math.Abs(lastheight-height) > 0.1 {
 			curwrited = true
 		}
 	}
@@ -740,8 +744,9 @@ func (table *Table) checkNeedVline(row, col int) bool {
 	}
 
 	if cells[row][nextcol].rowspan == 1 {
-		origin, remian := cells[row][nextcol].element.GetLines()
-		if cells[row][nextcol].element.GetHeight() == 0 || origin-remian > 0 {
+		height := cells[row][nextcol].element.GetHeight()
+		lastheight := cells[row][nextcol].element.GetLastHeight()
+		if cells[row][nextcol].element.GetHeight() == 0 || math.Abs(lastheight-height) > 0.1 {
 			negwrited = true
 			return negwrited || curwrited
 		}
@@ -974,7 +979,7 @@ func (table *Table) count(srow, scol int) int {
 
 		if cell.rowspan <= 0 {
 			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col // 实体
-			if table.cells[i][j].cellwrited == 0 { // 当前的实体未写
+			if table.cells[i][j].cellwrited == 0 {                     // 当前的实体未写
 				break
 			}
 
@@ -1013,7 +1018,7 @@ func (table *Table) cachedPoints(sx, sy float64) {
 	}
 
 	var (
-		x, y = sx+table.margin.Left, sy+table.margin.Top
+		x, y = sx + table.margin.Left, sy + table.margin.Top
 	)
 
 	// 只会缓存一次
