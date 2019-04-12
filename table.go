@@ -190,28 +190,21 @@ func (table *Table) checkSpan(row, col int, rowspan, colspan int) bool {
 		}
 	}
 
+	if rowspan == 1 && colspan <= maxcol || colspan == 1 && rowspan <= maxrow {
+		return true
+	}
+
 	// 检测合法性
 	if colspan <= maxcol && rowspan <= maxrow {
-		for i := row; i < table.rows; i++ {
-			for j := col; j < table.cols; j++ {
-				// cells[i][j]不为nil, 可以继续向下搜索
-				if cells[i][j] == nil {
-					if rowspan == i-row+1 && colspan <= j-col+1 {
-						return true
-					}
-
-					if colspan == j-col+1 && rowspan <= i-row+1 {
-						return true
-					}
-					continue
-				}
-
-				// cells[i][j]为nil, 不能向下搜索, 需要改变行号
+		for i := row; i < row+rowspan; i++ {
+			for j := col; j < col+colspan; j++ {
 				if cells[i][j] != nil {
-					break
+					return false
 				}
 			}
 		}
+
+		return true
 	}
 
 	return false
@@ -979,7 +972,7 @@ func (table *Table) count(srow, scol int) int {
 
 		if cell.rowspan <= 0 {
 			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col // 实体
-			if table.cells[i][j].cellwrited == 0 {                     // 当前的实体未写
+			if table.cells[i][j].cellwrited == 0 { // 当前的实体未写
 				break
 			}
 
@@ -1018,7 +1011,7 @@ func (table *Table) cachedPoints(sx, sy float64) {
 	}
 
 	var (
-		x, y = sx + table.margin.Left, sy + table.margin.Top
+		x, y = sx+table.margin.Left, sy+table.margin.Top
 	)
 
 	// 只会缓存一次

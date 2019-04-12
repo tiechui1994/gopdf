@@ -275,12 +275,12 @@ func TestTableWithdata(t *testing.T) {
 }
 
 func TestTable(t *testing.T) {
-	//for i := 0; i < 10; i++ {
-	start := time.Now().Unix()
-	ManyTableReportWithData()
-	end := time.Now().Unix()
-	fmt.Println("i", 1, end-start)
-	//}
+	for i := 0; i < 1000; i++ {
+		start := time.Now().Unix()
+		ManyTableReportWithData()
+		end := time.Now().Unix()
+		fmt.Println("i", 1, end-start)
+	}
 }
 
 func GetRandStr(l ...int) string {
