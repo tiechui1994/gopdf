@@ -18,10 +18,8 @@ type Span struct {
 	lineSpace     float64
 
 	fontColor string
-	backColor string
-
-	margin core.Scope
-	border core.Scope
+	margin    core.Scope
+	border    core.Scope
 
 	contents           []string
 	horizontalCentered bool
@@ -76,7 +74,6 @@ func (span *Span) Copy(content string) *Span {
 		lineHeight: span.lineHeight,
 		lineSpace:  span.lineSpace,
 		fontColor:  span.fontColor,
-		backColor:  span.backColor,
 	}
 
 	f.SetBorder(span.border)
@@ -87,6 +84,7 @@ func (span *Span) Copy(content string) *Span {
 }
 
 func (span *Span) SetHeight(height float64) *Span {
+	span.height = height
 	return span
 }
 func (span *Span) SetMarign(margin core.Scope) *Span {
@@ -149,12 +147,6 @@ func (span *Span) SetFontColor(color string) *Span {
 	span.fontColor = color
 	return span
 }
-func (span *Span) SetBackColor(color string) *Span {
-	util.CheckColor(color)
-	span.backColor = color
-	return span
-}
-
 func (span *Span) SetFont(font core.Font) *Span {
 	span.font = font
 	// 注册, 启动
@@ -186,6 +178,7 @@ func (span *Span) SetContent(content string) *Span {
 	// 必须先进行注册, 才能设置
 	span.pdf.Font(span.font.Family, span.font.Size, span.font.Style)
 	span.pdf.SetFontWithStyle(span.font.Family, span.font.Style, span.font.Size)
+
 	if len(blocks) == 1 {
 		if span.pdf.MeasureTextWidth(convertStr)/unit < contentWidth {
 			span.contents = []string{convertStr}
@@ -227,7 +220,8 @@ func (span *Span) SetContent(content string) *Span {
 
 	// 重新计算 span 的高度
 	length := float64(len(span.contents))
-	span.height = span.border.Top + span.lineHeight*length + span.lineSpace*(length-1)
+	height := span.border.Top + span.lineHeight*length + span.lineSpace*(length-1)
+	span.height = math.Max(height, span.height)
 
 	return span
 }
@@ -235,95 +229,64 @@ func (span *Span) SetContent(content string) *Span {
 // 非自动分页
 func (span *Span) GenerateAtomicCell() error {
 	var (
-		sx, sy                     = span.pdf.GetXY()
-		x, y                       float64
-		isFirstSetVerticalCentered bool
+		sx, sy = span.pdf.GetXY()
+		x, y   float64
+		border core.Scope
 	)
 
 	if util.IsEmpty(span.font) {
 		panic("no font")
 	}
 
+	border = span.border
+	span.pdf.Font(span.font.Family, span.font.Size, span.font.Style)
+	span.pdf.SetFontWithStyle(span.font.Family, span.font.Style, span.font.Size)
+
+	// todo: 垂直居中
+	if span.verticalCentered {
+		length := float64(len(span.contents))
+		height := (length-1)*span.lineSpace + length*span.lineHeight + span.border.Top
+		if height < span.height {
+			top := (span.height - height) / 2
+			span.border = core.NewScope(border.Left, top, border.Right, 0)
+		}
+	}
+
+	if !util.IsEmpty(span.fontColor) {
+		span.pdf.TextColor(util.GetColorRGB(span.fontColor))
+	}
+
 	for i := 0; i < len(span.contents); i++ {
-		var (
-			hOriginBorder core.Scope
-			vOriginBorder core.Scope
-		)
 		// todo: 水平居中, 只是对当前的行设置新的 Border
 		if span.horizontalCentered {
-			span.pdf.SetFontWithStyle(span.font.Family, span.font.Style, span.font.Size)
-			hOriginBorder = span.border
 			width := span.pdf.MeasureTextWidth(span.contents[i]) / span.pdf.GetUnit()
 			if width < span.width {
-				m := (span.width - width) / 2
-				span.border = core.NewScope(m, hOriginBorder.Top, 0, hOriginBorder.Right)
+				left := (span.width - width) / 2
+				span.border = core.NewScope(left, border.Top, 0, border.Right)
 			}
 		}
 
 		// todo: 水平居右, 只是对当前的行设置新的 Border
 		if span.rightAlign {
-			span.pdf.SetFontWithStyle(span.font.Family, span.font.Style, span.font.Size)
-			hOriginBorder = span.border
 			width := span.pdf.MeasureTextWidth(span.contents[i]) / span.pdf.GetUnit()
-			m := span.width - width
-			span.border = core.NewScope(m, hOriginBorder.Top, 0, hOriginBorder.Right)
-		}
-
-		// todo: 垂直居中, 只能操作一次
-		if i == 0 && span.verticalCentered {
-			isFirstSetVerticalCentered = true
-			span.verticalCentered = false
-			vOriginBorder = span.border
-			length := float64(len(span.contents))
-			height := (length-1)*span.lineSpace + length*span.lineHeight + span.border.Top
-			if height < span.height {
-				m := (span.height - height) / 2
-				span.border = core.NewScope(vOriginBorder.Left, m, vOriginBorder.Right, 0)
-			}
+			left := span.width - width
+			span.border = core.NewScope(left, border.Top, 0, border.Right)
 		}
 
 		x, y = span.getContentPosition(sx, sy, i)
 
-		if !util.IsEmpty(span.fontColor) {
-			span.pdf.TextColor(util.GetColorRGB(span.fontColor))
-		}
-		if !util.IsEmpty(span.backColor) {
-			x1 := x - span.border.Left
-			y1 := y
-			span.pdf.BackgroundColor(x1, y1, span.width, span.lineHeight+span.lineSpace, span.backColor, "1111")
-		}
-
-		span.pdf.Font(span.font.Family, span.font.Size, span.font.Style) // 添加设置
 		span.pdf.Cell(x, y, span.contents[i])
+	}
 
-		// todo: 颜色恢复
-		if !util.IsEmpty(span.fontColor) {
-			span.pdf.TextDefaultColor()
-		}
-
-		if span.horizontalCentered || span.rightAlign {
-			span.border = hOriginBorder
-		}
-
-		if isFirstSetVerticalCentered {
-			isFirstSetVerticalCentered = false
-			span.border = vOriginBorder
-		}
+	// todo: 颜色恢复
+	if !util.IsEmpty(span.fontColor) {
+		span.pdf.TextDefaultColor()
 	}
 
 	x, _ = span.pdf.GetPageStartXY()
 	span.pdf.SetXY(x, y+span.lineHeight+span.margin.Bottom) // 定格最终的位置
 
 	return nil
-
-}
-
-func (span *Span) replaceHeight() {
-	if len(span.contents) == 0 {
-		span.height = 0
-	}
-	length := float64(len(span.contents))
-	span.height = span.lineHeight*length + span.lineSpace*(length-1) + span.border.Top
 }
 
 func (span *Span) getContentPosition(sx, sy float64, index int) (x, y float64) {
