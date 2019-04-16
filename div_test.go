@@ -2,6 +2,7 @@ package gopdf
 
 import (
 	"testing"
+	"strings"
 
 	"github.com/tiechui1994/gopdf/core"
 )
@@ -11,7 +12,7 @@ const (
 	DIV_MD = "MPBOLD"
 )
 
-func ComplexDivReport() {
+func DivReport() {
 	r := core.CreateReport()
 	font1 := core.FontMap{
 		FontName: DIV_IG,
@@ -39,7 +40,7 @@ func DivReportExecutor(report *core.Report) {
 	lineSpace := 0.1 * unit
 	lineHeight := report.MeasureTextWidth("中") / unit
 
-	div := NewDiv(48*unit, lineHeight, lineSpace, report)
+	div := NewDivWithWidth(48*unit, lineHeight, lineSpace, report)
 	div.SetFont(font)
 	div.SetBackColor("11,123,244")
 	div.RightAlign()
@@ -94,10 +95,10 @@ A subquery's outer statement can be any one of: SELECT, INSERT, UPDATE, DELETE, 
 In MySQL, you cannot modify a table and select from the same table in a subquery. This applies to statements such as DELETE, INSERT, REPLACE, UPDATE, and (because subqueries can be used in the SET clause) LOAD DATA INFILE.
 
 For information about how the optimizer handles subqueries, see Section 8.2.2, “Optimizing Subqueries, Derived Tables, and View References”. For a discussion of restrictions on subquery use, including performance issues for certain forms of subquery syntax, see Section C.4, “Restrictions on Subqueries”.`)
-	div.GenerateAtomicCellWithAutoPage()
+	div.GenerateAtomicCell()
 }
 
-func ComplexFillColorReport() {
+func FillColorReport() {
 	r := core.CreateReport()
 	font1 := core.FontMap{
 		FontName: DIV_IG,
@@ -112,8 +113,8 @@ func ComplexFillColorReport() {
 
 	r.RegisterExecutor(core.Executor(FillColorReportExecutor), core.Detail)
 
-	r.Execute("fill_test.pdf")
-	r.SaveAtomicCellText("fill_test.txt")
+	r.Execute("fill_color_test.pdf")
+	r.SaveAtomicCellText("fill_color_test.txt")
 }
 func FillColorReportExecutor(report *core.Report) {
 	x, y := report.GetPageStartXY()
@@ -126,10 +127,75 @@ func FillColorReportExecutor(report *core.Report) {
 	report.Cell(x, y, "Java----------")
 }
 
-func TestDiv(t *testing.T) {
+func ComplexDivReport() {
+	r := core.CreateReport()
+	font1 := core.FontMap{
+		FontName: DIV_IG,
+		FileName: "example//ttf/ipaexg.ttf",
+	}
+	font2 := core.FontMap{
+		FontName: DIV_MD,
+		FileName: "example//ttf/mplus-1p-bold.ttf",
+	}
+	r.SetFonts([]*core.FontMap{&font1, &font2})
+	r.SetPage("A4", "mm", "P")
+
+	r.RegisterExecutor(core.Executor(ComplexDivReportExecutor), core.Detail)
+
+	r.Execute("complex_div_test.pdf")
+	r.SaveAtomicCellText("complex_div_test.txt")
+}
+func ComplexDivReportExecutor(report *core.Report) {
+	unit := report.GetUnit()
+	font := core.Font{Family: DIV_MD, Size: 10}
+
+	report.Font(DIV_MD, 10, "")
+	report.SetFont(DIV_MD, 10)
+
+	lineSpace := 0.1 * unit
+	lineHeight := report.MeasureTextWidth("中") / unit
+
+	frame := NewDivWithWidth(48*unit, lineHeight, lineSpace, report)
+	frame.SetFrameType(DIV_DOTTED)
+	//frame.SetBackColor("222,111,11")
+	frame.SetFont(font)
+	frame.SetMarign(core.NewScope(20, 50, 0, 0))
+	frame.SetBorder(core.NewScope(4, 50, 0, 0))
+
+	content := `13.2.10 Subquery  Syntax 
+13.2.10.1 The Subquery as Scalar Operand 
+13.2.10.2 Comparisons Using Subqueries
+13.2.10.3 Subqueries with ANY, IN, or SOME
+13.2.10.4 Subqueries with ALL
+13.2.10.5 Row Subqueries
+13.2.10.6 Subqueries with EXISTS or NOT EXISTS
+13.2.10.7 Correlated Subqueries
+13.2.10.8 Derived Tables
+13.2.10.9 Subquery Errors
+13.2.10.10 Optimizing Subqueries
+13.2.10.11 Rewriting Subqueries as Joins
+A subquery is a SELECT statement within another statement.
+All subquery forms and operations that the SQL standard requires are supported, as well as a few features that are MySQL-specific.
+Here is an example of a subquery:
+SELECT * FROM t1 WHERE column1 = (SELECT column1 FROM t2);
+In this example, SELECT * FROM t1 ... is the outer query (or outer statement), and (SELECT column1 FROM t2) is the subquery. We say that the subquery is nested within the outer query, and in fact it is possible to nest subqueries within other subqueries, to a considerable depth. A subquery must always appear within parentheses.
+The main advantages of subqueries are:
+They allow queries that are structured so that it is possible to isolate each part of a statement.
+They provide alternative ways to perform operations that would otherwise require complex joins and unions.
+Many people find subqueries more readable than complex joins or unions. Indeed, it was the innovation of subqueries that gave people the original idea of calling the early SQL “Structured Query Language.”
+how the optimizer handles subqueries, see Section 8.2.2, “Optimizing Subqueries, Derived Tables, and View References”. For a discussion of restrictions on subquery use, including performance issues for certain forms of subquery syntax, see Section C.4, “Restrictions on Subqueries”.`
+	frame.SetContent(strings.Repeat(content, 4))
+	frame.GenerateAtomicCell()
+}
+
+func TestDivReport(t *testing.T) {
+	DivReport()
+}
+
+func TestComplexDivReport(t *testing.T) {
 	ComplexDivReport()
 }
 
-func TestFill(t *testing.T) {
-	ComplexFillColorReport()
+func TestFillColorReport(t *testing.T) {
+	FillColorReport()
 }

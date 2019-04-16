@@ -320,8 +320,8 @@ func SimpleTableReportExecutor(report *core.Report) {
 		if !isTable && key != "" {
 			report.SetMargin(4*unit, 0)
 			content := fmt.Sprintf("%s: %s", key, value)
-			contentDiv := gopdf.NewDiv(80*unit, lineHight, lineSpace, report)
-			contentDiv.SetFont(textFont).SetContent(content).GenerateAtomicCellWithAutoPage()
+			contentDiv := gopdf.NewDivWithWidth(80*unit, lineHight, lineSpace, report)
+			contentDiv.SetFont(textFont).SetContent(content).GenerateAtomicCell()
 			report.SetMargin(0, 1*unit)
 
 		}
@@ -330,8 +330,8 @@ func SimpleTableReportExecutor(report *core.Report) {
 		if isTable {
 			report.SetMargin(4*unit, 0)
 			content := fmt.Sprintf("%s:", key)
-			contentDiv := gopdf.NewDiv(80*unit, lineHight, lineSpace, report)
-			contentDiv.SetFont(textFont).SetContent(content).GenerateAtomicCellWithAutoPage()
+			contentDiv := gopdf.NewDivWithWidth(80*unit, lineHight, lineSpace, report)
+			contentDiv.SetFont(textFont).SetContent(content).GenerateAtomicCell()
 			report.SetMargin(0, 0.5*unit)
 
 			rows, cols, cells, hasRowName := handleTable(template)

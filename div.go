@@ -8,65 +8,142 @@ import (
 	"github.com/tiechui1994/gopdf/util"
 )
 
+const (
+	DIV_STRAIGHT = 1 // 实线边框
+	DIV_DASHED   = 2 // 虚线边框
+	DIV_DOTTED   = 3 // 点状线的边框
+	DIV_NONE     = 4 // 无边框
+)
+
+// 边框
 type Div struct {
-	pdf           *core.Report
-	width, height float64
-	contents      []string // 内容
-
-	lineHeight float64 // 行高
-	lineSpace  float64 // 行间距
-
-	// div的位置调整和内容调整
-	margin core.Scope
-	border core.Scope
-
-	// 颜色控制
+	pdf       *core.Report
 	font      core.Font
+	frameType int // 边框类型
+
+	width, height float64
+	lineHeight    float64
+	lineSpace     float64
+
 	fontColor string
 	backColor string
 
-	// 居中
+	margin core.Scope
+	border core.Scope
+
+	contents           []string
 	horizontalCentered bool
-	verticalCentered   bool
 	rightAlign         bool
 }
 
-func NewDiv(width, lineHeight, lineSpace float64, pdf *core.Report) *Div {
-	// 最大宽度控制
+func NewDiv(lineHeight, lineSpce float64, pdf *core.Report) *Div {
+	currX, _ := pdf.GetXY()
 	endX := pdf.GetPageEndX()
-	curX, _ := pdf.GetXY()
-	if width > endX-curX {
-		width = endX - curX
+	if endX-currX <= 0 {
+		panic("please modify current X")
 	}
 
-	div := &Div{
-		width:      width,
-		height:     0,
+	f := &Div{
 		pdf:        pdf,
+		frameType:  DIV_NONE,
+		width:      endX - currX,
+		height:     lineHeight,
 		lineHeight: lineHeight,
-		lineSpace:  lineSpace,
+		lineSpace:  lineSpce,
 	}
-	(*div).pdf = pdf
+
+	return f
+}
+
+func NewDivWithWidth(width float64, lineHeight, lineSpce float64, pdf *core.Report) *Div {
+	currX, _ := pdf.GetXY()
+	endX := pdf.GetPageEndX()
+	if endX-currX <= 0 {
+		panic("please modify current X")
+	}
+
+	if endX-currX <= width {
+		width = endX - currX
+	}
+
+	f := &Div{
+		pdf:        pdf,
+		frameType:  DIV_NONE,
+		width:      width,
+		height:     lineHeight,
+		lineHeight: lineHeight,
+		lineSpace:  lineSpce,
+	}
+
+	return f
+}
+
+func (div *Div) Copy(content string) *Div {
+	f := &Div{
+		pdf:        div.pdf,
+		frameType:  div.frameType,
+		width:      div.width,
+		lineHeight: div.lineHeight,
+		lineSpace:  div.lineSpace,
+		fontColor:  div.fontColor,
+		backColor:  div.backColor,
+	}
+
+	f.SetBorder(div.border)
+	f.SetFont(div.font)
+	f.SetContent(content)
+
+	return f
+}
+
+func (div *Div) SetFrameType(frameType int) *Div {
+	if frameType < DIV_STRAIGHT || frameType > DIV_NONE {
+		return div
+	}
+
+	div.frameType = frameType
 
 	return div
 }
 
-func (div *Div) Copy(content string) *Div {
-	d := &Div{
-		pdf:        div.pdf,
-		width:      div.width,
-		height:     0,
-		lineHeight: div.lineHeight,
-		lineSpace:  div.lineSpace,
-		margin:     div.margin,
-		border:     div.border,
-		fontColor:  div.fontColor,
+func (div *Div) SetMarign(margin core.Scope) *Div {
+	margin.ReplaceMarign()
+	currX, _ := div.pdf.GetXY()
+	endX := div.pdf.GetPageEndX()
+
+	if endX-(currX+margin.Left) <= 0 {
+		panic("the marign out of page boundary")
 	}
 
-	d.SetFont(div.font)
-	d.SetContent(content)
+	// 宽度检测
+	if endX-(currX+margin.Left) <= div.width {
+		div.width = endX - (currX + margin.Left)
+	}
 
-	return d
+	div.margin = margin
+
+	return div
+}
+func (div *Div) SetBorder(border core.Scope) *Div {
+	border.ReplaceBorder()
+	currX, _ := div.pdf.GetXY()
+	endX := div.pdf.GetPageEndX()
+
+	// 最大宽度检测
+	if endX-(currX+div.margin.Left) >= div.width+border.Left+border.Right {
+		div.width += border.Left + border.Right
+	}
+
+	div.border = border
+
+	return div
+}
+
+func (div *Div) GetHeight() (height float64) {
+	return div.height
+}
+func (div *Div) GetWidth() (width float64) {
+	return div.width
 }
 
 func (div *Div) HorizontalCentered() *Div {
@@ -74,43 +151,10 @@ func (div *Div) HorizontalCentered() *Div {
 	div.rightAlign = false
 	return div
 }
-func (div *Div) VerticalCentered() *Div {
-	div.verticalCentered = true
-	return div
-}
 func (div *Div) RightAlign() *Div {
 	div.rightAlign = true
 	div.horizontalCentered = false
 	return div
-}
-
-func (div *Div) SetLineSpace(lineSpace float64) *Div {
-	div.lineSpace = lineSpace
-	return div
-}
-func (div *Div) SetLineHeight(lineHeight float64) *Div {
-	div.lineHeight = lineHeight
-	return div
-}
-
-// 注: 当div使用为tablecell的时候, 禁止设置margin
-// margin的Right无法生效,而且Bottom必须大于0
-func (div *Div) SetMarign(marign core.Scope) *Div {
-	marign.ReplaceMarign()
-	div.margin = marign
-
-	// 重新设置div的宽度
-	endX := div.pdf.GetPageEndX()
-	curX, _ := div.pdf.GetXY()
-	if div.width > endX-(curX+div.margin.Left) {
-		div.width = endX - (curX + div.margin.Left)
-	}
-
-	return div
-}
-func (div *Div) SetBorder(border core.Scope) {
-	border.ReplaceBorder()
-	div.border = border
 }
 
 func (div *Div) SetFontColor(color string) *Div {
@@ -124,24 +168,22 @@ func (div *Div) SetBackColor(color string) *Div {
 	return div
 }
 
-// 注册字体
 func (div *Div) SetFont(font core.Font) *Div {
 	div.font = font
 	// 注册, 启动
 	div.pdf.Font(font.Family, font.Size, font.Style)
 	div.pdf.SetFontWithStyle(font.Family, font.Style, font.Size)
+
 	return div
 }
 func (div *Div) SetFontWithColor(font core.Font, color string) *Div {
 	div.SetFont(font)
 	div.SetFontColor(color)
-
 	return div
 }
 
-// todo: 使用注册的字体进行分行计算
-func (div *Div) SetContent(s string) *Div {
-	convertStr := strings.Replace(s, "\t", "    ", -1)
+func (div *Div) SetContent(content string) *Div {
+	convertStr := strings.Replace(content, "\t", "    ", -1)
 
 	var (
 		unit         = div.pdf.GetUnit()
@@ -199,73 +241,64 @@ func (div *Div) SetContent(s string) *Div {
 	// 重新计算 div 的高度
 	length := float64(len(div.contents))
 	div.height = div.border.Top + div.lineHeight*length + div.lineSpace*(length-1)
+
 	return div
 }
 
-func (div *Div) GetHeight() float64 {
-	return div.height
-}
-
-// 自动换行
-func (div *Div) GenerateAtomicCellWithAutoPage() error {
+// 自动分页
+func (div *Div) GenerateAtomicCell() error {
 	var (
-		sx, sy                     = div.pdf.GetXY()
-		x, y                       float64
-		isFirstSetVerticalCentered bool
-		pageEndY                   = div.pdf.GetPageEndY()
+		sx, sy   = div.pdf.GetXY()
+		x, y     float64
+		border   core.Scope
+		pageEndY = div.pdf.GetPageEndY()
 	)
 
 	if util.IsEmpty(div.font) {
 		panic("no font")
 	}
 
+	switch div.frameType {
+	case DIV_STRAIGHT:
+		div.pdf.LineType("straight", 0.01)
+	case DIV_DASHED:
+		div.pdf.LineType("dashed", 0.01)
+	case DIV_DOTTED:
+		div.pdf.LineType("dotted", 0.01)
+	}
+
+	div.drawLine(sx, sy)
+	div.pdf.Font(div.font.Family, div.font.Size, div.font.Style)
+	div.pdf.SetFontWithStyle(div.font.Family, div.font.Style, div.font.Size)
+	border = div.border
+
 	for i := 0; i < len(div.contents); i++ {
-		var (
-			hOriginBorder core.Scope
-			vOriginBorder core.Scope
-		)
 		// todo: 水平居中, 只是对当前的行设置新的 Border
 		if div.horizontalCentered {
-			div.pdf.SetFontWithStyle(div.font.Family, div.font.Style, div.font.Size)
-			hOriginBorder = div.border
 			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
 			if width < div.width {
-				m := (div.width - width) / 2
-				div.border = core.NewScope(m, hOriginBorder.Top, 0, hOriginBorder.Right)
+				left := (div.width - width) / 2
+				div.border = core.NewScope(left, border.Top, 0, border.Right)
 			}
 		}
 
 		// todo: 水平居右, 只是对当前的行设置新的 Border
 		if div.rightAlign {
-			div.pdf.SetFontWithStyle(div.font.Family, div.font.Style, div.font.Size)
-			hOriginBorder = div.border
 			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
-			m := div.width - width
-			div.border = core.NewScope(m, hOriginBorder.Top, 0, hOriginBorder.Right)
-		}
-
-		// todo: 垂直居中, 只能操作一次
-		if i == 0 && div.verticalCentered {
-			isFirstSetVerticalCentered = true
-			div.verticalCentered = false
-			vOriginBorder = div.border
-			length := float64(len(div.contents))
-			height := (length-1)*div.lineSpace + length*div.lineHeight + div.border.Top
-			if height < div.height {
-				m := (div.height - height) / 2
-				div.border = core.NewScope(vOriginBorder.Left, m, vOriginBorder.Right, 0)
-			}
+			left := div.width - width
+			div.border = core.NewScope(left, border.Top, 0, border.Right)
 		}
 
 		x, y = div.getContentPosition(sx, sy, i)
 
 		// todo: 换页
 		if y+div.lineHeight > pageEndY {
-			var newX, newY float64 // 新页面的X,Y位置
+			var newX, newY float64
 
 			div.SetMarign(core.NewScope(div.margin.Left, 0, div.margin.Right, 0))
-			div.SetBorder(core.NewScope(div.border.Left, 0, div.border.Right, 0))
+			div.SetBorder(core.NewScope(border.Left, div.lineSpace, border.Right, 0))
 			div.contents = div.contents[i:]
+			div.resetHeight()
 
 			_, newY = div.pdf.GetPageStartXY()
 			if len(div.contents) > 0 {
@@ -277,17 +310,12 @@ func (div *Div) GenerateAtomicCellWithAutoPage() error {
 			div.pdf.AddNewPage(false)
 			div.pdf.SetXY(newX, newY)
 
-			return div.GenerateAtomicCellWithAutoPage()
+			return div.GenerateAtomicCell()
 		}
 
 		// todo: 当前页
 		if !util.IsEmpty(div.fontColor) {
 			div.pdf.TextColor(util.GetColorRGB(div.fontColor))
-		}
-		if !util.IsEmpty(div.backColor) {
-			x1 := x - div.border.Left
-			y1 := y
-			div.pdf.BackgroundColor(x1, y1, div.width, div.lineHeight+div.lineSpace, div.backColor, "1110")
 		}
 
 		div.pdf.Font(div.font.Family, div.font.Size, div.font.Style) // 添加设置
@@ -297,15 +325,6 @@ func (div *Div) GenerateAtomicCellWithAutoPage() error {
 		if !util.IsEmpty(div.fontColor) {
 			div.pdf.TextDefaultColor()
 		}
-
-		if div.horizontalCentered || div.rightAlign {
-			div.border = hOriginBorder
-		}
-
-		if isFirstSetVerticalCentered {
-			isFirstSetVerticalCentered = false
-			div.border = vOriginBorder
-		}
 	}
 
 	x, _ = div.pdf.GetPageStartXY()
@@ -314,97 +333,47 @@ func (div *Div) GenerateAtomicCellWithAutoPage() error {
 	return nil
 }
 
-// 非自动换行, 只写当前的页面, 不支持垂直居中??
-func (div *Div) GenerateAtomicCell() error {
+func (div *Div) drawLine(sx, sy float64) {
 	var (
 		x, y     float64
-		sx, sy   = div.pdf.GetXY()
 		pageEndY = div.pdf.GetPageEndY()
 	)
-	if util.IsEmpty(div.font) {
-		panic("no font")
-	}
 
-	for i := 0; i < len(div.contents); i++ {
-		var (
-			hOriginBorder core.Scope
-		)
-		// todo: 水平居中, 只是对当前的行设置新的 Border
-		if div.horizontalCentered {
-			div.pdf.SetFontWithStyle(div.font.Family, div.font.Style, div.font.Size)
-			hOriginBorder = div.border
-			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
-			if width < div.width {
-				m := (div.width - width) / 2
-				div.border = core.NewScope(m, hOriginBorder.Top, 0, hOriginBorder.Right)
-			}
-		}
-
-		// todo: 水平居右, 只是对当前的行设置新的 Border
-		if div.rightAlign {
-			div.pdf.SetFontWithStyle(div.font.Family, div.font.Style, div.font.Size)
-			hOriginBorder = div.border
-			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
-			m := div.width - width
-			div.border = core.NewScope(m, hOriginBorder.Top, 0, hOriginBorder.Right)
-		}
-
-		x, y = div.getContentPosition(sx, sy, i)
-
-		// todo: 换页
-		if y+div.lineHeight >= pageEndY {
-			div.contents = div.contents[i:]
-			div.replaceHeight()
-
-			if !util.IsEmpty(div.backColor) {
-				x1 := x - div.border.Left
-				y1 := y - div.border.Top
-				h := pageEndY - y1
-				div.pdf.BackgroundColor(x1, y1, div.width, h, div.backColor, "1010") // 不需要底线
-			}
-
-			div.margin.Top = 0
-			return nil
-		}
-
-		// todo: 当前页,
-		if !util.IsEmpty(div.fontColor) {
-			div.pdf.TextColor(util.GetColorRGB(div.fontColor))
-		}
+	if sy+div.height > pageEndY {
+		x, y = sx+div.margin.Left, sy+div.margin.Top
 		if !util.IsEmpty(div.backColor) {
-			x1 := x - div.border.Left
-			y1 := y - div.border.Top
-			h := div.lineHeight + div.lineSpace
-			// 最后一行
-			if i == len(div.contents)-1 {
-				h += div.border.Top
-				originHeight := float64(len(div.contents))*div.lineHeight + div.border.Top + float64(len(div.contents)-1)*div.lineSpace
-				h += div.height - originHeight
-			}
-			div.pdf.BackgroundColor(x1, y1, div.width, h, div.backColor, "1110")
+			div.pdf.BackgroundColor(x, y, div.width, pageEndY-y, div.backColor, "0000")
 		}
 
-		div.pdf.Font(div.font.Family, div.font.Size, div.font.Style) // 添加设置
-		div.pdf.Cell(x, y, div.contents[i])
+		y = sy + div.margin.Top
+		// 两条竖线 + 一条横线
+		if div.frameType != DIV_NONE {
+			div.pdf.LineV(sx+div.margin.Left, y, pageEndY)
+			div.pdf.LineV(sx+div.margin.Left+div.width, y, pageEndY)
 
-		// todo:颜色恢复
-		if !util.IsEmpty(div.fontColor) {
-			div.pdf.TextDefaultColor()
+			div.pdf.LineH(sx+div.margin.Left, y, sx+div.margin.Left+div.width)
+			div.pdf.LineH(sx+div.margin.Left, pageEndY, sx+div.margin.Left+div.width)
 		}
 
-		if div.horizontalCentered || div.rightAlign {
-			div.border = hOriginBorder
+	} else {
+		x, y = sx+div.margin.Left, sy+div.margin.Top
+		if !util.IsEmpty(div.backColor) {
+			div.pdf.BackgroundColor(x, y, div.width, div.height, div.backColor, "0000")
+		}
+
+		y = sy + div.margin.Top
+		// 两条竖线 + 一条横线
+		if div.frameType != DIV_NONE {
+			div.pdf.LineV(sx+div.margin.Left, y, y+div.height)
+			div.pdf.LineV(sx+div.margin.Left+div.width, y, y+div.height)
+
+			div.pdf.LineH(sx+div.margin.Left, y, sx+div.margin.Left+div.width)
+			div.pdf.LineH(sx+div.margin.Left, y+div.height, sx+div.margin.Left+div.width)
 		}
 	}
-
-	x, _ = div.pdf.GetPageStartXY()
-	div.pdf.SetXY(x, y+div.lineHeight+div.margin.Bottom) // 定格最终的位置
-
-	return nil
 }
 
-// 重新设置div的高度
-func (div *Div) replaceHeight() {
+func (div *Div) resetHeight() {
 	if len(div.contents) == 0 {
 		div.height = 0
 	}
