@@ -134,7 +134,7 @@ func ComplexReportExecutor(report *core.Report) {
 
 func ComplexReportFooterExecutor(report *core.Report) {
 	content := fmt.Sprintf("第 %v 页", report.GetCurrentPageNo())
-	footer := gopdf.NewDiv(10, 0, report)
+	footer := gopdf.NewSpan(10, 0, report)
 	footer.SetFont(textFont)
 	footer.SetFontColor("60, 179, 113")
 	footer.SetBorder(core.Scope{Top: 10})
@@ -143,7 +143,7 @@ func ComplexReportFooterExecutor(report *core.Report) {
 
 func ComplexReportHeaderExecutor(report *core.Report) {
 	content := "github.com/tiechui1994/gopdf"
-	footer := gopdf.NewDiv(10, 0, report)
+	footer := gopdf.NewSpan(10, 0, report)
 	footer.SetFont(textFont)
 	footer.SetFontColor("255,0,0")
 	footer.SetBorder(core.Scope{Top: 10})
