@@ -43,9 +43,10 @@ func ComplexFrameReportExecutor(report *core.Report) {
 
 	frame := NewFrameWithWidth(48*unit, lineHeight, lineSpace, report)
 	frame.SetFrameType(FRAME_DOTTED)
+	frame.SetBackColor("222,111,11")
 	frame.SetFont(font)
-	frame.SetMarign(core.NewScope(10, 20, 0, 0))
-	frame.SetBorder(core.NewScope(2, 50, 0, 0))
+	frame.SetMarign(core.NewScope(20, 50, 0, 0))
+	frame.SetBorder(core.NewScope(4, 50, 0, 0))
 
 	content := `13.2.10 Subquery  Syntax 
 13.2.10.1 The Subquery as Scalar Operand 
@@ -70,7 +71,7 @@ They provide alternative ways to perform operations that would otherwise require
 Many people find subqueries more readable than complex joins or unions. Indeed, it was the innovation of subqueries that gave people the original idea of calling the early SQL “Structured Query Language.”
 how the optimizer handles subqueries, see Section 8.2.2, “Optimizing Subqueries, Derived Tables, and View References”. For a discussion of restrictions on subquery use, including performance issues for certain forms of subquery syntax, see Section C.4, “Restrictions on Subqueries”.`
 	frame.SetContent(strings.Repeat(content, 4))
-	frame.GenerateAtomicCellWithAutoPage()
+	frame.GenerateAtomicCell()
 }
 
 func TestComplexFrameReport(t *testing.T) {

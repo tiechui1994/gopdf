@@ -116,7 +116,7 @@ func (image *Image) GenerateAtomicCell() error {
 		sx, sy = image.pdf.GetXY()
 	)
 
-	x, y := image.getPostion(sx, sy)
+	x, y := sx+image.margin.Left, sy+image.margin.Top
 	pageEndY := image.pdf.GetPageEndY()
 	if y < pageEndY && y+float64(image.height) > pageEndY {
 		image.pdf.AddNewPage(false)
@@ -126,12 +126,6 @@ func (image *Image) GenerateAtomicCell() error {
 	sx, _ = image.pdf.GetPageStartXY()
 	image.pdf.SetXY(sx, y+float64(image.height)+image.margin.Bottom)
 	return nil
-}
-
-func (image *Image) getPostion(sx, sy float64) (x, y float64) {
-	x = sx + image.margin.Left
-	y = sy + image.margin.Top
-	return x, y
 }
 
 func (image *Image) delTempImage(report *core.Report) {
