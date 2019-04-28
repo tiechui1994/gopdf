@@ -8,7 +8,7 @@ import (
 	"github.com/tiechui1994/gopdf/util"
 )
 
-// 边框
+// 不会进行自动分页, 可以用于页眉, 页脚的内容.
 type Span struct {
 	pdf  *core.Report
 	font core.Font
@@ -226,7 +226,6 @@ func (span *Span) SetContent(content string) *Span {
 	return span
 }
 
-// 非自动分页
 func (span *Span) GenerateAtomicCell() error {
 	var (
 		sx, sy = span.pdf.GetXY()
@@ -242,7 +241,7 @@ func (span *Span) GenerateAtomicCell() error {
 	span.pdf.Font(span.font.Family, span.font.Size, span.font.Style)
 	span.pdf.SetFontWithStyle(span.font.Family, span.font.Style, span.font.Size)
 
-	// todo: 垂直居中
+	// 垂直居中
 	if span.verticalCentered {
 		length := float64(len(span.contents))
 		height := (length-1)*span.lineSpace + length*span.lineHeight + span.border.Top
@@ -257,7 +256,7 @@ func (span *Span) GenerateAtomicCell() error {
 	}
 
 	for i := 0; i < len(span.contents); i++ {
-		// todo: 水平居中, 只是对当前的行设置新的 Border
+		// 水平居中, 只是对当前的行设置新的 Border
 		if span.horizontalCentered {
 			width := span.pdf.MeasureTextWidth(span.contents[i]) / span.pdf.GetUnit()
 			if width < span.width {
@@ -266,7 +265,7 @@ func (span *Span) GenerateAtomicCell() error {
 			}
 		}
 
-		// todo: 水平居右, 只是对当前的行设置新的 Border
+		// 水平居右, 只是对当前的行设置新的 Border
 		if span.rightAlign {
 			width := span.pdf.MeasureTextWidth(span.contents[i]) / span.pdf.GetUnit()
 			left := span.width - width
@@ -278,7 +277,6 @@ func (span *Span) GenerateAtomicCell() error {
 		span.pdf.Cell(x, y, span.contents[i])
 	}
 
-	// todo: 颜色恢复
 	if !util.IsEmpty(span.fontColor) {
 		span.pdf.TextDefaultColor()
 	}

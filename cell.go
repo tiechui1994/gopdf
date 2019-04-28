@@ -10,6 +10,7 @@ import (
 
 type TextCell struct {
 	pdf        *core.Report
+	font       core.Font
 	width      float64 // 宽度, 必须
 	height     float64
 	contents   []string // 内容
@@ -21,7 +22,6 @@ type TextCell struct {
 	border core.Scope // 内边距调整, left, top, right
 
 	// 颜色控制
-	font      core.Font
 	fontColor string
 	backColor string
 
@@ -169,11 +169,12 @@ func (cell *TextCell) SetContent(s string) *TextCell {
 	return cell
 }
 
+// 先涂背景颜色, 然后在背景颜色的基础上写入内容
 func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 	var (
 		sx, sy = cell.pdf.GetXY() // 基准坐标
 		lines  int                // 可以写入的行数
-		x, y   float64            //  实际开始的坐标
+		x, y   float64            // 实际开始的坐标
 	)
 
 	cell.pdf.Font(cell.font.Family, cell.font.Size, cell.font.Style)
@@ -183,7 +184,8 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 	if maxheight > cell.height || math.Abs(maxheight-cell.height) < 0.01 {
 		lines = len(cell.contents)
 
-		if maxheight > cell.height && cell.verticalCentered { // 垂直居中
+		// 垂直居中
+		if maxheight > cell.height && cell.verticalCentered {
 			sy += (maxheight - cell.height) / 2
 		}
 	} else {
@@ -223,6 +225,7 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 		}
 	}
 
+	// 重置lastheight
 	cell.lastheight = cell.height
 
 	// cell的height和contents重置
@@ -238,6 +241,7 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 		length := float64(len(cell.contents))
 		cell.height = cell.border.Top + math.Abs(cell.border.Bottom) + cell.lineHeight*length + cell.lineSpace*(length-1)
 	}
+
 	return lines, len(cell.contents), nil
 }
 

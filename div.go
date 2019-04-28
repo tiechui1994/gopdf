@@ -15,25 +15,25 @@ const (
 	DIV_NONE     = 4 // 无边框
 )
 
-// 边框
+// 带有各种边框的内容, 可以自动换行
 type Div struct {
 	pdf       *core.Report
 	font      core.Font
-	frameType int // 边框类型
+	frameType int // 边框类型, 默认是无边框
+	contents  []string
 
 	width, height float64
 	lineHeight    float64
 	lineSpace     float64
 
-	fontColor string
-	backColor string
+	fontColor string // 字体颜色
+	backColor string // 背景颜色
 
 	margin core.Scope
 	border core.Scope
 
-	contents           []string
-	horizontalCentered bool
-	rightAlign         bool
+	horizontalCentered bool // 水平居中
+	rightAlign         bool // 局右显示, 默认是居左显示
 }
 
 func NewDiv(lineHeight, lineSpce float64, pdf *core.Report) *Div {
@@ -273,7 +273,7 @@ func (div *Div) GenerateAtomicCell() error {
 	border = div.border
 
 	for i := 0; i < len(div.contents); i++ {
-		// todo: 水平居中, 只是对当前的行设置新的 Border
+		// 水平居中, 只是对当前的行设置新的 Border
 		if div.horizontalCentered {
 			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
 			if width < div.width {
@@ -282,7 +282,7 @@ func (div *Div) GenerateAtomicCell() error {
 			}
 		}
 
-		// todo: 水平居右, 只是对当前的行设置新的 Border
+		// 水平居右, 只是对当前的行设置新的 Border
 		if div.rightAlign {
 			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
 			left := div.width - width
@@ -291,7 +291,7 @@ func (div *Div) GenerateAtomicCell() error {
 
 		x, y = div.getContentPosition(sx, sy, i)
 
-		// todo: 换页
+		// 换页
 		if y+div.lineHeight > pageEndY {
 			var newX, newY float64
 
@@ -313,15 +313,11 @@ func (div *Div) GenerateAtomicCell() error {
 			return div.GenerateAtomicCell()
 		}
 
-		// todo: 当前页
 		if !util.IsEmpty(div.fontColor) {
 			div.pdf.TextColor(util.GetColorRGB(div.fontColor))
 		}
-
 		div.pdf.Font(div.font.Family, div.font.Size, div.font.Style) // 添加设置
 		div.pdf.Cell(x, y, div.contents[i])
-
-		// todo: 颜色恢复
 		if !util.IsEmpty(div.fontColor) {
 			div.pdf.TextDefaultColor()
 		}

@@ -275,7 +275,7 @@ func (table *Table) GenerateAtomicCell() error {
 		x1, y1, _, y2 float64 // 当前位置
 	)
 
-	// todo: 重新计算行高, 并且缓存每个位置的开始坐标
+	// 重新计算行高, 并且缓存每个位置的开始坐标
 	table.resetCellHeight()
 	table.cachedPoints(sx, sy)
 
@@ -287,7 +287,7 @@ func (table *Table) GenerateAtomicCell() error {
 				y2 = y1 + table.cells[i][j].minheight
 			}
 
-			// 需要进行换页操作
+			// 换页
 			if y1 < pageEndY && y2 > pageEndY {
 				if i == 0 {
 					table.pdf.AddNewPage(false)
@@ -325,11 +325,9 @@ func (table *Table) GenerateAtomicCell() error {
 					return nil
 				}
 
-				// 写入剩下页面
 				return table.GenerateAtomicCell()
 			}
 
-			// 拦截空格Cell
 			if table.cells[i][j].element == nil {
 				continue
 			}
@@ -351,10 +349,10 @@ func (table *Table) GenerateAtomicCell() error {
 		}
 	}
 
-	// todo: 最后一个页面的最后部分
+	// 最后一个页面的最后部分
 	table.drawLastPageLines(sx, sy)
 
-	// todo: 重置当前的坐标(非常重要)
+	// 重置当前的坐标(非常重要)
 	height := table.getLastPageHeight()
 	_, y1, _, y2 = table.getVLinePosition(sx, sy, 0, 0)
 	x1, _ = table.pdf.GetPageStartXY()
@@ -371,12 +369,11 @@ func (table *Table) writeCurrentPageCell(row, col int, sx, sy float64) {
 		cell          = table.cells[row][col]
 	)
 
-	// 写入数据前, 必须变换坐标系
 	x1, y1, _, y2 = table.getVLinePosition(sx, sy, col, row)
 	cell.table.pdf.SetXY(x1, y1)
 
 	if cell.element != nil {
-		// todo: 检查当前Cell下面的Cell能否写入(下一个Cell跨页), 如果不能写入, 需要修正写入的高度值
+		// 检查当前Cell下面的Cell能否写入(下一个Cell跨页), 如果不能写入, 需要修正写入的高度值
 		i, j := cell.row+cell.rowspan-table.cells[0][0].row, cell.col-table.cells[0][0].col
 		if i < len(table.cells) {
 			_, y3, _, y4 := table.getVLinePosition(sx, sy, j, i)
@@ -398,12 +395,11 @@ func (table *Table) writePartialPageCell(row, col int, sx, sy float64) {
 		cell     = table.cells[row][col]
 	)
 
-	// 写入数据前, 必须变换坐标系
 	x1, y1, _, _ = table.getVLinePosition(sx, sy, col, row) // 垂直线
 	cell.table.pdf.SetXY(x1, y1)
 
 	if cell.element != nil {
-		// todo: 尝试写入(跨页的Cell), 写不进去就不再写
+		// 尝试写入(跨页的Cell), 写不进去就不再写
 		wn, _ := cell.element.TryGenerateAtomicCell(pageEndY - y1)
 		if wn == 0 {
 			return
@@ -461,7 +457,7 @@ func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) {
 			continue
 		}
 
-		// todo: 尝试写入(跨页的Cell), 写不进去就不再写
+		// 尝试写入(跨页的Cell), 写不进去就不再写
 		wn, _ := cell.element.TryGenerateAtomicCell(pageEndY - y1)
 		if wn == 0 {
 			continue
