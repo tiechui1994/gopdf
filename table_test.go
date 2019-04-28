@@ -16,6 +16,10 @@ const (
 	TABLE_MY = "微软雅黑"
 )
 
+var (
+	seed = rand.New(rand.NewSource(time.Now().UnixNano()))
+)
+
 func ComplexTableReportWithData() {
 	r := core.CreateReport()
 	font1 := core.FontMap{
@@ -200,7 +204,7 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 				for col := 0; col < cols; col++ {
 					conent := fmt.Sprintf("%v-(%v,%v)", 0, i+row, col)
 					cell := table.NewCell()
-					txt := NewTextCell(table.GetColWidth(i+row, col), lineHeight, lineSpace, report)
+					txt := NewTextCell(table.GetColWidth(i+row, col), lineHeight, lineSpace, report).SetBackColor(GetRandColor())
 					txt.SetFont(f1).SetBorder(border).SetContent(conent + GetRandStr(1))
 					cell.SetElement(txt)
 				}
@@ -214,12 +218,12 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 			c31 := table.NewCellByRange(4, 1)
 			c41 := table.NewCellByRange(4, 1)
 
-			t00 := NewTextCell(table.GetColWidth(i+0, 0), lineHeight, lineSpace, report)
-			t01 := NewTextCell(table.GetColWidth(i+0, 1), lineHeight, lineSpace, report)
-			t03 := NewTextCell(table.GetColWidth(i+0, 3), lineHeight, lineSpace, report)
-			t21 := NewTextCell(table.GetColWidth(i+2, 1), lineHeight, lineSpace, report)
-			t31 := NewTextCell(table.GetColWidth(i+3, 1), lineHeight, lineSpace, report)
-			t41 := NewTextCell(table.GetColWidth(i+4, 1), lineHeight, lineSpace, report)
+			t00 := NewTextCell(table.GetColWidth(i+0, 0), lineHeight, lineSpace, report).SetBackColor(GetRandColor())
+			t01 := NewTextCell(table.GetColWidth(i+0, 1), lineHeight, lineSpace, report).SetBackColor(GetRandColor())
+			t03 := NewTextCell(table.GetColWidth(i+0, 3), lineHeight, lineSpace, report).SetBackColor(GetRandColor())
+			t21 := NewTextCell(table.GetColWidth(i+2, 1), lineHeight, lineSpace, report).SetBackColor(GetRandColor())
+			t31 := NewTextCell(table.GetColWidth(i+3, 1), lineHeight, lineSpace, report).SetBackColor(GetRandColor())
+			t41 := NewTextCell(table.GetColWidth(i+4, 1), lineHeight, lineSpace, report).SetBackColor(GetRandColor())
 
 			t00.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+0, 0) + GetRandStr(5))
 			t01.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 1, i+0, 1) + GetRandStr(4))
@@ -243,12 +247,12 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 			c33 := table.NewCellByRange(2, 2)
 			c40 := table.NewCellByRange(1, 1)
 
-			t00 := NewTextCell(table.GetColWidth(i+0, 0), lineHeight, lineSpace, report)
-			t03 := NewTextCell(table.GetColWidth(i+0, 3), lineHeight, lineSpace, report)
-			t20 := NewTextCell(table.GetColWidth(i+2, 0), lineHeight, lineSpace, report)
-			t21 := NewTextCell(table.GetColWidth(i+2, 1), lineHeight, lineSpace, report)
-			t33 := NewTextCell(table.GetColWidth(i+3, 3), lineHeight, lineSpace, report)
-			t40 := NewTextCell(table.GetColWidth(i+4, 0), lineHeight, lineSpace, report)
+			t00 := NewTextCell(table.GetColWidth(i+0, 0), lineHeight, lineSpace, report).SetBackColor(GetRandColor())
+			t03 := NewTextCell(table.GetColWidth(i+0, 3), lineHeight, lineSpace, report).SetBackColor(GetRandColor())
+			t20 := NewTextCell(table.GetColWidth(i+2, 0), lineHeight, lineSpace, report).SetBackColor(GetRandColor())
+			t21 := NewTextCell(table.GetColWidth(i+2, 1), lineHeight, lineSpace, report).SetBackColor(GetRandColor())
+			t33 := NewTextCell(table.GetColWidth(i+3, 3), lineHeight, lineSpace, report).SetBackColor(GetRandColor())
+			t40 := NewTextCell(table.GetColWidth(i+4, 0), lineHeight, lineSpace, report).SetBackColor(GetRandColor())
 
 			t00.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+0, 0) + GetRandStr(6))
 			t03.SetFont(f1).SetBorder(border).SetContent(fmt.Sprintf("%v-(%v,%v)", 2, i+0, 3) + GetRandStr(6))
@@ -282,10 +286,19 @@ func TestTable(t *testing.T) {
 }
 
 func GetRandStr(l ...int) string {
-	seed := rand.New(rand.NewSource(time.Now().UnixNano()))
 	str := "0123456789ABCDEFGHIGKLMNOPQRSTUVWXYZ"
 	l = append(l, 8)
 	r := seed.Intn(l[0]*11) + 8
 	data := strings.Repeat(str, r/36+1)
 	return data[:r] + "---"
+}
+
+func GetRandColor() (color string) {
+	r, g, b := seed.Intn(256), seed.Intn(256), seed.Intn(256)
+	if float64(r)*0.299+float64(g)*0.578+float64(b)*0.114 >= 192 {
+		color = fmt.Sprintf("%v,%v,%v", r, g, b)
+		return color
+	}
+
+	return GetRandColor()
 }
