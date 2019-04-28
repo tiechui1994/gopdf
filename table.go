@@ -6,6 +6,43 @@ import (
 	"github.com/tiechui1994/gopdf/core"
 )
 
+/**
+Table写入的实现思路:
+	先构建一个标准table(n*m),
+	然后在标准的table基础上构建不规则的table.
+
+标准table: (4*5)
++-----+-----+-----+-----+-----+
+|(0,0)|(0,1)|(0,2)|(0,3)|(0,4)|
++-----+-----+-----+-----+-----+
+|(1,0)|(1,1)|(1,2)|(1,3)|(1,4)|
++-----+-----+-----+-----+-----+
+|(2,0)|(2,1)|(2,2)|(2,3)|(2,4)|
++-----+-----+-----+-----+-----+
+|(3,0)|(3,1)|(3,2)|(3,3)|(3,4)|
++-----+-----+-----+-----+-----+
+
+不规则table: 在 (4*5) 基础上构建
++-----+-----+-----+-----+-----+
+|(0,0)      |(0,2)      |(0,4)|
++	        +-----+-----+     +
+|           |(1,2)      |     |
++-----+-----+-----+-----+     +
+|(2,0)            |(2,3)|     |
++                 +     +-----+
+|                 |     |(3,4)|
++-----+-----+-----+-----+-----+
+
+在创建不规则table的时候, 先构建标准table, 然后再 "描述" 不规则table,
+一旦不规则 table 描述完毕之后, 其余的工作交由程序, 自动分页, 换行去生成
+描述的不规则table.
+
+Table主要负载的是生成最终表格.
+core.Cell接口的实现类可以生成自定义的单元格. 默认的一个实现是TextCell, 基于纯文本的Cell
+
+注: 目前在table的分页当中, 背景颜色和线条存在bug.
+**/
+
 // 构建表格
 type Table struct {
 	pdf           *core.Report
@@ -19,7 +56,7 @@ type Table struct {
 	margin     core.Scope // 位置调整
 
 	nextrow, nextcol int // 下一个位置
-	hasWrited        int // 当前页面已经写入的行数
+	hasWrited        int // 当前页面可以 "完整" 写入的行数. 完整的含义是用户自定义cell的对齐
 
 	tableCheck bool      // table 完整性检查
 	cachedRow  []float64 // 缓存行
@@ -888,13 +925,13 @@ func (table *Table) resetTableCells() {
 		if cell.rowspan <= 0 {
 			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col
 
-			// todo: 从cells[table.hasWrite]算起已经写入的行数
+			// todo: 从cells[table.hasWrite]行开始算起已经写入的行数
 			count += cells[i][j].cellwrited - (cell.row - cells[i][j].row)
 
 			if cells[i][j].cellwrited == cells[i][j].rowspan {
-				// TODO: 先计算当前的实体(空格->实体), 然后跳跃到下一个实体(条件性)
+				// TODO: 先计算当前的实体(如果是空格, 找到空格对应的实体), 然后跳跃到下一个实体(条件性)
 				srow := cells[i][j].row - origin.row + cells[i][j].rowspan
-				count += table.count(srow, col)
+				count += table.countStandardRow(srow, col)
 			}
 		}
 
@@ -902,9 +939,9 @@ func (table *Table) resetTableCells() {
 			count += cell.cellwrited
 
 			if cell.cellwrited == cell.rowspan {
-				// TODO: 先计算当前的实体(空格->实体), 然后跳跃到下一个实体(条件性)
+				// TODO: 先计算当前的实体, 然后跳跃到下一个实体(条件性)
 				srow := cell.row - origin.row + cell.rowspan
-				count += table.count(srow, col)
+				count += table.countStandardRow(srow, col)
 			}
 		}
 
@@ -958,7 +995,7 @@ func (table *Table) resetTableCells() {
 	table.cells = table.cells[table.hasWrited+min:]
 }
 
-func (table *Table) count(srow, scol int) int {
+func (table *Table) countStandardRow(srow, scol int) int {
 	var (
 		origin = table.cells[0][0]
 		count  int
@@ -998,7 +1035,7 @@ func (table *Table) count(srow, scol int) int {
 }
 
 func (table *Table) cachedPoints(sx, sy float64) {
-	// todo: 只计算当前页面最大的rows
+	// 只计算当前页面最大的rows
 	x1, _ := table.pdf.GetPageStartXY()
 	x2 := table.pdf.GetPageEndY()
 	rows := table.rows

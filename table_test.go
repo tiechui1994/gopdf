@@ -271,7 +271,7 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 }
 
 func TestTableWithdata(t *testing.T) {
-	ComplexTableReportWithData()
+	//ComplexTableReportWithData()
 }
 
 func TestTable(t *testing.T) {
