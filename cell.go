@@ -132,6 +132,7 @@ func (cell *TextCell) SetContent(s string) *TextCell {
 		if cell.pdf.MeasureTextWidth(convertStr)/unit < contentWidth {
 			cell.contents = []string{convertStr}
 			cell.height = math.Abs(cell.border.Top) + math.Abs(cell.border.Bottom) + cell.lineHeight
+			cell.lastheight = cell.height
 			return cell
 		}
 	}

@@ -40,6 +40,9 @@ Table写入的实现思路:
 Table主要负载的是生成最终表格.
 core.Cell接口的实现类可以生成自定义的单元格. 默认的一个实现是TextCell, 基于纯文本的Cell
 
+空白cell: 比如(0,1), (1,0) 等, 非用户写入单元格内容的开始位置, 辅助作用.
+非空白cell: 比如(0,0), (0,2), (3,4)等, 用户要写入单元格内容的开始位置(table当中)
+
 注: 目前在table的分页当中, 背景颜色和线条存在bug.
 **/
 
@@ -578,7 +581,7 @@ func (table *Table) drawPageLines(sx, sy float64) {
 		x, y, x1, y1, x2, y2 float64
 	)
 
-	// todo: 只计算当前页面最大的rows
+	// 计算当前页面最大的rows
 	x1, _ = table.pdf.GetPageStartXY()
 	x2 = table.pdf.GetPageEndY()
 	if rows > int((x2-x1)/table.lineHeight)+1 {
@@ -605,16 +608,15 @@ func (table *Table) drawPageLines(sx, sy float64) {
 			x, y, x1, y1 = table.getHLinePosition(sx, sy, col, row)
 			x, y, _, y2 = table.getVLinePosition(sx, sy, col, row)
 
-			// TODO: 当前的Cell没有跨页
+			// cell没有跨页
 			if y1 < pageEndY && y2 < pageEndY {
-				// todo: 当前Cell的下一个Cell跨页, 需要判断下一个Cell是否可以写入
+				// cell的下一个cell跨页, 需要判断下一个cell是否写入, 当写入了, 需要底线, 否则, 不需要底线
 				i, j := cell.row+cell.rowspan-table.cells[0][0].row, cell.col-table.cells[0][0].col
 				_, y3, _, y4 := table.getVLinePosition(sx, sy, j, i)
 				if y3 < pageEndY && y4 >= pageEndY {
-					if !table.checkNextCellWrite(row, col) {
+					if !table.checkNextCellWrited(row, col) {
 						y2 = pageEndY
 						table.pdf.LineV(x1, y1, y2)
-						table.pdf.LineH(x, y2, x1)
 						continue
 					}
 				}
@@ -623,7 +625,7 @@ func (table *Table) drawPageLines(sx, sy float64) {
 				table.pdf.LineH(x, y2, x1)
 			}
 
-			// TODO: 当前的Cell跨页, 需要先判断是否需要竖线
+			// cell跨页, 需要先判断是否需要竖线
 			if y1 < pageEndY && y2 >= pageEndY {
 				if table.checkNeedVline(row, col) {
 					table.pdf.LineV(x1, y1, pageEndY)
@@ -685,7 +687,7 @@ func (table *Table) drawLastPageLines(sx, sy float64) {
 	table.pdf.LineV(x+table.width, y, pageEndY)
 }
 
-func (table *Table) checkNextCellWrite(row, col int) bool {
+func (table *Table) checkNextCellWrited(row, col int) bool {
 	var (
 		cells      = table.cells
 		cellwrited bool
@@ -695,34 +697,39 @@ func (table *Table) checkNextCellWrite(row, col int) bool {
 		return cellwrited
 	}
 
-	nextrow := cells[row][col].row + cells[row][col].rowspan - cells[0][0].row
-	for k := col; k < table.cols; k++ {
+	// row,col所定位的cell必须是非空白cell, 需要定位到下一个非空白cell
+	nextrow := (cells[row][col].row - cells[0][0].row) + cells[row][col].rowspan
+
+	// 如果nexrow行, 从col开始, 一直到col+colspan, 有内容写入, 则说明下一个单元格有内容写入,
+	// 否则, 没有内容写入
+	for k := col; k < col+cells[row][col].colspan; k++ {
 		cell := cells[nextrow][col]
 
+		// 空白cell
 		if cell.rowspan <= 0 {
+			// rowspan = 1 和 rowsapn != 1 需要区别对待, 原因是rowsapn=1, 即使写入了, cellwrited还是可能为0
 			i, j := -cell.rowspan-cells[0][0].row, -cell.colspan-cells[0][0].col
-			// todo: 当前空白Cell已经写入内容
-			if cells[i][j].cellwrited >= cell.row-cells[i][j].row+1 {
-				cellwrited = true
-				return cellwrited
+			if cells[i][j].rowspan == 1 {
+				height := cells[i][j].element.GetHeight()
+				lastheight := cells[i][j].element.GetLastHeight()
+				if math.Abs(lastheight-height) > 0.1 {
+					return true
+				}
+			}
+
+			if cells[i][j].rowspan > 1 {
+				if cells[i][j].cellwrited >= cell.row-cells[i][j].row+1 {
+					return true
+				}
 			}
 		}
 
-		if cell.rowspan == 1 {
-			// todo: 当前的Cell存在写入的内容
+		// 非空白cell
+		if cell.rowspan >= 1 {
 			height := cell.element.GetHeight()
 			lastheight := cell.element.GetLastHeight()
-			if cell.element.GetHeight() == 0 || math.Abs(lastheight-height) > 0.1 {
-				cellwrited = true
-				return cellwrited
-			}
-		}
-
-		if cell.rowspan > 1 {
-			// todo: 当前的Cell存在写入的内容
-			if cell.cellwrited > 0 {
-				cellwrited = true
-				return cellwrited
+			if math.Abs(lastheight-height) > 0.1 {
+				return true
 			}
 		}
 	}
@@ -730,7 +737,6 @@ func (table *Table) checkNextCellWrite(row, col int) bool {
 	return cellwrited
 }
 
-// 跨页的Cell
 func (table *Table) checkNeedVline(row, col int) bool {
 	var (
 		negwrited bool
@@ -743,12 +749,13 @@ func (table *Table) checkNeedVline(row, col int) bool {
 		return negwrited || curwrited
 	}
 
-	// todo: 当前cell没有写入 && 邻居Cell没有写入 => 不需要线, 其余的都须要
+	// row,col 所确定的cell必须是非空白cell. 只有当前非空白cell没有写入 && 邻居cell没有写入 => false, 否则, 返回 true
+
 	// 当前的cell
 	if cells[row][col].rowspan == 1 {
 		height := cells[row][col].element.GetHeight()
 		lastheight := cells[row][col].element.GetLastHeight()
-		if cells[row][col].element.GetHeight() == 0 || math.Abs(lastheight-height) > 0.1 {
+		if math.Abs(lastheight-height) > 0.1 {
 			curwrited = true
 		}
 	}
@@ -761,66 +768,33 @@ func (table *Table) checkNeedVline(row, col int) bool {
 	// 邻居cell
 	nextcol := cells[row][col].col + cells[row][col].colspan - cells[0][0].col
 	if nextcol == table.cols {
-		negwrited = true
-		return negwrited || curwrited
+		return true
 	}
 
 	if cells[row][nextcol].rowspan <= 0 {
 		row, nextcol = -cells[row][nextcol].rowspan-origin.row, -cells[row][nextcol].colspan-origin.col
 	}
-
 	if cells[row][nextcol].rowspan == 1 {
 		height := cells[row][nextcol].element.GetHeight()
 		lastheight := cells[row][nextcol].element.GetLastHeight()
-		if cells[row][nextcol].element.GetHeight() == 0 || math.Abs(lastheight-height) > 0.1 {
-			negwrited = true
-			return negwrited || curwrited
+		if math.Abs(lastheight-height) > 0.1 {
+			return true
 		}
 	}
-
 	if cells[row][nextcol].rowspan > 1 {
 		if cells[row][nextcol].cellwrited > 0 {
-			negwrited = true
-			return negwrited || curwrited
+			return true
 		}
 	}
 
 	return negwrited || curwrited
 }
 
-// 校验table是否合法(只做一次)
-func (table *Table) checkTableConstraint() {
-	if !table.tableCheck {
-		return
-	}
-
-	table.tableCheck = false
-	var (
-		cells int
-		area  int
-	)
-	for i := 0; i < table.rows; i++ {
-		for j := 0; j < table.cols; j++ {
-			cell := table.cells[i][j]
-			if cell != nil {
-				cells += 1
-			}
-			if cell != nil && cell.element != nil {
-				area += cell.rowspan * cell.colspan
-			}
-		}
-	}
-
-	if cells != table.cols*table.rows || area != table.cols*table.rows {
-		panic("please check setting rows, cols and writed cell")
-	}
-}
-
-// TODO: 重新计算tablecell的高度(精确)
+// 重新计算 tablecell 的高度(精确)
 func (table *Table) resetCellHeight() {
 	table.checkTableConstraint()
 
-	// todo: 只计算当前页面最大的rows
+	// 计算当前页面最大的rows
 	x1, _ := table.pdf.GetPageStartXY()
 	x2 := table.pdf.GetPageEndY()
 	rows := table.rows
@@ -884,12 +858,12 @@ func (table *Table) resetCellHeight() {
 						// 更新minheight
 						cells[row][col].minheight += h
 
-						// todo: 更新height, 当rowspan=1
+						// 更新height, 当rowspan=1
 						if cells[row][col].rowspan == 1 {
 							cells[row][col].height += h
 						}
 
-						// todo: 更新height, 当rowspan<0, 空格,需要更新非当前的实体(前面的)
+						// 更新height, 当rowspan<0, 空格,需要更新非当前的实体(前面的)
 						if cells[row][col].rowspan <= 0 {
 							cells[row][col].height += h
 
@@ -910,6 +884,7 @@ func (table *Table) resetCellHeight() {
 	table.cells = cells
 }
 
+// 重置cells
 func (table *Table) resetTableCells() {
 	var (
 		min    = 2 ^ 32
@@ -925,13 +900,13 @@ func (table *Table) resetTableCells() {
 		if cell.rowspan <= 0 {
 			i, j := -cell.rowspan-origin.row, -cell.colspan-origin.col
 
-			// todo: 从cells[table.hasWrite]行开始算起已经写入的行数
+			// 从 table.hasWrite 行开始算起已经写入的行数
 			count += cells[i][j].cellwrited - (cell.row - cells[i][j].row)
 
 			if cells[i][j].cellwrited == cells[i][j].rowspan {
-				// TODO: 先计算当前的实体(如果是空格, 找到空格对应的实体), 然后跳跃到下一个实体(条件性)
+				// 先计算当前的实体(如果是空格, 找到空格对应的实体), 然后跳跃到下一个实体(条件性)
 				srow := cells[i][j].row - origin.row + cells[i][j].rowspan
-				count += table.countStandardRow(srow, col)
+				count += table.countWritedRowAfterHaswrited(srow, col)
 			}
 		}
 
@@ -939,9 +914,9 @@ func (table *Table) resetTableCells() {
 			count += cell.cellwrited
 
 			if cell.cellwrited == cell.rowspan {
-				// TODO: 先计算当前的实体, 然后跳跃到下一个实体(条件性)
+				// 先计算当前的实体, 然后跳跃到下一个实体(条件性)
 				srow := cell.row - origin.row + cell.rowspan
-				count += table.countStandardRow(srow, col)
+				count += table.countWritedRowAfterHaswrited(srow, col)
 			}
 		}
 
@@ -995,11 +970,13 @@ func (table *Table) resetTableCells() {
 	table.cells = table.cells[table.hasWrited+min:]
 }
 
-func (table *Table) countStandardRow(srow, scol int) int {
+// 统计在table.haswrited 行之后又写入的行数
+func (table *Table) countWritedRowAfterHaswrited(srow, scol int) int {
 	var (
 		origin = table.cells[0][0]
 		count  int
 	)
+
 	for row := srow; row < table.rows; {
 		cell := table.cells[row][scol]
 
@@ -1108,4 +1085,32 @@ func (table *Table) getLastPageHeight() float64 {
 		count += table.cells[i][0].minheight
 	}
 	return count
+}
+
+// 校验table是否合法(只做一次)
+func (table *Table) checkTableConstraint() {
+	if !table.tableCheck {
+		return
+	}
+
+	table.tableCheck = false
+	var (
+		cells int
+		area  int
+	)
+	for i := 0; i < table.rows; i++ {
+		for j := 0; j < table.cols; j++ {
+			cell := table.cells[i][j]
+			if cell != nil {
+				cells += 1
+			}
+			if cell != nil && cell.element != nil {
+				area += cell.rowspan * cell.colspan
+			}
+		}
+	}
+
+	if cells != table.cols*table.rows || area != table.cols*table.rows {
+		panic("please check setting rows, cols and writed cell")
+	}
 }
