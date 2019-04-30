@@ -36,16 +36,22 @@ func ImageReportExecutor(report *core.Report) {
 	rand := "example//pictures/rand.jpeg"
 	i1 := NewImage(rand, report)
 	i1.GenerateAtomicCell()
+
+	report.SetMargin(0, 5)
+
 	i2 := NewImage(cat, report)
 	i2.GenerateAtomicCell()
+
+	report.SetMargin(0, 5)
+
 	i3 := NewImageWithWidthAndHeight(cat, 20, 40, report)
 	i3.GenerateAtomicCell()
-	//DrawPNG("example//pictures/random.png")
 
-	report.Font(DIV_MD, 30, "")
-	report.SetFont(DIV_MD, 30)
 	x, y := report.GetXY()
-	report.CellGray(x, y+10, `ABCDEFGHIJKLMNOPQRS`, 0.85)
+	report.LineH(x, y+5, x+100)
+
+	x, y = x+0, y+40
+	report.Oval(x, y, x+40, y+20)
 }
 
 func TestImage(t *testing.T) {
