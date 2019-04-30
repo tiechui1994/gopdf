@@ -81,21 +81,21 @@ func (convert *Converter) Execute() {
 		case "F":
 			convert.Font(line, elements) // 字体
 		case "TC":
-			convert.TextColor(line, elements) // 颜色
+			convert.TextColor(line, elements) // 文本颜色
 		case "LC":
-			convert.LineColor(line, elements) //
+			convert.LineColor(line, elements) // 线条颜色
 		case "BC":
 			convert.BackgroundColor(line, elements) // 背景颜色
 		case "GF", "GS":
 			convert.Grey(line, elements)
 		case "C", "CL", "CR":
-			convert.Cell(line, elements) // 单元格
+			convert.Cell(line, elements) // 单元格内容
 		case "L", "LV", "LH", "LT":
-			convert.Line(line, elements) // 新行
+			convert.Line(line, elements) // 行
 		case "R":
-			convert.Rect(line, elements) // 表
+			convert.Rect(line, elements) // 长方形
 		case "O":
-			convert.Oval(line, elements) //
+			convert.Oval(line, elements) // 椭圆
 		case "I":
 			convert.Image(line, elements) // 图片
 		case "M":

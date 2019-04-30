@@ -16,8 +16,9 @@ func ComplexHLineReport() {
 	r.SaveAtomicCellText("hr_test.txt")
 }
 func ComplexHLineReportExecutor(report *core.Report) {
+	unit := report.GetUnit()
 	hr := NewHLine(report)
-	hr.SetColor(0)
+	hr.SetColor(0.7).SetWidth(5 * unit)
 	hr.GenerateAtomicCell()
 }
 

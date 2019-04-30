@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/tiechui1994/gopdf/util"
+	"regexp"
 )
 
 // 需要解决的问题: currY的控制权, 用户 -> 程序 -> 自动化操作
@@ -20,6 +21,14 @@ const (
 	Flag_AutoAddNewPage = "AutoAddNewPage"
 	Flag_ResetPageNo    = "ResetPageNo"
 )
+
+var (
+	rline *regexp.Regexp
+)
+
+func init() {
+	rline, _ = regexp.Compile(`^[01]+$`)
+}
 
 type pageMark struct {
 	lineNo int
@@ -476,12 +485,26 @@ func (report *Report) LineColor(red int, green int, blue int) {
 // color: 背景颜色
 // line: 是否需要边框线条, "0000"不需要,  "1111"需要, "0110" 是需要 TOP,RIGHT 线条
 func (report *Report) BackgroundColor(x, y, w, h float64, color string, line string) {
+	if !rline.MatchString(line) {
+		line = "0000"
+	}
+	if len(line) == 1 {
+		line = strings.Repeat(line, 4)
+	}
+	if len(line) == 2 {
+		line = strings.Repeat(line, 2)
+	}
+	if len(line) == 3 {
+		line += "0"
+	}
+
 	red, green, blue := util.GetColorRGB(color)
 
 	report.addAtomicCell("BC|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + util.Ftoa(w) + "|" +
 		util.Ftoa(h) + "|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) + "|" + strconv.Itoa(blue) + "|" + line)
 }
 
+// 线条灰度
 func (report *Report) GrayColor(x, y float64, w, h float64, gray float64) {
 	if gray < 0 || gray > 1 {
 		gray = 0.85

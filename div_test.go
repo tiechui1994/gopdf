@@ -98,35 +98,6 @@ For information about how the optimizer handles subqueries, see Section 8.2.2, â
 	div.GenerateAtomicCell()
 }
 
-func FillColorReport() {
-	r := core.CreateReport()
-	font1 := core.FontMap{
-		FontName: DIV_IG,
-		FileName: "example//ttf/ipaexg.ttf",
-	}
-	font2 := core.FontMap{
-		FontName: DIV_MD,
-		FileName: "example//ttf/mplus-1p-bold.ttf",
-	}
-	r.SetFonts([]*core.FontMap{&font1, &font2})
-	r.SetPage("A4", "mm", "P")
-
-	r.RegisterExecutor(core.Executor(FillColorReportExecutor), core.Detail)
-
-	r.Execute("fill_color_test.pdf")
-	r.SaveAtomicCellText("fill_color_test.txt")
-}
-func FillColorReportExecutor(report *core.Report) {
-	x, y := report.GetPageStartXY()
-
-	report.Font(DIV_IG, 10, "")
-	report.SetFont(DIV_IG, 10)
-
-	report.GrayColor(x, y, 160, 5, 0.85)
-
-	report.Cell(x, y, "Java----------")
-}
-
 func ComplexDivReport() {
 	r := core.CreateReport()
 	font1 := core.FontMap{
@@ -194,8 +165,4 @@ func TestDivReport(t *testing.T) {
 
 func TestComplexDivReport(t *testing.T) {
 	ComplexDivReport()
-}
-
-func TestFillColorReport(t *testing.T) {
-	FillColorReport()
 }
