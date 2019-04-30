@@ -359,7 +359,6 @@ func (table *Table) GenerateAtomicCell() error {
 				table.pdf.SetXY(table.pdf.GetPageStartXY())
 
 				table.pdf.LineType("straight", 0.1)
-				table.pdf.GrayStroke(0)
 
 				if table.rows == 0 {
 					return nil
@@ -589,7 +588,6 @@ func (table *Table) drawPageLines(sx, sy float64) {
 	}
 
 	table.pdf.LineType("straight", 0.1)
-	table.pdf.GrayStroke(0)
 
 	// 两条水平线
 	x, y, _, _ = table.getHLinePosition(sx, sy, 0, 0)
@@ -651,7 +649,6 @@ func (table *Table) drawLastPageLines(sx, sy float64) {
 	)
 
 	table.pdf.LineType("straight", 0.1)
-	table.pdf.GrayStroke(0)
 
 	x, y, _, _ = table.getHLinePosition(sx, sy, 0, 0)
 	pageEndY = y + pageEndY

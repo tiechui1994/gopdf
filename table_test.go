@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
-	"testing"
 	"time"
+	"testing"
 
 	"github.com/tiechui1994/gopdf/core"
 )
@@ -274,17 +274,6 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 	table.GenerateAtomicCell()
 }
 
-func TestTableWithdata(t *testing.T) {
-	//ComplexTableReportWithData()
-}
-
-func TestTable(t *testing.T) {
-	start := time.Now().Unix()
-	ManyTableReportWithData()
-	end := time.Now().Unix()
-	fmt.Println("i", 1, end-start)
-}
-
 func GetRandStr(l ...int) string {
 	str := "0123456789ABCDEFGHIGKLMNOPQRSTUVWXYZ"
 	l = append(l, 8)
@@ -302,4 +291,19 @@ func GetRandColor() (color string) {
 	}
 
 	return GetRandColor()
+}
+
+func TestComplexTableReport(t *testing.T) {
+	ComplexTableReport()
+}
+
+func TestComplexTableReportWithData(t *testing.T) {
+	ComplexTableReportWithData()
+}
+
+func TestManyTableReportWithData(t *testing.T) {
+	start := time.Now().Unix()
+	ManyTableReportWithData()
+	end := time.Now().Unix()
+	fmt.Println("i", 1, end-start)
 }

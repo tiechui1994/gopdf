@@ -5,9 +5,9 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"regexp"
 
 	"github.com/tiechui1994/gopdf/util"
-	"regexp"
 )
 
 // 需要解决的问题: currY的控制权, 用户 -> 程序 -> 自动化操作
@@ -124,19 +124,62 @@ func (report *Report) LoadCellsFromText(filepath string) error {
 // 转换, 内容 -> PDF文件
 func (report *Report) execute(exec bool) {
 	if exec {
-		report.ExecutePageHeader() // 首页的页眉
+		report.executePageHeader() // 首页的页眉
 
 		report.pageNo = 1
 		report.currX, report.currY = report.GetPageStartXY()
 		report.addAtomicCell("v|PAGE|" + strconv.Itoa(report.pageNo))
-		report.ExecuteDetail()
+		report.executeDetail()
 
 		report.pagination() // 分页
 
-		report.ExecutePageFooter() // 最后一页的页脚
+		report.executePageFooter() // 最后一页的页脚
 	}
 
 	report.converter.Execute()
+}
+func (report *Report) executePageFooter() {
+	if !report.FisrtPageNeedFooter {
+		report.FisrtPageNeedFooter = true
+		return
+	}
+
+	curX, curY := report.GetXY()
+	report.currY = report.config.endY / report.unit
+	report.currX = report.config.startX / report.unit
+
+	h := report.executors[Footer]
+	if h != nil {
+		(*h)(report)
+	}
+	report.SetXY(curX, curY)
+}
+func (report *Report) executePageHeader() {
+	if !report.FisrtPageNeedHeader {
+		report.FisrtPageNeedHeader = true
+		return
+	}
+
+	curX, curY := report.GetXY()
+	report.currY = 0
+	report.currX = report.config.startX / report.unit
+	h := report.executors[Header]
+	if h != nil {
+		(*h)(report)
+	}
+	report.SetXY(curX, curY)
+}
+func (report *Report) executeDetail() {
+	h := report.executors[Detail]
+	if h != nil {
+		if report.flags[Flag_AutoAddNewPage] {
+			report.AddNewPage(report.flags[Flag_ResetPageNo])
+			report.flags[Flag_AutoAddNewPage] = false
+			report.flags[Flag_ResetPageNo] = false
+		}
+
+		(*h)(report)
+	}
 }
 
 // 分页, 只有一个页面的PDF没有此操作
@@ -213,7 +256,7 @@ func (report *Report) GetCurrentPageNo() int {
 
 // 添加新的页面
 func (report *Report) AddNewPage(resetpageNo bool) {
-	report.ExecutePageFooter()
+	report.executePageFooter()
 
 	report.addAtomicCell("NP") // 构建新的页面
 	if resetpageNo {
@@ -225,51 +268,7 @@ func (report *Report) AddNewPage(resetpageNo bool) {
 	report.addAtomicCell("v|PAGE|" + strconv.Itoa(report.pageNo))
 	report.SetXY(report.GetPageStartXY())
 
-	report.ExecutePageHeader()
-}
-
-func (report *Report) ExecutePageFooter() {
-	if !report.FisrtPageNeedFooter {
-		report.FisrtPageNeedFooter = true
-		return
-	}
-
-	curX, curY := report.GetXY()
-	report.currY = report.config.endY / report.unit
-	report.currX = report.config.startX / report.unit
-
-	h := report.executors[Footer]
-	if h != nil {
-		(*h)(report)
-	}
-	report.SetXY(curX, curY)
-}
-func (report *Report) ExecutePageHeader() {
-	if !report.FisrtPageNeedHeader {
-		report.FisrtPageNeedHeader = true
-		return
-	}
-
-	curX, curY := report.GetXY()
-	report.currY = 0
-	report.currX = report.config.startX / report.unit
-	h := report.executors[Header]
-	if h != nil {
-		(*h)(report)
-	}
-	report.SetXY(curX, curY)
-}
-func (report *Report) ExecuteDetail() {
-	h := report.executors[Detail]
-	if h != nil {
-		if report.flags[Flag_AutoAddNewPage] {
-			report.AddNewPage(report.flags[Flag_ResetPageNo])
-			report.flags[Flag_AutoAddNewPage] = false
-			report.flags[Flag_ResetPageNo] = false
-		}
-
-		(*h)(report)
-	}
+	report.executePageHeader()
 }
 
 func (report *Report) RegisterExecutor(execuror Executor, name string) {
@@ -433,6 +432,11 @@ func (report *Report) CellRight(x float64, y float64, w float64, content string)
 	report.addAtomicCell("CR|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" +
 		util.Ftoa(w) + "|" + content)
 }
+func (report *Report) CellGray(x float64, y float64, content string, grayScale float64) {
+	report.grayFill(grayScale)
+	report.addAtomicCell("CL|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + content)
+	report.grayFill(0)
+}
 
 // 划线
 func (report *Report) LineType(ltype string, width float64) {
@@ -505,22 +509,33 @@ func (report *Report) BackgroundColor(x, y, w, h float64, color string, line str
 }
 
 // 线条灰度
-func (report *Report) GrayColor(x, y float64, w, h float64, gray float64) {
+func (report *Report) LineGrayColor(x, y float64, w, h float64, gray float64) {
 	if gray < 0 || gray > 1 {
 		gray = 0.85
 	}
 	report.LineType("straight", h)
-	report.GrayStroke(gray)
+	report.grayStroke(gray)
 	report.LineH(x, y, x+w)
 	report.LineType("straight", 0.01)
-	report.GrayStroke(0)
+	report.grayStroke(0)
 }
 
-func (report *Report) GrayFill(grayScale float64) {
-	report.addAtomicCell("GF|" + util.Ftoa(grayScale))
-}
-func (report *Report) GrayStroke(grayScale float64) {
+// 只用于划线
+func (report *Report) grayStroke(grayScale float64) {
+	if grayScale > 1.0 || grayScale < 0.0 {
+		grayScale = 0
+	}
+
 	report.addAtomicCell("GS|" + util.Ftoa(grayScale))
+}
+
+// 只用于文本
+func (report *Report) grayFill(grayScale float64) {
+	if grayScale > 1.0 || grayScale < 0.0 {
+		grayScale = 0
+	}
+
+	report.addAtomicCell("GF|" + util.Ftoa(grayScale))
 }
 
 // 图片

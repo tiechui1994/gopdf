@@ -40,7 +40,12 @@ func ImageReportExecutor(report *core.Report) {
 	i2.GenerateAtomicCell()
 	i3 := NewImageWithWidthAndHeight(cat, 20, 40, report)
 	i3.GenerateAtomicCell()
-	DrawPNG("example//pictures/random.png")
+	//DrawPNG("example//pictures/random.png")
+
+	report.Font(DIV_MD, 30, "")
+	report.SetFont(DIV_MD, 30)
+	x, y := report.GetXY()
+	report.CellGray(x, y+10, `ABCDEFGHIJKLMNOPQRS`, 0.85)
 }
 
 func TestImage(t *testing.T) {
