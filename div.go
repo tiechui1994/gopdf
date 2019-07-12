@@ -90,6 +90,7 @@ func (div *Div) Copy(content string) *Div {
 	}
 
 	f.SetBorder(div.border)
+	f.SetMarign(div.margin)
 	f.SetFont(div.font)
 	f.SetContent(content)
 

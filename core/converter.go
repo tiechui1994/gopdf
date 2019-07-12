@@ -100,6 +100,12 @@ func (convert *Converter) Execute() {
 			convert.Image(line, elements) // 图片
 		case "M":
 			convert.Margin(line, elements)
+		case "EL":
+			convert.ExternalLink(line, elements)
+		case "ILA":
+			convert.InternalLinkAnchor(line, elements)
+		case "ILL":
+			convert.InternalLinkLink(line, elements)
 		default:
 			if len(line) > 0 && line[0:1] != "v" {
 				fmt.Println("skip:" + line + ":")
@@ -449,9 +455,11 @@ func (convert *Converter) InternalLinkAnchor(line string, elements []string) {
 }
 
 // 内部链接, 链接
-// ["ILL", x, y, h, content, anchor]
+// ["ILL", content, anchor]
 func (convert *Converter) InternalLinkLink(line string, elements []string) {
-	checkLength(line, elements, 10)
+	checkLength(line, elements, 3)
+	convert.pdf.Text(elements[1])
+	convert.pdf.SetAnchor(elements[2])
 }
 
 // 辅助方法
@@ -466,6 +474,10 @@ func (convert *Converter) Margin(line string, eles []string) {
 	if left != 0.0 {
 		convert.pdf.SetLeftMargin(left)
 	}
+}
+
+func (convert *Converter) GetXY() (x, y float64) {
+	return convert.pdf.GetX(), convert.pdf.GetY()
 }
 
 func (convert *Converter) MeasureTextWidth(text string) float64 {

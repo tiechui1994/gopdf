@@ -423,15 +423,18 @@ func (report *Report) Font(fontName string, size int, style string) {
 // 写入字符串内容
 func (report *Report) Cell(x float64, y float64, content string) {
 	report.addAtomicCell("CL|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + content)
+	report.SetXY(report.converter.GetXY())
 }
 func (report *Report) CellRight(x float64, y float64, w float64, content string) {
 	report.addAtomicCell("CR|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" +
 		util.Ftoa(w) + "|" + content)
+	report.SetXY(report.converter.GetXY())
 }
 func (report *Report) CellGray(x float64, y float64, content string, grayScale float64) {
 	report.grayFill(grayScale)
 	report.addAtomicCell("CL|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + content)
 	report.grayFill(0)
+	report.SetXY(report.converter.GetXY())
 }
 
 // 划线
