@@ -4,7 +4,7 @@ import (
 	"math"
 
 	"github.com/tiechui1994/gopdf/core"
-)
+	)
 
 /**
 Table写入的实现思路:
@@ -1030,7 +1030,6 @@ func (table *Table) cachedPoints(sx, sy float64) {
 			x += table.colwidths[col] * table.width
 		}
 	}
-
 	table.cachedRow = make([]float64, rows)
 
 	for row := 0; row < rows; row++ {

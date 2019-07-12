@@ -165,7 +165,6 @@ func (span *Span) SetContent(content string) *Span {
 	convertStr := strings.Replace(content, "\t", "    ", -1)
 
 	var (
-		unit         = span.pdf.GetUnit()
 		blocks       = strings.Split(convertStr, "\n") // 分行
 		contentWidth = span.width - math.Abs(span.border.Left) - math.Abs(span.border.Right)
 	)
@@ -180,7 +179,7 @@ func (span *Span) SetContent(content string) *Span {
 	span.pdf.SetFontWithStyle(span.font.Family, span.font.Style, span.font.Size)
 
 	if len(blocks) == 1 {
-		if span.pdf.MeasureTextWidth(convertStr)/unit < contentWidth {
+		if span.pdf.MeasureTextWidth(convertStr) < contentWidth {
 			span.contents = []string{convertStr}
 			span.height = math.Abs(span.border.Top) + math.Abs(span.border.Bottom) + span.lineHeight
 			return span
@@ -189,7 +188,7 @@ func (span *Span) SetContent(content string) *Span {
 
 	for i := range blocks {
 		// 单独的一行
-		if span.pdf.MeasureTextWidth(convertStr)/unit < contentWidth {
+		if span.pdf.MeasureTextWidth(convertStr) < contentWidth {
 			span.contents = append(span.contents, blocks[i])
 			continue
 		}
@@ -201,8 +200,8 @@ func (span *Span) SetContent(content string) *Span {
 		for _, r := range []rune(blocks[i]) {
 			line = append(line, r)
 			lineLength := span.pdf.MeasureTextWidth(string(line))
-			if lineLength/unit >= contentWidth {
-				if lineLength-contentWidth/unit > unit*2 {
+			if lineLength >= contentWidth {
+				if lineLength-contentWidth > 2 {
 					span.contents = append(span.contents, string(line[0:len(line)-1]))
 					line = line[len(line)-1:]
 				} else {
@@ -258,7 +257,7 @@ func (span *Span) GenerateAtomicCell() error {
 	for i := 0; i < len(span.contents); i++ {
 		// 水平居中, 只是对当前的行设置新的 Border
 		if span.horizontalCentered {
-			width := span.pdf.MeasureTextWidth(span.contents[i]) / span.pdf.GetUnit()
+			width := span.pdf.MeasureTextWidth(span.contents[i])
 			if width < span.width {
 				left := (span.width - width) / 2
 				span.border = core.NewScope(left, border.Top, 0, border.Right)
@@ -267,7 +266,7 @@ func (span *Span) GenerateAtomicCell() error {
 
 		// 水平居右, 只是对当前的行设置新的 Border
 		if span.rightAlign {
-			width := span.pdf.MeasureTextWidth(span.contents[i]) / span.pdf.GetUnit()
+			width := span.pdf.MeasureTextWidth(span.contents[i])
 			left := span.width - width
 			span.border = core.NewScope(left, border.Top, 0, border.Right)
 		}

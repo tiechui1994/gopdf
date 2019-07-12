@@ -6,7 +6,7 @@ import (
 
 	"github.com/tiechui1994/gopdf/core"
 	"github.com/tiechui1994/gopdf/util"
-)
+	)
 
 const (
 	DIV_STRAIGHT = 1 // 实线边框
@@ -187,7 +187,6 @@ func (div *Div) SetContent(content string) *Div {
 	convertStr := strings.Replace(content, "\t", "    ", -1)
 
 	var (
-		unit         = div.pdf.GetUnit()
 		blocks       = strings.Split(convertStr, "\n") // 分行
 		contentWidth = div.width - math.Abs(div.border.Left) - math.Abs(div.border.Right)
 	)
@@ -201,7 +200,7 @@ func (div *Div) SetContent(content string) *Div {
 	div.pdf.Font(div.font.Family, div.font.Size, div.font.Style)
 	div.pdf.SetFontWithStyle(div.font.Family, div.font.Style, div.font.Size)
 	if len(blocks) == 1 {
-		if div.pdf.MeasureTextWidth(convertStr)/unit < contentWidth {
+		if div.pdf.MeasureTextWidth(convertStr) < contentWidth {
 			div.contents = []string{convertStr}
 			div.height = math.Abs(div.border.Top) + math.Abs(div.border.Bottom) + div.lineHeight
 			return div
@@ -210,7 +209,7 @@ func (div *Div) SetContent(content string) *Div {
 
 	for i := range blocks {
 		// 单独的一行
-		if div.pdf.MeasureTextWidth(convertStr)/unit < contentWidth {
+		if div.pdf.MeasureTextWidth(convertStr) < contentWidth {
 			div.contents = append(div.contents, blocks[i])
 			continue
 		}
@@ -222,8 +221,8 @@ func (div *Div) SetContent(content string) *Div {
 		for _, r := range []rune(blocks[i]) {
 			line = append(line, r)
 			lineLength := div.pdf.MeasureTextWidth(string(line))
-			if lineLength/unit >= contentWidth {
-				if lineLength-contentWidth/unit > unit*2 {
+			if lineLength >= contentWidth {
+				if lineLength-contentWidth > 2 {
 					div.contents = append(div.contents, string(line[0:len(line)-1]))
 					line = line[len(line)-1:]
 				} else {
@@ -272,11 +271,10 @@ func (div *Div) GenerateAtomicCell() error {
 	div.pdf.Font(div.font.Family, div.font.Size, div.font.Style)
 	div.pdf.SetFontWithStyle(div.font.Family, div.font.Style, div.font.Size)
 	border = div.border
-
 	for i := 0; i < len(div.contents); i++ {
 		// 水平居中, 只是对当前的行设置新的 Border
 		if div.horizontalCentered {
-			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
+			width := div.pdf.MeasureTextWidth(div.contents[i])
 			if width < div.width {
 				left := (div.width - width) / 2
 				div.border = core.NewScope(left, border.Top, 0, border.Right)
@@ -285,7 +283,7 @@ func (div *Div) GenerateAtomicCell() error {
 
 		// 水平居右, 只是对当前的行设置新的 Border
 		if div.rightAlign {
-			width := div.pdf.MeasureTextWidth(div.contents[i]) / div.pdf.GetUnit()
+			width := div.pdf.MeasureTextWidth(div.contents[i])
 			left := div.width - width
 			div.border = core.NewScope(left, border.Top, 0, border.Right)
 		}
@@ -296,17 +294,13 @@ func (div *Div) GenerateAtomicCell() error {
 		if y+div.lineHeight > pageEndY {
 			var newX, newY float64
 
-			div.SetMarign(core.NewScope(div.margin.Left, 0, div.margin.Right, 0))
-			div.SetBorder(core.NewScope(border.Left, div.lineSpace, border.Right, 0))
+			div.SetMarign(core.NewScope(div.margin.Left, 0, div.margin.Right, div.margin.Bottom))
+			div.SetBorder(core.NewScope(border.Left, div.lineSpace, border.Right, border.Bottom))
 			div.contents = div.contents[i:]
 			div.resetHeight()
 
-			_, newY = div.pdf.GetPageStartXY()
-			if len(div.contents) > 0 {
-				newX, _ = div.pdf.GetXY()
-			} else {
-				newX, _ = div.pdf.GetPageStartXY()
-			}
+			newX, newY = div.pdf.GetPageStartXY()
+
 
 			div.pdf.AddNewPage(false)
 			div.pdf.SetXY(newX, newY)

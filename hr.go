@@ -12,7 +12,6 @@ type HLine struct {
 }
 
 func NewHLine(pdf *core.Report) *HLine {
-	unit := pdf.GetUnit()
 	return &HLine{
 		pdf:   pdf,
 		color: 0,
@@ -20,8 +19,8 @@ func NewHLine(pdf *core.Report) *HLine {
 		margin: core.Scope{
 			Left:   0,
 			Right:  0,
-			Top:    0.1 * unit,
-			Bottom: 0.1 * unit,
+			Top:    0.3,
+			Bottom: 0.3,
 		},
 	}
 }

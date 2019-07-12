@@ -23,7 +23,7 @@ func DivReport() {
 		FileName: "example//ttf/mplus-1p-bold.ttf",
 	}
 	r.SetFonts([]*core.FontMap{&font1, &font2})
-	r.SetPage("A4", "mm", "P")
+	r.SetPage("A4", "P")
 
 	r.RegisterExecutor(core.Executor(DivReportExecutor), core.Detail)
 
@@ -31,21 +31,19 @@ func DivReport() {
 	r.SaveAtomicCellText("div_test.txt")
 }
 func DivReportExecutor(report *core.Report) {
-	unit := report.GetUnit()
 	font := core.Font{Family: DIV_MD, Size: 10}
 
 	report.Font(DIV_MD, 10, "")
 	report.SetFont(DIV_MD, 10)
 
-	lineSpace := 0.1 * unit
-	lineHeight := report.MeasureTextWidth("中") / unit
+	lineSpace := 1.0
+	lineHeight := report.MeasureTextWidth("中")
 
-	div := NewDivWithWidth(48*unit, lineHeight, lineSpace, report)
+	div := NewDivWithWidth(300, lineHeight, lineSpace, report)
 	div.SetFont(font)
 	div.SetBackColor("11,123,244")
 	div.RightAlign()
 	div.SetMarign(core.NewScope(10, 20, 0, 0))
-
 	div.SetBorder(core.NewScope(10, 50, 0, 0))
 	div.SetContent(`13.2.10 Subquery  Syntax 
 13.2.10.1 The Subquery as Scalar Operand 
@@ -109,7 +107,7 @@ func ComplexDivReport() {
 		FileName: "example//ttf/mplus-1p-bold.ttf",
 	}
 	r.SetFonts([]*core.FontMap{&font1, &font2})
-	r.SetPage("A4", "mm", "P")
+	r.SetPage("A4", "P")
 
 	r.RegisterExecutor(core.Executor(ComplexDivReportExecutor), core.Detail)
 
@@ -117,21 +115,20 @@ func ComplexDivReport() {
 	r.SaveAtomicCellText("complex_div_test.txt")
 }
 func ComplexDivReportExecutor(report *core.Report) {
-	unit := report.GetUnit()
 	font := core.Font{Family: DIV_MD, Size: 10}
 
 	report.Font(DIV_MD, 10, "")
 	report.SetFont(DIV_MD, 10)
 
-	lineSpace := 0.1 * unit
-	lineHeight := report.MeasureTextWidth("中") / unit
+	lineSpace := 1.0
+	lineHeight := report.MeasureTextWidth("中")
 
-	frame := NewDivWithWidth(48*unit, lineHeight, lineSpace, report)
+	frame := NewDivWithWidth(415, lineHeight, lineSpace, report)
 	frame.SetFrameType(DIV_DOTTED)
 	//frame.SetBackColor("222,111,11")
 	frame.SetFont(font)
 	frame.SetMarign(core.NewScope(20, 50, 0, 0))
-	frame.SetBorder(core.NewScope(4, 50, 0, 0))
+	frame.SetBorder(core.NewScope(10, 50, 10, 10))
 
 	content := `13.2.10 Subquery  Syntax 
 13.2.10.1 The Subquery as Scalar Operand 

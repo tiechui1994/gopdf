@@ -313,8 +313,9 @@ func (report *Report) SetMargin(dx, dy float64) {
 }
 
 // 设置页面的尺寸, unit: mm pt in  size: A4 LTR, 目前支持常用的两种方式
-func (report *Report) SetPage(size string, unit string, orientation string) {
-	report.setUnit(unit)
+func (report *Report) SetPage(size string, orientation string) {
+	unit := "pt"
+	report.unit = 1.0
 	config, ok := defaultConfigs[size]
 	if !ok {
 		panic("the config not exists, please add config")
@@ -359,25 +360,6 @@ func (report *Report) SetPage(size string, unit string, orientation string) {
 	report.execute(false)
 }
 
-func (report *Report) setUnit(unit string) {
-	switch unit {
-	case "mm":
-		report.unit = 2.834645669
-	case "pt":
-		report.unit = 1
-	case "in":
-		report.unit = 72
-	default:
-		panic("This unit is not specified :" + unit)
-	}
-}
-func (report *Report) GetUnit() float64 {
-	if report.unit == 0.0 {
-		panic("does not set unit")
-	}
-	return report.unit
-}
-
 // 获取底层的所有的原子单元内容
 func (report *Report) GetAtomicCells() *[]string {
 	cells := report.converter.GetAutomicCells()
@@ -399,9 +381,11 @@ func (report *Report) MeasureTextWidth(text string) float64 {
 // 设置当前文本字体, 先注册,后设置
 func (report *Report) SetFontWithStyle(family, style string, size int) {
 	report.converter.SetFont(family, style, size)
+	report.addAtomicCell("F|" + family + "|" + style + "|" + strconv.Itoa(size))
 }
 func (report *Report) SetFont(family string, size int) {
 	report.converter.SetFont(family, "", size)
+	report.addAtomicCell("F|" + family + "|" + "" + "|" + strconv.Itoa(size))
 }
 
 func (report *Report) AddCallBack(callback CallBack) {
@@ -554,9 +538,31 @@ func (report *Report) ExternalLink(x, y, th float64, content, link string) {
 	if x+tw > report.config.endX {
 		tw = report.config.endX - x
 	}
-
 	report.addAtomicCell("EL|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + util.Ftoa(tw) + "|" + util.Ftoa(th) + "|" +
 		content + "|" + link)
+
+	report.SetXY(x+tw, y)
+}
+
+func (report *Report) InternalLinkAnchor(x, y, th float64, content, anchor string) {
+	tw := report.MeasureTextWidth(content)
+	if x+tw > report.config.endX {
+		tw = report.config.endX - x
+	}
+
+	report.addAtomicCell("ILA|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + util.Ftoa(tw) + "|" + util.Ftoa(th) + "|" +
+		content + "|" + anchor)
+
+	report.SetXY(x+tw, y)
+}
+
+func (report *Report) InternalLinkLink(x, y float64, content, anchor string) {
+	tw := report.MeasureTextWidth(content)
+	if x+tw > report.config.endX {
+		tw = report.config.endX - x
+	}
+
+	report.addAtomicCell("ILL|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + util.Ftoa(tw) + "|" + content + "|" + anchor)
 
 	report.SetXY(x+tw, y)
 }

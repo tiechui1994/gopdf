@@ -35,7 +35,7 @@ func ComplexTableReportWithData() {
 		FileName: "example//ttf/microsoft.ttf",
 	}
 	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
-	r.SetPage("A4", "mm", "P")
+	r.SetPage("A4", "P")
 
 	r.RegisterExecutor(core.Executor(ComplexTableReportWithDataExecutor), core.Detail)
 
@@ -44,13 +44,11 @@ func ComplexTableReportWithData() {
 	fmt.Println(r.GetCurrentPageNo())
 }
 func ComplexTableReportWithDataExecutor(report *core.Report) {
-	unit := report.GetUnit()
+	lineSpace := 1.0
+	lineHeight := 18.0
 
-	lineSpace := 0.01 * unit
-	lineHeight := 2 * unit
-
-	table := NewTable(5, 100, 80*unit, lineHeight, report)
-	table.SetMargin(core.Scope{0, 0, 0, 0})
+	table := NewTable(5, 100, 415, lineHeight, report)
+	table.SetMargin(core.Scope{})
 
 	// 先把当前的行设置完毕, 然后才能添加单元格内容.
 	c00 := table.NewCellByRange(1, 1)
@@ -59,14 +57,14 @@ func ComplexTableReportWithDataExecutor(report *core.Report) {
 	c10 := table.NewCellByRange(3, 1)
 
 	f1 := core.Font{Family: TABLE_MY, Size: 15, Style: ""}
-	border := core.NewScope(0.8*unit, 0.8*unit, 0.8*unit, 0.8*unit)
+	border := core.NewScope(4.0, 4.0, 4.0, 3.0)
 	c00.SetElement(NewTextCell(table.GetColWidth(0, 0), lineHeight, lineSpace, report).SetFont(f1).SetBorder(border).HorizontalCentered().SetContent("0-0"))
 	c01.SetElement(NewTextCell(table.GetColWidth(0, 1), lineHeight, lineSpace, report).SetFont(f1).SetBorder(border).RightAlign().SetContent("0-1"))
 	c03.SetElement(NewTextCell(table.GetColWidth(0, 3), lineHeight, lineSpace, report).SetFont(f1).SetBorder(border).RightAlign().SetContent("0-3近日，江苏苏州市姑苏区市场监督管理局向苏州定园旅游服务有限公司送达行政处罚决定书，对定园进行处罚，吊销其营业执照，此举开创了我国旅游景点因虚假宣传被吊销营业执照的先河"))
 	c10.SetElement(NewTextCell(table.GetColWidth(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetBorder(border).VerticalCentered().SetContent("1-0近日，江苏苏州市姑苏区市场监督管理局向苏州定园旅游服务有限公司送达行政处罚决定书了我国旅游景点因虚假宣传被吊销营业执照的先河"))
 
 	f1 = core.Font{Family: TABLE_MY, Size: 10}
-	border = core.NewScope(0.5*unit, 0.5*unit, 0, 0)
+	border = core.NewScope(4.0, 4.0, 0, 0)
 
 	for i := 0; i < 98; i++ {
 		cells := make([]*TableCell, 5)
@@ -108,20 +106,19 @@ func ComplexTableReport() {
 		FileName: "example//ttf/microsoft.ttf",
 	}
 	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
-	r.SetPage("A4", "mm", "P")
+	r.SetPage("A4", "P")
 
 	r.RegisterExecutor(core.Executor(ComplexTableReportExecutor), core.Detail)
 
-	r.Execute("table_test.pdf")
-	r.SaveAtomicCellText("table_test.txt")
+	r.Execute("complex_table_test.pdf")
+	r.SaveAtomicCellText("complex_table_test.txt")
 }
 func ComplexTableReportExecutor(report *core.Report) {
-	unit := report.GetUnit()
-	lineSpace := 0.01 * unit
-	lineHeight := 2 * unit
+	lineSpace := 1.0
+	lineHeight := 18.0
 
-	form := NewTable(5, 100, 50*unit, lineHeight, report)
-	form.SetMargin(core.Scope{0 * unit, 0 * unit, 0, 0})
+	form := NewTable(5, 100, 415, lineHeight, report)
+	form.SetMargin(core.Scope{})
 
 	// todo: 先把当前的行设置完毕, 然后才能添加单元格内容.
 	c00 := form.NewCellByRange(1, 1)
@@ -136,7 +133,7 @@ func ComplexTableReportExecutor(report *core.Report) {
 	c10.SetElement(NewTextCell(form.GetColWidth(1, 0), lineHeight, lineSpace, report).SetFont(f1).SetContent(GetRandStr()))
 
 	f1 = core.Font{Family: TABLE_MY, Size: 10}
-	border := core.NewScope(0.5*unit, 0.5*unit, 0, 0)
+	border := core.NewScope(4.0, 4.0, 0, 0)
 
 	for i := 0; i < 98; i++ {
 		cells := make([]*TableCell, 5)
@@ -176,27 +173,25 @@ func ManyTableReportWithData() {
 		FileName: "example//ttf/microsoft.ttf",
 	}
 	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
-	r.SetPage("A4", "mm", "P")
+	r.SetPage("A4", "P")
 
 	r.RegisterExecutor(core.Executor(ManyTableReportWithDataExecutor), core.Detail)
 
 	r.Execute("many_table_data.pdf")
 }
 func ManyTableReportWithDataExecutor(report *core.Report) {
-	unit := report.GetUnit()
-
-	lineSpace := 0.01 * unit
-	lineHeight := 2 * unit
+	lineSpace := 1.0
+	lineHeight := 18.0
 
 	rows, cols := 10000, 5
-	table := NewTable(cols, rows, 80*unit, lineHeight, report)
-	table.SetMargin(core.Scope{0, 0, 0, 0})
+	table := NewTable(cols, rows, 415, lineHeight, report)
+	table.SetMargin(core.Scope{})
 
 	for i := 0; i < rows; i += 5 {
 		key := rand.Intn(3)
 		//key := (i+1)%2 + 1
 		f1 := core.Font{Family: TABLE_MY, Size: 10}
-		border := core.NewScope(0.5*unit, 0.5*unit, 0, 0)
+		border := core.NewScope(4.0, 4.0, 0, 0)
 
 		switch key {
 		case 0:
