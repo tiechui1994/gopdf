@@ -415,6 +415,46 @@ func (convert *Converter) Cell(line string, elements []string) {
 	}
 }
 
+func (convert *Converter) setPosition(x string, y string, line string) {
+	convert.pdf.SetX(parseFloatPanic(x, line) * convert.unit)
+	convert.pdf.SetY(parseFloatPanic(y, line) * convert.unit)
+}
+
+// 外部链接
+// ["EL", x, y, w, h, content, link] // 从(x,y)开始写入content,并添加外链接
+func (convert *Converter) ExternalLink(line string, elements []string) {
+	checkLength(line, elements, 7)
+
+	convert.pdf.Text(elements[5])
+	convert.pdf.AddExternalLink(elements[6],
+		parseFloatPanic(elements[1], line),
+		parseFloatPanic(elements[2], line),
+		parseFloatPanic(elements[3], line),
+		parseFloatPanic(elements[4], line),
+	)
+}
+
+// 内部链接, 锚点
+// ["ILA", x, y, w, h, content, anchor]
+func (convert *Converter) InternalLinkAnchor(line string, elements []string) {
+	checkLength(line, elements, 7)
+
+	convert.pdf.Text(elements[5])
+	convert.pdf.AddInternalLink(elements[6],
+		parseFloatPanic(elements[1], line),
+		parseFloatPanic(elements[2], line),
+		parseFloatPanic(elements[3], line),
+		parseFloatPanic(elements[4], line),
+	)
+}
+
+// 内部链接, 链接
+// ["ILL", x, y, h, content, anchor]
+func (convert *Converter) InternalLinkLink(line string, elements []string) {
+	checkLength(line, elements, 10)
+}
+
+// 辅助方法
 func (convert *Converter) Margin(line string, eles []string) {
 	checkLength(line, eles, 3)
 	top := parseFloatPanic(eles[1], line)
@@ -428,9 +468,33 @@ func (convert *Converter) Margin(line string, eles []string) {
 	}
 }
 
-func (convert *Converter) setPosition(x string, y string, line string) {
-	convert.pdf.SetX(parseFloatPanic(x, line) * convert.unit)
-	convert.pdf.SetY(parseFloatPanic(y, line) * convert.unit)
+func (convert *Converter) MeasureTextWidth(text string) float64 {
+	w, err := convert.pdf.MeasureTextWidth(text)
+	if err != nil {
+		panic(err)
+	}
+
+	return w
+}
+
+func (convert *Converter) SetFont(family, style string, size int) {
+	convert.pdf.SetFont(family, style, size)
+}
+
+func (convert *Converter) NoCompression() {
+	convert.pdf.SetNoCompression()
+}
+
+func (convert *Converter) WritePdf(filepath string) {
+	convert.pdf.WritePdf(filepath)
+}
+
+func (convert *Converter) CompressLevel(level int) {
+	convert.pdf.SetCompressLevel(level)
+}
+
+func (convert *Converter) GetBytesPdf() (ret []byte) {
+	return convert.pdf.GetBytesPdf()
 }
 
 func checkLength(line string, eles []string, no int) {

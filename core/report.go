@@ -77,7 +77,7 @@ func CreateReport() *Report {
 }
 
 func (report *Report) NoCompression() {
-	report.converter.pdf.SetNoCompression()
+	report.converter.NoCompression()
 }
 
 /****************************************************************
@@ -89,7 +89,7 @@ func (report *Report) NoCompression() {
 	9  最大限度的压缩, 但是执行效率也是最慢的
 ****************************************************************/
 func (report *Report) CompressLevel(level int) {
-	report.converter.pdf.SetCompressLevel(level)
+	report.converter.CompressLevel(level)
 }
 
 // 写入PDF文件
@@ -99,7 +99,7 @@ func (report *Report) Execute(filepath string) {
 	}
 
 	report.execute(true)
-	report.converter.pdf.WritePdf(filepath)
+	report.converter.WritePdf(filepath)
 
 	for i := range report.callbacks {
 		report.callbacks[i](report)
@@ -113,7 +113,7 @@ func (report *Report) GetBytesPdf() (ret []byte) {
 	}
 
 	report.execute(true)
-	ret = report.converter.pdf.GetBytesPdf()
+	ret = report.converter.GetBytesPdf()
 	return
 }
 
@@ -393,19 +393,15 @@ func (report *Report) SaveAtomicCellText(filepath string) {
 
 // 计算文本宽度, 必须先调用 SetFontWithStyle() 或者 SetFont()
 func (report *Report) MeasureTextWidth(text string) float64 {
-	w, err := report.converter.pdf.MeasureTextWidth(text)
-	if err != nil {
-		panic(err)
-	}
-	return w
+	return report.converter.MeasureTextWidth(text)
 }
 
 // 设置当前文本字体, 先注册,后设置
 func (report *Report) SetFontWithStyle(family, style string, size int) {
-	report.converter.pdf.SetFont(family, style, size)
+	report.converter.SetFont(family, style, size)
 }
 func (report *Report) SetFont(family string, size int) {
-	report.SetFontWithStyle(family, "", size)
+	report.converter.SetFont(family, "", size)
 }
 
 func (report *Report) AddCallBack(callback CallBack) {
@@ -547,4 +543,17 @@ func (report *Report) Image(path string, x1 float64, y1 float64, x2 float64, y2 
 // 添加变量
 func (report *Report) Var(name string, val string) {
 	report.addAtomicCell("V|" + name + "|" + val)
+}
+
+// 外部链接
+func (report *Report) ExternalLink(x, y, th float64, content, link string) {
+	tw := report.MeasureTextWidth(content)
+	if x+tw > report.config.endX {
+		tw = report.config.endX - x
+	}
+
+	report.addAtomicCell("EL|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + util.Ftoa(tw) + "|" + util.Ftoa(th) + "|" +
+		content + "|" + link)
+
+	report.SetXY(x+tw, y)
 }
