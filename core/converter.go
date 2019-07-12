@@ -431,19 +431,21 @@ func (convert *Converter) setPosition(x string, y string, line string) {
 func (convert *Converter) ExternalLink(line string, elements []string) {
 	checkLength(line, elements, 7)
 
-	convert.pdf.SetX(parseFloatPanic(elements[1], line))
-	convert.pdf.SetY(parseFloatPanic(elements[2], line))
+	x, y := parseFloatPanic(elements[1], line), parseFloatPanic(elements[2], line)
+	w, h := parseFloatPanic(elements[3], line), parseFloatPanic(elements[4], line)
+
+	convert.pdf.SetX(x)
+	convert.pdf.SetY(y)
 
 	convert.pdf.Text(elements[5])
-	convert.pdf.AddExternalLink(elements[6],
-		parseFloatPanic(elements[1], line),
-		parseFloatPanic(elements[2], line),
-		parseFloatPanic(elements[3], line),
-		parseFloatPanic(elements[4], line),
-	)
+	y1 := y
+	if y-h > 0 {
+		y1 = y - h
+	}
+	convert.pdf.AddExternalLink(elements[6], x, y1, w, h)
 
-	convert.pdf.SetX(parseFloatPanic(elements[1], line) + parseFloatPanic(elements[3], line))
-	convert.pdf.SetY(parseFloatPanic(elements[2], line))
+	convert.pdf.SetX(x + w)
+	convert.pdf.SetY(y)
 }
 
 // 内部链接, 锚点
@@ -451,20 +453,20 @@ func (convert *Converter) ExternalLink(line string, elements []string) {
 func (convert *Converter) InternalLinkAnchor(line string, elements []string) {
 	checkLength(line, elements, 7)
 
-	convert.pdf.SetX(parseFloatPanic(elements[1], line))
-	convert.pdf.SetY(parseFloatPanic(elements[2], line))
-	fmt.Println(convert.pdf.GetX(), convert.pdf.GetY(), "---")
-	convert.pdf.Text(elements[5])
-	convert.pdf.AddInternalLink(elements[6],
-		parseFloatPanic(elements[1], line),
-		parseFloatPanic(elements[2], line),
-		parseFloatPanic(elements[3], line),
-		parseFloatPanic(elements[4], line),
-	)
+	x, y := parseFloatPanic(elements[1], line), parseFloatPanic(elements[2], line)
+	w, h := parseFloatPanic(elements[3], line), parseFloatPanic(elements[4], line)
+	convert.pdf.SetX(x)
+	convert.pdf.SetY(y)
 
-	convert.pdf.SetX(parseFloatPanic(elements[1], line) + parseFloatPanic(elements[3], line))
-	convert.pdf.SetY(parseFloatPanic(elements[2], line))
-	fmt.Println(convert.pdf.GetX(), convert.pdf.GetY(), "---==")
+	convert.pdf.Text(elements[5])
+	y1 := y
+	if y-h > 0 {
+		y1 = y - h
+	}
+	convert.pdf.AddInternalLink(elements[6], x, y1, w, h)
+
+	convert.pdf.SetX(x + w)
+	convert.pdf.SetY(y)
 }
 
 // 内部链接, 链接

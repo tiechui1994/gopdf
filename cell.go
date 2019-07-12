@@ -114,7 +114,6 @@ func (cell *TextCell) SetBorder(border core.Scope) *TextCell {
 func (cell *TextCell) SetContent(s string) *TextCell {
 	convertStr := strings.Replace(s, "\t", "    ", -1)
 	var (
-		unit         = cell.pdf.GetUnit()
 		blocks       = strings.Split(convertStr, "\n") // 分行
 		contentWidth = cell.width - math.Abs(cell.border.Left) - math.Abs(cell.border.Right)
 	)
@@ -129,7 +128,7 @@ func (cell *TextCell) SetContent(s string) *TextCell {
 	cell.pdf.SetFontWithStyle(cell.font.Family, cell.font.Style, cell.font.Size)
 
 	if len(blocks) == 1 {
-		if cell.pdf.MeasureTextWidth(convertStr)/unit < contentWidth {
+		if cell.pdf.MeasureTextWidth(convertStr) < contentWidth {
 			cell.contents = []string{convertStr}
 			cell.height = math.Abs(cell.border.Top) + math.Abs(cell.border.Bottom) + cell.lineHeight
 			cell.lastheight = cell.height
@@ -139,7 +138,7 @@ func (cell *TextCell) SetContent(s string) *TextCell {
 
 	for i := range blocks {
 		// 不需要拆分
-		if cell.pdf.MeasureTextWidth(convertStr)/unit < contentWidth {
+		if cell.pdf.MeasureTextWidth(convertStr) < contentWidth {
 			cell.contents = append(cell.contents, blocks[i])
 			continue
 		}
@@ -149,8 +148,8 @@ func (cell *TextCell) SetContent(s string) *TextCell {
 		for _, r := range []rune(blocks[i]) {
 			line = append(line, r)
 			lineLength := cell.pdf.MeasureTextWidth(string(line))
-			if lineLength/unit >= contentWidth {
-				if lineLength-contentWidth/unit > unit*2 {
+			if lineLength >= contentWidth {
+				if lineLength-contentWidth > 2 {
 					cell.contents = append(cell.contents, string(line[0:len(line)-1]))
 					line = line[len(line)-1:]
 				} else {
@@ -200,7 +199,7 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 
 	// 写入cell数据
 	for i := 0; i < lines; i++ {
-		width := cell.pdf.MeasureTextWidth(cell.contents[i]) / cell.pdf.GetUnit()
+		width := cell.pdf.MeasureTextWidth(cell.contents[i])
 		// 水平居左
 		x = sx + cell.border.Left
 		// 水平居右

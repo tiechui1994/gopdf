@@ -21,7 +21,7 @@ type Template struct {
 	TableObj struct {
 		Columns []struct {
 			ColumnsName string `json:"columnsName"`
-		} `json:"columns"` // 列名称
+		} `json:"columns"`          // 列名称
 		Rows []string `json:"rows"` // 行名称, 从第2行开算, 第一行是Header,没有
 	} `json:"tableObj"`
 
@@ -236,9 +236,8 @@ func handleTemplateRow(template Template) (isTable bool, key, value string) {
 func SimpleTableReportExecutor(report *core.Report) {
 	var (
 		templates []Template
-		unit      = report.GetUnit()
-		lineSpace = 0.01 * unit
-		lineHight = 1.9 * unit
+		lineSpace = 1.0
+		lineHight = 16.0
 	)
 	str := `[
 	{"modelname":"所在公司","modeltype":"5","value":"中国航天科技九院"},
@@ -318,30 +317,30 @@ func SimpleTableReportExecutor(report *core.Report) {
 		isTable, key, value := handleTemplateRow(template)
 		// key != "" 是过滤 Modeltype 为 "7"的情况
 		if !isTable && key != "" {
-			report.SetMargin(4*unit, 0)
+			report.SetMargin(15, 0)
 			content := fmt.Sprintf("%s: %s", key, value)
-			contentDiv := gopdf.NewDivWithWidth(80*unit, lineHight, lineSpace, report)
+			contentDiv := gopdf.NewDivWithWidth(200, lineHight, lineSpace, report)
 			contentDiv.SetFont(textFont).SetContent(content).GenerateAtomicCell()
-			report.SetMargin(0, 1*unit)
+			report.SetMargin(0, 4)
 
 		}
 
 		// 处理表格
 		if isTable {
-			report.SetMargin(4*unit, 0)
+			report.SetMargin(20, 0)
 			content := fmt.Sprintf("%s:", key)
-			contentDiv := gopdf.NewDivWithWidth(80*unit, lineHight, lineSpace, report)
+			contentDiv := gopdf.NewDivWithWidth(415, lineHight, lineSpace, report)
 			contentDiv.SetFont(textFont).SetContent(content).GenerateAtomicCell()
-			report.SetMargin(0, 0.5*unit)
+			report.SetMargin(0, 2)
 
 			rows, cols, cells, hasRowName := handleTable(template)
-			table := gopdf.NewTable(cols, rows, 100*unit, lineHight, report)
+			table := gopdf.NewTable(cols, rows, 415, lineHight, report)
 			for i := 0; i < rows; i++ {
 				for j := 0; j < cols; j++ {
 					cell := table.NewCell()
 					element := gopdf.NewTextCell(table.GetColWidth(i, j), lineHight, lineSpace, report)
 					element.SetFont(textFont)
-					element.SetBorder(core.Scope{Left: 0.5 * unit, Top: 0.5 * unit})
+					element.SetBorder(core.Scope{Left: 2, Top: 2})
 					if i == 0 || j == 0 && hasRowName {
 						element.HorizontalCentered()
 					}
@@ -351,7 +350,7 @@ func SimpleTableReportExecutor(report *core.Report) {
 			}
 
 			table.GenerateAtomicCell()
-			report.SetMargin(0, 1*unit)
+			report.SetMargin(0, 4)
 		}
 	}
 }
@@ -367,7 +366,7 @@ func SimpleTableReport() {
 		FileName: "ttf//mplus-1p-bold.ttf",
 	}
 	r.SetFonts([]*core.FontMap{&font1, &font2})
-	r.SetPage("A4", "mm", "P")
+	r.SetPage("A4", "P")
 
 	r.RegisterExecutor(core.Executor(SimpleTableReportExecutor), core.Detail)
 	r.Execute("simple_table_test.pdf")

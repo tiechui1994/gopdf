@@ -22,7 +22,7 @@ func ComplexImageReport() {
 		FileName: "example//ttf/mplus-1p-bold.ttf",
 	}
 	r.SetFonts([]*core.FontMap{&font1, &font2})
-	r.SetPage("A4", "mm", "P")
+	r.SetPage("A4", "P")
 
 	r.RegisterExecutor(core.Executor(ImageReportExecutor), core.Detail)
 

@@ -8,7 +8,7 @@ import (
 	"regexp"
 
 	"github.com/tiechui1994/gopdf/util"
-	)
+)
 
 // 需要解决的问题: currY的控制权, 用户 -> 程序 -> 自动化操作
 // 页面的三部分: Header Page Footer
@@ -313,8 +313,9 @@ func (report *Report) SetMargin(dx, dy float64) {
 }
 
 // 设置页面的尺寸, unit: mm pt in  size: A4 LTR, 目前支持常用的两种方式
-func (report *Report) SetPage(size string, unit string, orientation string) {
-	report.setUnit(unit)
+func (report *Report) SetPage(size string, orientation string) {
+	unit := "pt"
+	report.unit = 1.0
 	config, ok := defaultConfigs[size]
 	if !ok {
 		panic("the config not exists, please add config")
@@ -357,25 +358,6 @@ func (report *Report) SetPage(size string, unit string, orientation string) {
 	report.config = config
 
 	report.execute(false)
-}
-
-func (report *Report) setUnit(unit string) {
-	switch unit {
-	case "mm":
-		report.unit = 2.834645669
-	case "pt":
-		report.unit = 1
-	case "in":
-		report.unit = 72
-	default:
-		panic("This unit is not specified :" + unit)
-	}
-}
-func (report *Report) GetUnit() float64 {
-	if report.unit == 0.0 {
-		panic("does not set unit")
-	}
-	return report.unit
 }
 
 // 获取底层的所有的原子单元内容
