@@ -125,7 +125,7 @@ func (convert *Converter) AddFont() {
 func (convert *Converter) Page(line string, elements []string) {
 	convert.pdf = new(gopdf.GoPdf)
 
-	CheckLength(line, elements, 4)
+	checkLength(line, elements, 4)
 	switch elements[2] {
 	/* A0 ~ A5 纸张像素表示
 	'A0': [2383.94, 3370.39],
@@ -204,8 +204,8 @@ func (convert *Converter) Start(w float64, h float64) {
 // ["", "family", "style", "size"]
 // style: "" or "U", ("B", "I")(需要字体本身支持)
 func (convert *Converter) Font(line string, elements []string) {
-	CheckLength(line, elements, 4)
-	err := convert.pdf.SetFont(elements[1], elements[2], AtoiPanic(elements[3], line))
+	checkLength(line, elements, 4)
+	err := convert.pdf.SetFont(elements[1], elements[2], parseIntPanic(elements[3], line))
 	if err != nil {
 		panic(err.Error() + " line;" + line)
 	}
@@ -215,57 +215,57 @@ func (convert *Converter) Font(line string, elements []string) {
 // ["GF|GS", grayScale]
 // grayScale: 0.0 到 1.0
 func (convert *Converter) Grey(line string, elements []string) {
-	CheckLength(line, elements, 2)
+	checkLength(line, elements, 2)
 	if elements[0] == "GF" {
-		convert.pdf.SetGrayFill(ParseFloatPanic(elements[1], line))
+		convert.pdf.SetGrayFill(parseFloatPanic(elements[1], line))
 	}
 	if elements[0] == "GS" {
-		convert.pdf.SetGrayStroke(ParseFloatPanic(elements[1], line))
+		convert.pdf.SetGrayStroke(parseFloatPanic(elements[1], line))
 	}
 }
 
 // 文本颜色
 // ["", R, G, B] // RGB文本颜色
 func (convert *Converter) TextColor(line string, elements []string) {
-	CheckLength(line, elements, 4)
-	convert.pdf.SetTextColor(uint8(AtoiPanic(elements[1], line)),
-		uint8(AtoiPanic(elements[2], line)),
-		uint8(AtoiPanic(elements[3], line)))
+	checkLength(line, elements, 4)
+	convert.pdf.SetTextColor(uint8(parseIntPanic(elements[1], line)),
+		uint8(parseIntPanic(elements[2], line)),
+		uint8(parseIntPanic(elements[3], line)))
 }
 
 // 画笔颜色
 // ["", R, G, B]
 func (convert *Converter) LineColor(line string, elements []string) {
-	CheckLength(line, elements, 4)
-	convert.pdf.SetStrokeColor(uint8(AtoiPanic(elements[1], line)),
-		uint8(AtoiPanic(elements[2], line)),
-		uint8(AtoiPanic(elements[3], line)))
+	checkLength(line, elements, 4)
+	convert.pdf.SetStrokeColor(uint8(parseIntPanic(elements[1], line)),
+		uint8(parseIntPanic(elements[2], line)),
+		uint8(parseIntPanic(elements[3], line)))
 }
 
 func (convert *Converter) BackgroundColor(line string, elements []string) {
-	CheckLength(line, elements, 9)
+	checkLength(line, elements, 9)
 
 	//convert.pdf.SetLineWidth(0)               // 宽带最小
 	convert.pdf.SetStrokeColor(255, 255, 255) // 白色线条
 
-	convert.pdf.SetFillColor(uint8(AtoiPanic(elements[5], line)),
-		uint8(AtoiPanic(elements[6], line)),
-		uint8(AtoiPanic(elements[7], line))) // 设置填充颜色
+	convert.pdf.SetFillColor(uint8(parseIntPanic(elements[5], line)),
+		uint8(parseIntPanic(elements[6], line)),
+		uint8(parseIntPanic(elements[7], line))) // 设置填充颜色
 
-	convert.pdf.RectFromUpperLeftWithStyle(ParseFloatPanic(elements[1], line)*convert.unit,
-		ParseFloatPanic(elements[2], line)*convert.unit,
-		ParseFloatPanic(elements[3], line)*convert.unit,
-		ParseFloatPanic(elements[4], line)*convert.unit, "F")
+	convert.pdf.RectFromUpperLeftWithStyle(parseFloatPanic(elements[1], line)*convert.unit,
+		parseFloatPanic(elements[2], line)*convert.unit,
+		parseFloatPanic(elements[3], line)*convert.unit,
+		parseFloatPanic(elements[4], line)*convert.unit, "F")
 
 	convert.pdf.SetFillColor(0, 0, 0) // 颜色恢复
 	convert.pdf.SetStrokeColor(0, 0, 0)
 
 	convert.pdf.SetLineType("solid")
 
-	x := ParseFloatPanic(elements[1], line) * convert.unit
-	y := ParseFloatPanic(elements[2], line) * convert.unit
-	w := ParseFloatPanic(elements[3], line) * convert.unit
-	h := ParseFloatPanic(elements[4], line) * convert.unit
+	x := parseFloatPanic(elements[1], line) * convert.unit
+	y := parseFloatPanic(elements[2], line) * convert.unit
+	w := parseFloatPanic(elements[3], line) * convert.unit
+	h := parseFloatPanic(elements[4], line) * convert.unit
 
 	lines := elements[8] //  LEFT,TOP,RIGHT,BOTTOM
 	if lines[0] == '1' {
@@ -285,55 +285,55 @@ func (convert *Converter) BackgroundColor(line string, elements []string) {
 // 椭圆
 // ["", x1, y1, x2, y2]
 func (convert *Converter) Oval(line string, elements []string) {
-	CheckLength(line, elements, 5)
-	convert.pdf.Oval(ParseFloatPanic(elements[1], line)*convert.unit,
-		ParseFloatPanic(elements[2], line)*convert.unit,
-		ParseFloatPanic(elements[3], line)*convert.unit,
-		ParseFloatPanic(elements[4], line)*convert.unit)
+	checkLength(line, elements, 5)
+	convert.pdf.Oval(parseFloatPanic(elements[1], line)*convert.unit,
+		parseFloatPanic(elements[2], line)*convert.unit,
+		parseFloatPanic(elements[3], line)*convert.unit,
+		parseFloatPanic(elements[4], line)*convert.unit)
 }
 
 // 长方形
 // ["R", x1, y1, x2, y2]
 func (convert *Converter) Rect(line string, eles []string) {
-	CheckLength(line, eles, 5)
+	checkLength(line, eles, 5)
 	adj := convert.linew * convert.unit * 0.5
 	convert.pdf.Line(
-		ParseFloatPanic(eles[1], line)*convert.unit,
-		ParseFloatPanic(eles[2], line)*convert.unit+adj,
-		ParseFloatPanic(eles[3], line)*convert.unit+adj*2,
-		ParseFloatPanic(eles[2], line)*convert.unit+adj)
+		parseFloatPanic(eles[1], line)*convert.unit,
+		parseFloatPanic(eles[2], line)*convert.unit+adj,
+		parseFloatPanic(eles[3], line)*convert.unit+adj*2,
+		parseFloatPanic(eles[2], line)*convert.unit+adj)
 
 	convert.pdf.Line(
-		ParseFloatPanic(eles[1], line)*convert.unit+adj,
-		ParseFloatPanic(eles[2], line)*convert.unit,
-		ParseFloatPanic(eles[1], line)*convert.unit+adj,
-		ParseFloatPanic(eles[4], line)*convert.unit+adj*2)
+		parseFloatPanic(eles[1], line)*convert.unit+adj,
+		parseFloatPanic(eles[2], line)*convert.unit,
+		parseFloatPanic(eles[1], line)*convert.unit+adj,
+		parseFloatPanic(eles[4], line)*convert.unit+adj*2)
 
 	convert.pdf.Line(
-		ParseFloatPanic(eles[1], line)*convert.unit,
-		ParseFloatPanic(eles[4], line)*convert.unit+adj,
-		ParseFloatPanic(eles[3], line)*convert.unit+adj*2,
-		ParseFloatPanic(eles[4], line)*convert.unit+adj)
+		parseFloatPanic(eles[1], line)*convert.unit,
+		parseFloatPanic(eles[4], line)*convert.unit+adj,
+		parseFloatPanic(eles[3], line)*convert.unit+adj*2,
+		parseFloatPanic(eles[4], line)*convert.unit+adj)
 
 	convert.pdf.Line(
-		ParseFloatPanic(eles[3], line)*convert.unit+adj,
-		ParseFloatPanic(eles[2], line)*convert.unit,
-		ParseFloatPanic(eles[3], line)*convert.unit+adj,
-		ParseFloatPanic(eles[4], line)*convert.unit+adj*2)
+		parseFloatPanic(eles[3], line)*convert.unit+adj,
+		parseFloatPanic(eles[2], line)*convert.unit,
+		parseFloatPanic(eles[3], line)*convert.unit+adj,
+		parseFloatPanic(eles[4], line)*convert.unit+adj*2)
 }
 
 // 图片
 // ["I", path, x, y, x1, y2]
 func (convert *Converter) Image(line string, elements []string) {
-	CheckLength(line, elements, 6)
+	checkLength(line, elements, 6)
 	r := new(gopdf.Rect)
-	r.W = ParseFloatPanic(elements[4], line)*convert.unit - ParseFloatPanic(elements[2], line)*convert.unit
-	r.H = ParseFloatPanic(elements[5], line)*convert.unit - ParseFloatPanic(elements[3], line)*convert.unit
+	r.W = parseFloatPanic(elements[4], line)*convert.unit - parseFloatPanic(elements[2], line)*convert.unit
+	r.H = parseFloatPanic(elements[5], line)*convert.unit - parseFloatPanic(elements[3], line)*convert.unit
 
 	convert.pdf.Image(
 		elements[1],
-		ParseFloatPanic(elements[2], line)*convert.unit,
-		ParseFloatPanic(elements[3], line)*convert.unit,
+		parseFloatPanic(elements[2], line)*convert.unit,
+		parseFloatPanic(elements[3], line)*convert.unit,
 		r,
 	)
 }
@@ -346,37 +346,37 @@ func (convert *Converter) Image(line string, elements []string) {
 func (convert *Converter) Line(line string, elements []string) {
 	switch elements[0] {
 	case "L":
-		CheckLength(line, elements, 5)
+		checkLength(line, elements, 5)
 		convert.pdf.Line(
-			ParseFloatPanic(elements[1], line)*convert.unit,
-			ParseFloatPanic(elements[2], line)*convert.unit,
-			ParseFloatPanic(elements[3], line)*convert.unit,
-			ParseFloatPanic(elements[4], line)*convert.unit,
+			parseFloatPanic(elements[1], line)*convert.unit,
+			parseFloatPanic(elements[2], line)*convert.unit,
+			parseFloatPanic(elements[3], line)*convert.unit,
+			parseFloatPanic(elements[4], line)*convert.unit,
 		)
 	case "LH":
-		CheckLength(line, elements, 4)
+		checkLength(line, elements, 4)
 		convert.pdf.Line(
-			ParseFloatPanic(elements[1], line)*convert.unit,
-			ParseFloatPanic(elements[2], line)*convert.unit,
-			ParseFloatPanic(elements[3], line)*convert.unit,
-			ParseFloatPanic(elements[2], line)*convert.unit,
+			parseFloatPanic(elements[1], line)*convert.unit,
+			parseFloatPanic(elements[2], line)*convert.unit,
+			parseFloatPanic(elements[3], line)*convert.unit,
+			parseFloatPanic(elements[2], line)*convert.unit,
 		)
 	case "LV":
-		CheckLength(line, elements, 4)
+		checkLength(line, elements, 4)
 		convert.pdf.Line(
-			ParseFloatPanic(elements[1], line)*convert.unit,
-			ParseFloatPanic(elements[2], line)*convert.unit,
-			ParseFloatPanic(elements[1], line)*convert.unit,
-			ParseFloatPanic(elements[3], line)*convert.unit,
+			parseFloatPanic(elements[1], line)*convert.unit,
+			parseFloatPanic(elements[2], line)*convert.unit,
+			parseFloatPanic(elements[1], line)*convert.unit,
+			parseFloatPanic(elements[3], line)*convert.unit,
 		)
 	case "LT":
-		CheckLength(line, elements, 3)
+		checkLength(line, elements, 3)
 		lineType := elements[1]
 		if lineType == "" {
 			lineType = "straight"
 		}
 		convert.pdf.SetLineType(lineType)
-		convert.linew = ParseFloatPanic(elements[2], line)
+		convert.linew = parseFloatPanic(elements[2], line)
 		convert.pdf.SetLineWidth(convert.linew * convert.unit)
 	}
 }
@@ -388,26 +388,26 @@ func (convert *Converter) Line(line string, elements []string) {
 func (convert *Converter) Cell(line string, elements []string) {
 	switch elements[0] {
 	case "C":
-		CheckLength(line, elements, 6)
-		err := convert.pdf.SetFont(elements[1], "", AtoiPanic(elements[2], line))
+		checkLength(line, elements, 6)
+		err := convert.pdf.SetFont(elements[1], "", parseIntPanic(elements[2], line))
 		if err != nil {
 			panic(err.Error() + " line;" + line)
 		}
 		convert.setPosition(elements[3], elements[4], line)
 		convert.pdf.Cell(nil, elements[5])
 	case "CL":
-		CheckLength(line, elements, 4)
+		checkLength(line, elements, 4)
 		convert.setPosition(elements[1], elements[2], line)
 		convert.pdf.Cell(nil, elements[3])
 	case "CR":
-		CheckLength(line, elements, 5)
+		checkLength(line, elements, 5)
 		tw, err := convert.pdf.MeasureTextWidth(elements[4])
 		if err != nil {
 			panic(err.Error() + " line;" + line)
 		}
-		x := ParseFloatPanic(elements[1], line) * convert.unit
-		y := ParseFloatPanic(elements[2], line) * convert.unit
-		w := ParseFloatPanic(elements[3], line) * convert.unit
+		x := parseFloatPanic(elements[1], line) * convert.unit
+		y := parseFloatPanic(elements[2], line) * convert.unit
+		w := parseFloatPanic(elements[3], line) * convert.unit
 		finalx := x + w - tw
 		convert.pdf.SetX(finalx)
 		convert.pdf.SetY(y)
@@ -416,9 +416,9 @@ func (convert *Converter) Cell(line string, elements []string) {
 }
 
 func (convert *Converter) Margin(line string, eles []string) {
-	CheckLength(line, eles, 3)
-	top := ParseFloatPanic(eles[1], line)
-	left := ParseFloatPanic(eles[2], line)
+	checkLength(line, eles, 3)
+	top := parseFloatPanic(eles[1], line)
+	left := parseFloatPanic(eles[2], line)
 	if top != 0.0 {
 		convert.pdf.SetTopMargin(top)
 	}
@@ -429,25 +429,25 @@ func (convert *Converter) Margin(line string, eles []string) {
 }
 
 func (convert *Converter) setPosition(x string, y string, line string) {
-	convert.pdf.SetX(ParseFloatPanic(x, line) * convert.unit)
-	convert.pdf.SetY(ParseFloatPanic(y, line) * convert.unit)
+	convert.pdf.SetX(parseFloatPanic(x, line) * convert.unit)
+	convert.pdf.SetY(parseFloatPanic(y, line) * convert.unit)
 }
 
-func CheckLength(line string, eles []string, no int) {
+func checkLength(line string, eles []string, no int) {
 	if len(eles) < no {
 		panic("Column short:" + line)
 	}
 }
 
-func AtoiPanic(s string, line string) int {
-	i, err := strconv.Atoi(s)
+func parseIntPanic(num string, line string) int {
+	i, err := strconv.Atoi(num)
 	if err != nil {
-		panic(s + " not Integer :" + line)
+		panic(num + " not Integer :" + line)
 	}
 	return i
 }
 
-func ParseFloatPanic(num string, line string) float64 {
+func parseFloatPanic(num string, line string) float64 {
 	if num == "" {
 		return 0
 	}

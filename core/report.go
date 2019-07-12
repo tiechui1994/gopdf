@@ -195,7 +195,7 @@ func (report *Report) pagination() {
 		if line[0:7] == "v|PAGE|" {
 			h := new(pageMark)
 			h.lineNo = i
-			h.pageNo = AtoiPanic(line[7:], line)
+			h.pageNo = parseIntPanic(line[7:], line)
 			list.Add(h)
 			//fmt.Printf("hist %v \n", h)
 		}
