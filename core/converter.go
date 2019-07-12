@@ -431,6 +431,9 @@ func (convert *Converter) setPosition(x string, y string, line string) {
 func (convert *Converter) ExternalLink(line string, elements []string) {
 	checkLength(line, elements, 7)
 
+	convert.pdf.SetX(parseFloatPanic(elements[1], line))
+	convert.pdf.SetY(parseFloatPanic(elements[2], line))
+
 	convert.pdf.Text(elements[5])
 	convert.pdf.AddExternalLink(elements[6],
 		parseFloatPanic(elements[1], line),
@@ -438,6 +441,9 @@ func (convert *Converter) ExternalLink(line string, elements []string) {
 		parseFloatPanic(elements[3], line),
 		parseFloatPanic(elements[4], line),
 	)
+
+	convert.pdf.SetX(parseFloatPanic(elements[1], line) + parseFloatPanic(elements[3], line))
+	convert.pdf.SetY(parseFloatPanic(elements[2], line))
 }
 
 // 内部链接, 锚点
@@ -445,6 +451,9 @@ func (convert *Converter) ExternalLink(line string, elements []string) {
 func (convert *Converter) InternalLinkAnchor(line string, elements []string) {
 	checkLength(line, elements, 7)
 
+	convert.pdf.SetX(parseFloatPanic(elements[1], line))
+	convert.pdf.SetY(parseFloatPanic(elements[2], line))
+	fmt.Println(convert.pdf.GetX(), convert.pdf.GetY(), "---")
 	convert.pdf.Text(elements[5])
 	convert.pdf.AddInternalLink(elements[6],
 		parseFloatPanic(elements[1], line),
@@ -452,14 +461,25 @@ func (convert *Converter) InternalLinkAnchor(line string, elements []string) {
 		parseFloatPanic(elements[3], line),
 		parseFloatPanic(elements[4], line),
 	)
+
+	convert.pdf.SetX(parseFloatPanic(elements[1], line) + parseFloatPanic(elements[3], line))
+	convert.pdf.SetY(parseFloatPanic(elements[2], line))
+	fmt.Println(convert.pdf.GetX(), convert.pdf.GetY(), "---==")
 }
 
 // 内部链接, 链接
-// ["ILL", content, anchor]
+// ["ILL", x, y, w  content, anchor]
 func (convert *Converter) InternalLinkLink(line string, elements []string) {
-	checkLength(line, elements, 3)
-	convert.pdf.Text(elements[1])
-	convert.pdf.SetAnchor(elements[2])
+	checkLength(line, elements, 6)
+
+	convert.pdf.SetX(parseFloatPanic(elements[1], line))
+	convert.pdf.SetY(parseFloatPanic(elements[2], line))
+
+	convert.pdf.Text(elements[4])
+	convert.pdf.SetAnchor(elements[5])
+
+	convert.pdf.SetX(parseFloatPanic(elements[1], line) + parseFloatPanic(elements[3], line))
+	convert.pdf.SetY(parseFloatPanic(elements[2], line))
 }
 
 // 辅助方法

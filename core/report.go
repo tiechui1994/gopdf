@@ -8,7 +8,7 @@ import (
 	"regexp"
 
 	"github.com/tiechui1994/gopdf/util"
-)
+	)
 
 // 需要解决的问题: currY的控制权, 用户 -> 程序 -> 自动化操作
 // 页面的三部分: Header Page Footer
@@ -399,9 +399,11 @@ func (report *Report) MeasureTextWidth(text string) float64 {
 // 设置当前文本字体, 先注册,后设置
 func (report *Report) SetFontWithStyle(family, style string, size int) {
 	report.converter.SetFont(family, style, size)
+	report.addAtomicCell("F|" + family + "|" + style + "|" + strconv.Itoa(size))
 }
 func (report *Report) SetFont(family string, size int) {
 	report.converter.SetFont(family, "", size)
+	report.addAtomicCell("F|" + family + "|" + "" + "|" + strconv.Itoa(size))
 }
 
 func (report *Report) AddCallBack(callback CallBack) {
@@ -554,9 +556,31 @@ func (report *Report) ExternalLink(x, y, th float64, content, link string) {
 	if x+tw > report.config.endX {
 		tw = report.config.endX - x
 	}
-
 	report.addAtomicCell("EL|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + util.Ftoa(tw) + "|" + util.Ftoa(th) + "|" +
 		content + "|" + link)
+
+	report.SetXY(x+tw, y)
+}
+
+func (report *Report) InternalLinkAnchor(x, y, th float64, content, anchor string) {
+	tw := report.MeasureTextWidth(content)
+	if x+tw > report.config.endX {
+		tw = report.config.endX - x
+	}
+
+	report.addAtomicCell("ILA|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + util.Ftoa(tw) + "|" + util.Ftoa(th) + "|" +
+		content + "|" + anchor)
+
+	report.SetXY(x+tw, y)
+}
+
+func (report *Report) InternalLinkLink(x, y float64, content, anchor string) {
+	tw := report.MeasureTextWidth(content)
+	if x+tw > report.config.endX {
+		tw = report.config.endX - x
+	}
+
+	report.addAtomicCell("ILL|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + util.Ftoa(tw) + "|" + content + "|" + anchor)
 
 	report.SetXY(x+tw, y)
 }
