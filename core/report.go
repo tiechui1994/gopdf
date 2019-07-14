@@ -48,7 +48,6 @@ type Report struct {
 	currX, currY float64              // 当前位置
 	executors    map[string]*Executor // 执行器
 	flags        map[string]bool      // 标记(自动分页和重置页号码)
-	unit         float64              // 转换单位
 	pageNo       int                  // 记录当前的 Page 的页数
 	linew        float64              // 线宽
 
@@ -130,10 +129,9 @@ func (report *Report) execute(exec bool) {
 		report.currX, report.currY = report.GetPageStartXY()
 		report.addAtomicCell("v|PAGE|" + strconv.Itoa(report.pageNo))
 		report.executeDetail()
+		report.executePageFooter()  // 最后一页的页脚
 
-		report.pagination() // 分页
-
-		report.executePageFooter() // 最后一页的页脚
+		report.pagination() // 分页, 执行总页数脚本
 	}
 
 	report.converter.Execute()
@@ -145,8 +143,8 @@ func (report *Report) executePageFooter() {
 	}
 
 	curX, curY := report.GetXY()
-	report.currY = report.config.endY / report.unit
-	report.currX = report.config.startX / report.unit
+	report.currY = report.config.endY
+	report.currX = report.config.startX
 
 	h := report.executors[Footer]
 	if h != nil {
@@ -162,7 +160,7 @@ func (report *Report) executePageHeader() {
 
 	curX, curY := report.GetXY()
 	report.currY = 0
-	report.currX = report.config.startX / report.unit
+	report.currX = report.config.startX
 	h := report.executors[Header]
 	if h != nil {
 		(*h)(report)
@@ -277,20 +275,20 @@ func (report *Report) RegisterExecutor(execuror Executor, name string) {
 
 // 换页坐标
 func (report *Report) GetPageEndY() float64 {
-	return report.pageEndY / report.unit
+	return report.pageEndY
 }
 
 func (report *Report) GetPageEndX() float64 {
-	return report.pageEndX / report.unit
+	return report.pageEndX
 }
 
 // 页面开始坐标
 func (report *Report) GetPageStartXY() (x, y float64) {
-	return report.pageStartX / report.unit, report.pageStartY / report.unit
+	return report.pageStartX, report.pageStartY
 }
 
 func (report *Report) GetContentWidthAndHeight() (width, height float64) {
-	return report.contentWidth / report.unit, report.contentHeight / report.unit
+	return report.contentWidth, report.contentHeight
 }
 
 // currX, currY, 坐标
@@ -315,7 +313,6 @@ func (report *Report) SetMargin(dx, dy float64) {
 // 设置页面的尺寸, unit: mm pt in  size: A4 LTR, 目前支持常用的两种方式
 func (report *Report) SetPage(size string, orientation string) {
 	unit := "pt"
-	report.unit = 1.0
 	config, ok := defaultConfigs[size]
 	if !ok {
 		panic("the config not exists, please add config")
@@ -326,23 +323,23 @@ func (report *Report) SetPage(size string, orientation string) {
 		switch orientation {
 		case "P":
 			report.addAtomicCell("P|" + unit + "|A4|P")
-			report.pageWidth = config.width / report.unit
-			report.pageHeight = config.height / report.unit
+			report.pageWidth = config.width
+			report.pageHeight = config.height
 		case "L":
 			report.addAtomicCell("P|" + unit + "|A4|L")
-			report.pageWidth = config.height / report.unit
-			report.pageHeight = config.width / report.unit
+			report.pageWidth = config.height
+			report.pageHeight = config.width
 		}
 	case "LTR":
 		switch orientation {
 		case "P":
-			report.pageWidth = config.width / report.unit
-			report.pageHeight = config.height / report.unit
+			report.pageWidth = config.width
+			report.pageHeight = config.height
 			report.addAtomicCell("P|" + unit + "|" + strconv.FormatFloat(report.pageWidth, 'f', 4, 64) +
 				"|" + strconv.FormatFloat(report.pageHeight, 'f', 4, 64))
 		case "L":
-			report.pageWidth = config.height / report.unit
-			report.pageHeight = config.width / report.unit
+			report.pageWidth = config.height
+			report.pageHeight = config.width
 			report.addAtomicCell("P  |" + unit + "|" + strconv.FormatFloat(report.pageWidth, 'f', 4, 64) +
 				"|" + strconv.FormatFloat(report.pageHeight, 'f', 4, 64))
 		}
