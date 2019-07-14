@@ -131,7 +131,7 @@ func ComplexReportExecutor(report *core.Report) {
 	}
 }
 func ComplexReportFooterExecutor(report *core.Report) {
-	content := fmt.Sprintf("第 %v 页", report.GetCurrentPageNo())
+	content := fmt.Sprintf("第 %v / {#TotalPage#} 页", report.GetCurrentPageNo())
 	footer := gopdf.NewSpan(10, 0, report)
 	footer.SetFont(textFont)
 	footer.SetFontColor("60, 179, 113")
