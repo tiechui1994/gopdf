@@ -4,7 +4,7 @@ import (
 	"math"
 
 	"github.com/tiechui1994/gopdf/core"
-	)
+)
 
 /**
 Table写入的实现思路:
@@ -329,7 +329,7 @@ func (table *Table) GenerateAtomicCell() error {
 
 			// 换页
 			if y1 < pageEndY && y2 > pageEndY {
-				if i == 0 {
+				if i == 0 && j == 0 && !table.checkFirstRowCanWrite(sx, sy) {
 					table.pdf.AddNewPage(false)
 					table.hasWrited = 2 ^ 32
 					table.margin.Top = 0
@@ -398,6 +398,32 @@ func (table *Table) GenerateAtomicCell() error {
 	table.pdf.SetXY(x1, y1+height+table.margin.Top+table.margin.Bottom)
 
 	return nil
+}
+
+func (table *Table) checkFirstRowCanWrite(sx, sy float64) (ok bool) {
+	var (
+		pageEndY = table.pdf.GetPageEndY()
+	)
+
+	row := 0
+	for col := 0; col < table.cols; col++ {
+		cell := table.cells[row][col]
+		_, y, _, _ := table.getHLinePosition(sx, sy, col, 0)
+
+		if cell.rowspan < 1 {
+			continue
+		}
+
+		if cell.rowspan >= 1 {
+			wn, _ := cell.element.TryGenerateAtomicCell(pageEndY - y)
+			if wn > 0 {
+				ok = true
+				return ok
+			}
+		}
+	}
+
+	return ok
 }
 
 // row,col 定位cell, sx,sy是table基准坐标
