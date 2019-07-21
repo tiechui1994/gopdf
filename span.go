@@ -29,7 +29,7 @@ type Span struct {
 
 func NewSpan(lineHeight, lineSpce float64, pdf *core.Report) *Span {
 	currX, _ := pdf.GetXY()
-	endX := pdf.GetPageEndX()
+	endX,_ := pdf.GetPageEndXY()
 	if endX-currX <= 0 {
 		panic("please modify current X")
 	}
@@ -47,7 +47,7 @@ func NewSpan(lineHeight, lineSpce float64, pdf *core.Report) *Span {
 
 func NewSpanWithWidth(width float64, lineHeight, lineSpce float64, pdf *core.Report) *Span {
 	currX, _ := pdf.GetXY()
-	endX := pdf.GetPageEndX()
+	endX,_ := pdf.GetPageEndXY()
 	if endX-currX <= 0 {
 		panic("please modify current X")
 	}
@@ -90,7 +90,7 @@ func (span *Span) SetHeight(height float64) *Span {
 func (span *Span) SetMarign(margin core.Scope) *Span {
 	margin.ReplaceMarign()
 	currX, _ := span.pdf.GetXY()
-	endX := span.pdf.GetPageEndX()
+	endX,_ := span.pdf.GetPageEndXY()
 
 	if endX-(currX+margin.Left) <= 0 {
 		panic("the marign out of page boundary")
@@ -108,7 +108,7 @@ func (span *Span) SetMarign(margin core.Scope) *Span {
 func (span *Span) SetBorder(border core.Scope) *Span {
 	border.ReplaceBorder()
 	currX, _ := span.pdf.GetXY()
-	endX := span.pdf.GetPageEndX()
+	endX,_ := span.pdf.GetPageEndXY()
 
 	// 最大宽度检测
 	if endX-(currX+span.margin.Left) >= span.width+border.Left+border.Right {

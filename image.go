@@ -117,7 +117,7 @@ func (image *Image) GenerateAtomicCell() error {
 	)
 
 	x, y := sx+image.margin.Left, sy+image.margin.Top
-	pageEndY := image.pdf.GetPageEndY()
+	_, pageEndY := image.pdf.GetPageEndXY()
 	if y < pageEndY && y+float64(image.height) > pageEndY {
 		image.pdf.AddNewPage(false)
 	}

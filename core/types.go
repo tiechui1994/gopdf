@@ -29,9 +29,7 @@ func (scope *Scope) ReplaceBorder() {
 
 func (scope *Scope) ReplaceMarign() {
 	scope.Right = 0
-	if scope.Bottom < 0 {
-		scope.Bottom = 0
-	}
+	scope.Bottom = 0
 }
 
 type Font struct {

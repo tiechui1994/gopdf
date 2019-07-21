@@ -52,7 +52,7 @@ func (h *HLine) GenerateAtomicCell() {
 
 	x := sx + h.margin.Left
 	y := sy + h.margin.Top
-	endY := h.pdf.GetPageEndY()
+	_, endY := h.pdf.GetPageEndXY()
 	if (sy >= endY || sy < endY) && sy+h.width > endY {
 		h.pdf.AddNewPage(false)
 		h.pdf.SetXY(h.pdf.GetPageStartXY())

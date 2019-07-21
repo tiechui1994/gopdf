@@ -31,7 +31,7 @@ type TextCell struct {
 }
 
 func NewTextCell(width, lineHeight, lineSpace float64, pdf *core.Report) *TextCell {
-	endX := pdf.GetPageEndX()
+	endX,_ := pdf.GetPageEndXY()
 	curX, _ := pdf.GetXY()
 	if width > endX-curX {
 		width = endX - curX

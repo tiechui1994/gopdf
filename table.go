@@ -309,7 +309,7 @@ func (table *Table) SetMargin(margin core.Scope) {
 func (table *Table) GenerateAtomicCell() error {
 	var (
 		sx, sy        = table.pdf.GetXY() // 基准坐标
-		pageEndY      = table.pdf.GetPageEndY()
+		_, pageEndY   = table.pdf.GetPageEndXY()
 		x1, y1, _, y2 float64 // 当前位置
 	)
 
@@ -390,7 +390,7 @@ func (table *Table) GenerateAtomicCell() error {
 
 func (table *Table) checkFirstRowCanWrite(sx, sy float64) (ok bool) {
 	var (
-		pageEndY = table.pdf.GetPageEndY()
+		_, pageEndY = table.pdf.GetPageEndXY()
 	)
 
 	row := 0
@@ -418,7 +418,7 @@ func (table *Table) checkFirstRowCanWrite(sx, sy float64) (ok bool) {
 func (table *Table) writeCurrentPageCell(row, col int, sx, sy float64) {
 	var (
 		x1, y1, _, y2 float64
-		pageEndY      = table.pdf.GetPageEndY()
+		_, pageEndY   = table.pdf.GetPageEndXY()
 		cell          = table.cells[row][col]
 	)
 
@@ -449,9 +449,9 @@ func (table *Table) writeCurrentPageCell(row, col int, sx, sy float64) {
 }
 func (table *Table) writePartialPageCell(row, col int, sx, sy float64) {
 	var (
-		x1, y1   float64
-		pageEndY = table.pdf.GetPageEndY()
-		cell     = table.cells[row][col]
+		x1, y1      float64
+		_, pageEndY = table.pdf.GetPageEndXY()
+		cell        = table.cells[row][col]
 	)
 
 	x1, y1, _, _ = table.getVLinePosition(sx, sy, col, row) // 垂直线
@@ -516,9 +516,9 @@ func (table *Table) writeCurrentPageRestCells(row, col int, sx, sy float64) {
 // 检查下一个Cell是否可以写入(当前的Cell必须是非空格Cell)
 func (table *Table) checkNextCellCanWrite(sx, sy float64, row, col int) bool {
 	var (
-		canwrite bool
-		cells    = table.cells
-		pageEndY = table.pdf.GetPageEndY()
+		canwrite    bool
+		cells       = table.cells
+		_, pageEndY = table.pdf.GetPageEndXY()
 	)
 
 	if cells[row][col].rowspan <= 0 {
@@ -557,16 +557,16 @@ func (table *Table) checkNextCellCanWrite(sx, sy float64, row, col int) bool {
 // 对当前的Page进行画线
 func (table *Table) drawPageLines(sx, sy float64) {
 	var (
-		rows, cols           = table.rows, table.cols
-		pageEndY             = table.pdf.GetPageEndY()
-		x, y, x1, y1, x2, y2 float64
+		rows, cols          = table.rows, table.cols
+		_, pageEndY         = table.pdf.GetPageEndXY()
+		x, y, x1, y1, _, y2 float64
 	)
 
 	// 计算当前页面最大的rows
-	x1, _ = table.pdf.GetPageStartXY()
-	x2 = table.pdf.GetPageEndY()
-	if rows > int((x2-x1)/table.lineHeight)+1 {
-		rows = int((x2-x1)/table.lineHeight) + 1
+	_, y1 = table.pdf.GetPageStartXY()
+	_, y2 = table.pdf.GetPageEndXY()
+	if rows > int((y2-y1)/table.lineHeight)+1 {
+		rows = int((y2-y1)/table.lineHeight) + 1
 	}
 
 	table.pdf.LineType("straight", 0.1)
@@ -764,11 +764,11 @@ func (table *Table) resetCellHeight() {
 	table.checkTableConstraint()
 
 	// 计算当前页面最大的rows
-	x1, _ := table.pdf.GetPageStartXY()
-	x2 := table.pdf.GetPageEndY()
+	_, y1 := table.pdf.GetPageStartXY()
+	_, y2 := table.pdf.GetPageEndXY()
 	rows := table.rows
-	if rows > int((x2-x1)/table.lineHeight)+1 {
-		rows = int((x2-x1)/table.lineHeight) + 1
+	if rows > int((y2-y1)/table.lineHeight)+1 {
+		rows = int((y2-y1)/table.lineHeight) + 1
 	}
 	cells := table.cells
 
@@ -857,11 +857,11 @@ func (table *Table) getMaxWriteLineNo() int {
 		writenum int
 	)
 
-	x1, _ := table.pdf.GetPageStartXY()
-	x2 := table.pdf.GetPageEndY()
+	_, y1 := table.pdf.GetPageStartXY()
+	_, y2 := table.pdf.GetPageEndXY()
 	rows := table.rows
-	if rows > int((x2-x1)/table.lineHeight)+1 {
-		rows = int((x2-x1)/table.lineHeight) + 1
+	if rows > int((y2-y1)/table.lineHeight)+1 {
+		rows = int((y2-y1)/table.lineHeight) + 1
 	}
 
 	// todo: 计算当前的已经当前行全部写入的最大的行数.
@@ -946,11 +946,11 @@ func (table *Table) resetTableCells() {
 
 func (table *Table) cachedPoints(sx, sy float64) {
 	// 只计算当前页面最大的rows
-	x1, _ := table.pdf.GetPageStartXY()
-	x2 := table.pdf.GetPageEndY()
+	_, y1 := table.pdf.GetPageStartXY()
+	_, y2 := table.pdf.GetPageEndXY()
 	rows := table.rows
-	if rows > int((x2-x1)/table.lineHeight)+1 {
-		rows = int((x2-x1)/table.lineHeight) + 1
+	if rows > int((y2-y1)/table.lineHeight)+1 {
+		rows = int((y2-y1)/table.lineHeight) + 1
 	}
 
 	var (

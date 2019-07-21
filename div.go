@@ -6,7 +6,7 @@ import (
 
 	"github.com/tiechui1994/gopdf/core"
 	"github.com/tiechui1994/gopdf/util"
-	)
+)
 
 const (
 	DIV_STRAIGHT = 1 // 实线边框
@@ -38,7 +38,7 @@ type Div struct {
 
 func NewDiv(lineHeight, lineSpce float64, pdf *core.Report) *Div {
 	currX, _ := pdf.GetXY()
-	endX := pdf.GetPageEndX()
+	endX, _ := pdf.GetPageEndXY()
 	if endX-currX <= 0 {
 		panic("please modify current X")
 	}
@@ -57,7 +57,7 @@ func NewDiv(lineHeight, lineSpce float64, pdf *core.Report) *Div {
 
 func NewDivWithWidth(width float64, lineHeight, lineSpce float64, pdf *core.Report) *Div {
 	currX, _ := pdf.GetXY()
-	endX := pdf.GetPageEndX()
+	endX, _ := pdf.GetPageEndXY()
 	if endX-currX <= 0 {
 		panic("please modify current X")
 	}
@@ -110,8 +110,7 @@ func (div *Div) SetFrameType(frameType int) *Div {
 func (div *Div) SetMarign(margin core.Scope) *Div {
 	margin.ReplaceMarign()
 	currX, _ := div.pdf.GetXY()
-	endX := div.pdf.GetPageEndX()
-
+	endX, _ := div.pdf.GetPageEndXY()
 	if endX-(currX+margin.Left) <= 0 {
 		panic("the marign out of page boundary")
 	}
@@ -128,7 +127,7 @@ func (div *Div) SetMarign(margin core.Scope) *Div {
 func (div *Div) SetBorder(border core.Scope) *Div {
 	border.ReplaceBorder()
 	currX, _ := div.pdf.GetXY()
-	endX := div.pdf.GetPageEndX()
+	endX, _ := div.pdf.GetPageEndXY()
 
 	// 最大宽度检测
 	if endX-(currX+div.margin.Left) >= div.width+border.Left+border.Right {
@@ -248,10 +247,10 @@ func (div *Div) SetContent(content string) *Div {
 // 自动分页
 func (div *Div) GenerateAtomicCell() error {
 	var (
-		sx, sy   = div.pdf.GetXY()
-		x, y     float64
-		border   core.Scope
-		pageEndY = div.pdf.GetPageEndY()
+		sx, sy      = div.pdf.GetXY()
+		x, y        float64
+		border      core.Scope
+		_, pageEndY = div.pdf.GetPageEndXY()
 	)
 
 	if util.IsEmpty(div.font) {
@@ -301,7 +300,6 @@ func (div *Div) GenerateAtomicCell() error {
 
 			newX, newY = div.pdf.GetPageStartXY()
 
-
 			div.pdf.AddNewPage(false)
 			div.pdf.SetXY(newX, newY)
 
@@ -326,8 +324,8 @@ func (div *Div) GenerateAtomicCell() error {
 
 func (div *Div) drawLine(sx, sy float64) {
 	var (
-		x, y     float64
-		pageEndY = div.pdf.GetPageEndY()
+		x, y        float64
+		_, pageEndY = div.pdf.GetPageEndXY()
 	)
 
 	if sy+div.height > pageEndY {

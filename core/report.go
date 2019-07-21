@@ -3,9 +3,9 @@ package core
 import (
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
-	"regexp"
 
 	"github.com/tiechui1994/gopdf/util"
 )
@@ -129,7 +129,7 @@ func (report *Report) execute(exec bool) {
 		report.currX, report.currY = report.GetPageStartXY()
 		report.addAtomicCell("v|PAGE|" + strconv.Itoa(report.pageNo))
 		report.executeDetail()
-		report.executePageFooter()  // 最后一页的页脚
+		report.executePageFooter() // 最后一页的页脚
 
 		report.pagination() // 分页, 执行总页数脚本
 	}
@@ -273,16 +273,10 @@ func (report *Report) RegisterExecutor(execuror Executor, name string) {
 	report.executors[name] = &execuror
 }
 
-// 换页坐标
-func (report *Report) GetPageEndY() float64 {
-	return report.pageEndY
+func (report *Report) GetPageEndXY() (x, y float64) {
+	return report.pageEndX, report.pageEndY
 }
 
-func (report *Report) GetPageEndX() float64 {
-	return report.pageEndX
-}
-
-// 页面开始坐标
 func (report *Report) GetPageStartXY() (x, y float64) {
 	return report.pageStartX, report.pageStartY
 }

@@ -28,6 +28,18 @@ func (config *Config) checkConfig() {
 	}
 }
 
+func (config *Config) GetWidthAndHeight() (width, height float64) {
+	return config.width, config.width
+}
+
+func (config *Config) GetStart() (x, y float64) {
+	return config.startX, config.startY
+}
+
+func (config *Config) GetEnd() (x, y float64) {
+	return config.endX, config.endY
+}
+
 var defaultConfigs map[string]*Config // page -> config
 
 /**************************************
