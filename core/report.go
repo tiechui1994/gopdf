@@ -273,14 +273,17 @@ func (report *Report) RegisterExecutor(execuror Executor, name string) {
 	report.executors[name] = &execuror
 }
 
+func (report *Report) GetConfig() Config {
+	config := *report.config
+	return config
+}
+
 func (report *Report) GetPageEndXY() (x, y float64) {
 	return report.pageEndX, report.pageEndY
 }
-
 func (report *Report) GetPageStartXY() (x, y float64) {
 	return report.pageStartX, report.pageStartY
 }
-
 func (report *Report) GetContentWidthAndHeight() (width, height float64) {
 	return report.contentWidth, report.contentHeight
 }

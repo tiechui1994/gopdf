@@ -89,8 +89,6 @@ func (div *Div) Copy(content string) *Div {
 		backColor:  div.backColor,
 	}
 
-	f.SetBorder(div.border)
-	f.SetMarign(div.margin)
 	f.SetFont(div.font)
 	f.SetContent(content)
 
@@ -107,17 +105,24 @@ func (div *Div) SetFrameType(frameType int) *Div {
 	return div
 }
 
+// TODO: the order 
 func (div *Div) SetMarign(margin core.Scope) *Div {
 	margin.ReplaceMarign()
-	currX, _ := div.pdf.GetXY()
-	endX, _ := div.pdf.GetPageEndXY()
-	if endX-(currX+margin.Left) <= 0 {
-		panic("the marign out of page boundary")
+	config := div.pdf.GetConfig()
+
+	width, height := config.GetWidthAndHeight()
+	x, y := div.pdf.GetXY()
+
+	if x+margin.Left > width || x+margin.Left < 0 {
+		return div
 	}
 
-	// 宽度检测
-	if endX-(currX+margin.Left) <= div.width {
-		div.width = endX - (currX + margin.Left)
+	if y+margin.Top > height || y+margin.Top < 0 {
+		return div
+	}
+
+	if x+margin.Left+div.width > width {
+		div.width = width - (x + margin.Right)
 	}
 
 	div.margin = margin
@@ -126,14 +131,18 @@ func (div *Div) SetMarign(margin core.Scope) *Div {
 }
 func (div *Div) SetBorder(border core.Scope) *Div {
 	border.ReplaceBorder()
-	currX, _ := div.pdf.GetXY()
-	endX, _ := div.pdf.GetPageEndXY()
-
-	// 最大宽度检测
-	if endX-(currX+div.margin.Left) >= div.width+border.Left+border.Right {
-		div.width += border.Left + border.Right
+	if border.Left+border.Right > div.width {
+		return div
 	}
 
+	config := div.pdf.GetConfig()
+	_, y := div.pdf.GetXY()
+	_, height := config.GetWidthAndHeight()
+	if y+div.margin.Top+border.Top+border.Bottom > height {
+		return div
+	}
+
+	div.width = div.width - border.Left - border.Right
 	div.border = border
 
 	return div
@@ -184,6 +193,8 @@ func (div *Div) SetFontWithColor(font core.Font, color string) *Div {
 
 func (div *Div) SetContent(content string) *Div {
 	convertStr := strings.Replace(content, "\t", "    ", -1)
+
+	div.SetMarign(div.margin).SetBorder(div.border)
 
 	var (
 		blocks       = strings.Split(convertStr, "\n") // 分行
@@ -293,8 +304,8 @@ func (div *Div) GenerateAtomicCell() error {
 		if y+div.lineHeight > pageEndY {
 			var newX, newY float64
 
-			div.SetMarign(core.NewScope(div.margin.Left, 0, div.margin.Right, div.margin.Bottom))
-			div.SetBorder(core.NewScope(border.Left, div.lineSpace, border.Right, border.Bottom))
+			div.margin = core.NewScope(div.margin.Left, 0, 0, 0)
+			div.border = core.NewScope(border.Left, 0, border.Right, border.Bottom)
 			div.contents = div.contents[i:]
 			div.resetHeight()
 
@@ -338,10 +349,10 @@ func (div *Div) drawLine(sx, sy float64) {
 		// 两条竖线 + 一条横线
 		if div.frameType != DIV_NONE {
 			div.pdf.LineV(sx+div.margin.Left, y, pageEndY)
-			div.pdf.LineV(sx+div.margin.Left+div.width, y, pageEndY)
+			div.pdf.LineV(sx+div.margin.Left+div.border.Left+div.width+div.border.Right, y, pageEndY)
 
-			div.pdf.LineH(sx+div.margin.Left, y, sx+div.margin.Left+div.width)
-			div.pdf.LineH(sx+div.margin.Left, pageEndY, sx+div.margin.Left+div.width)
+			div.pdf.LineH(sx+div.margin.Left, y, sx+div.margin.Left+div.border.Left+div.width+div.border.Right)
+			div.pdf.LineH(sx+div.margin.Left, pageEndY, sx+div.margin.Left+div.border.Left+div.width+div.border.Right)
 		}
 
 	} else {
@@ -354,10 +365,10 @@ func (div *Div) drawLine(sx, sy float64) {
 		// 两条竖线 + 一条横线
 		if div.frameType != DIV_NONE {
 			div.pdf.LineV(sx+div.margin.Left, y, y+div.height)
-			div.pdf.LineV(sx+div.margin.Left+div.width, y, y+div.height)
+			div.pdf.LineV(sx+div.margin.Left+div.border.Left+div.width+div.border.Right, y, y+div.height)
 
-			div.pdf.LineH(sx+div.margin.Left, y, sx+div.margin.Left+div.width)
-			div.pdf.LineH(sx+div.margin.Left, y+div.height, sx+div.margin.Left+div.width)
+			div.pdf.LineH(sx+div.margin.Left, y, sx+div.margin.Left+div.border.Left+div.width+div.border.Right)
+			div.pdf.LineH(sx+div.margin.Left, y+div.height, sx+div.margin.Left+div.border.Left+div.width+div.border.Right)
 		}
 	}
 }

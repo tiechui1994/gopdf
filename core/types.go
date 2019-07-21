@@ -23,6 +23,9 @@ func (scope *Scope) ReplaceBorder() {
 	if scope.Top < 0 {
 		scope.Top = 0
 	}
+	if scope.Bottom < 0 {
+		scope.Bottom = 0
+	}
 
 	scope.Bottom = 0
 }
