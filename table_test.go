@@ -274,7 +274,7 @@ func GetRandStr(l ...int) string {
 	l = append(l, 8)
 	r := seed.Intn(l[0]*11) + 8
 	//r := l[0] * 13
-	r = 455
+	r = 1000
 	data := strings.Repeat(str, r/36+1)
 	return data[:r] + "---"
 }
