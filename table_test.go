@@ -183,7 +183,7 @@ func ManyTableReportWithDataExecutor(report *core.Report) {
 	lineSpace := 1.0
 	lineHeight := 18.0
 
-	rows, cols := 10000, 5
+	rows, cols := 100, 5
 	table := NewTable(cols, rows, 415, lineHeight, report)
 	table.SetMargin(core.Scope{})
 
@@ -274,6 +274,7 @@ func GetRandStr(l ...int) string {
 	l = append(l, 8)
 	r := seed.Intn(l[0]*11) + 8
 	//r := l[0] * 13
+	//r = 1200
 	data := strings.Repeat(str, r/36+1)
 	return data[:r] + "---"
 }
