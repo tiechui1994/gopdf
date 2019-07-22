@@ -56,14 +56,14 @@ func NewDiv(lineHeight, lineSpce float64, pdf *core.Report) *Div {
 }
 
 func NewDivWithWidth(width float64, lineHeight, lineSpce float64, pdf *core.Report) *Div {
-	currX, _ := pdf.GetXY()
+	x, _ := pdf.GetXY()
 	endX, _ := pdf.GetPageEndXY()
-	if endX-currX <= 0 {
+	if endX-x <= 0 {
 		panic("please modify current X")
 	}
 
-	if endX-currX <= width {
-		width = endX - currX
+	if endX-x <= width {
+		width = endX - x
 	}
 
 	f := &Div{
@@ -89,6 +89,8 @@ func (div *Div) Copy(content string) *Div {
 		backColor:  div.backColor,
 	}
 
+	f.SetMarign(div.margin)
+	f.SetBorder(div.border)
 	f.SetFont(div.font)
 	f.SetContent(content)
 
@@ -110,19 +112,29 @@ func (div *Div) SetMarign(margin core.Scope) *Div {
 	margin.ReplaceMarign()
 	config := div.pdf.GetConfig()
 
-	width, height := config.GetWidthAndHeight()
+	_, height := config.GetWidthAndHeight()
+	x1, _ := config.GetStart()
+	x2, _ := config.GetEnd()
 	x, y := div.pdf.GetXY()
 
-	if x+margin.Left > width || x+margin.Left < 0 {
+	// X
+	if x+margin.Left > x2 || x+margin.Left < x1 {
 		return div
 	}
 
+	// Y
 	if y+margin.Top > height || y+margin.Top < 0 {
 		return div
 	}
 
-	if x+margin.Left+div.width > width {
-		div.width = width - (x + margin.Right)
+	// width
+	if x+margin.Left+div.border.Left+div.width+div.border.Right > x2 {
+		width := x2 - (x + margin.Left + div.border.Left + div.border.Right)
+		if width <= 0 {
+			return div
+		}
+
+		div.width = width
 	}
 
 	div.margin = margin
@@ -131,18 +143,27 @@ func (div *Div) SetMarign(margin core.Scope) *Div {
 }
 func (div *Div) SetBorder(border core.Scope) *Div {
 	border.ReplaceBorder()
-	if border.Left+border.Right > div.width {
-		return div
-	}
 
 	config := div.pdf.GetConfig()
-	_, y := div.pdf.GetXY()
+
+	x2, _ := config.GetEnd()
+	x, y := div.pdf.GetXY()
+
 	_, height := config.GetWidthAndHeight()
 	if y+div.margin.Top+border.Top+border.Bottom > height {
 		return div
 	}
 
-	div.width = div.width - border.Left - border.Right
+	// width
+	if x+div.margin.Left+border.Left+div.width+border.Right > x2 {
+		width := x2 - (x + div.margin.Left + border.Left + border.Right)
+		if width <= 0 {
+			return div
+		}
+
+		div.width = width
+	}
+
 	div.border = border
 
 	return div
@@ -194,11 +215,9 @@ func (div *Div) SetFontWithColor(font core.Font, color string) *Div {
 func (div *Div) SetContent(content string) *Div {
 	convertStr := strings.Replace(content, "\t", "    ", -1)
 
-	div.SetMarign(div.margin).SetBorder(div.border)
-
 	var (
 		blocks       = strings.Split(convertStr, "\n") // 分行
-		contentWidth = div.width - math.Abs(div.border.Left) - math.Abs(div.border.Right)
+		contentWidth = div.width
 	)
 
 	// 必须检查字体
@@ -305,7 +324,7 @@ func (div *Div) GenerateAtomicCell() error {
 			var newX, newY float64
 
 			div.margin = core.NewScope(div.margin.Left, 0, 0, 0)
-			div.border = core.NewScope(border.Left, 0, border.Right, border.Bottom)
+			div.border = core.NewScope(border.Left, div.lineHeight, border.Right, border.Bottom)
 			div.contents = div.contents[i:]
 			div.resetHeight()
 
@@ -378,7 +397,7 @@ func (div *Div) resetHeight() {
 		div.height = 0
 	}
 	length := float64(len(div.contents))
-	div.height = div.lineHeight*length + div.lineSpace*(length-1) + div.border.Top
+	div.height = div.lineHeight*length + div.lineSpace*(length-1) + div.border.Top + div.border.Bottom
 }
 
 func (div *Div) getContentPosition(sx, sy float64, index int) (x, y float64) {

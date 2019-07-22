@@ -127,7 +127,7 @@ func ComplexDivReportExecutor(report *core.Report) {
 	frame.SetFrameType(DIV_DOTTED)
 	//frame.SetBackColor("222,111,11")
 	frame.SetFont(font)
-	frame.SetMarign(core.NewScope(20, 50, 0, 0))
+	frame.SetMarign(core.NewScope(120, 50, 0, 0))
 	frame.SetBorder(core.NewScope(10, 50, 10, 10))
 
 	content := `13.2.10 Subquery  Syntax 
