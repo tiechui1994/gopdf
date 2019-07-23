@@ -28,15 +28,15 @@ type Span struct {
 }
 
 func NewSpan(lineHeight, lineSpce float64, pdf *core.Report) *Span {
-	currX, _ := pdf.GetXY()
-	endX,_ := pdf.GetPageEndXY()
-	if endX-currX <= 0 {
+	x, _ := pdf.GetXY()
+	endX, _ := pdf.GetPageEndXY()
+	if endX-x <= 0 {
 		panic("please modify current X")
 	}
 
 	f := &Span{
 		pdf:        pdf,
-		width:      endX - currX,
+		width:      endX - x,
 		height:     lineHeight,
 		lineHeight: lineHeight,
 		lineSpace:  lineSpce,
@@ -47,7 +47,7 @@ func NewSpan(lineHeight, lineSpce float64, pdf *core.Report) *Span {
 
 func NewSpanWithWidth(width float64, lineHeight, lineSpce float64, pdf *core.Report) *Span {
 	currX, _ := pdf.GetXY()
-	endX,_ := pdf.GetPageEndXY()
+	endX, _ := pdf.GetPageEndXY()
 	if endX-currX <= 0 {
 		panic("please modify current X")
 	}
@@ -87,18 +87,34 @@ func (span *Span) SetHeight(height float64) *Span {
 	span.height = height
 	return span
 }
+
 func (span *Span) SetMarign(margin core.Scope) *Span {
 	margin.ReplaceMarign()
-	currX, _ := span.pdf.GetXY()
-	endX,_ := span.pdf.GetPageEndXY()
+	config := span.pdf.GetConfig()
 
-	if endX-(currX+margin.Left) <= 0 {
-		panic("the marign out of page boundary")
+	_, height := config.GetWidthAndHeight()
+	x1, _ := config.GetStart()
+	x2, _ := config.GetEnd()
+	x, y := span.pdf.GetXY()
+
+	// X
+	if x+margin.Left > x2 || x+margin.Left < x1 {
+		return span
 	}
 
-	// 宽度检测
-	if endX-(currX+margin.Left) <= span.width {
-		span.width = endX - (currX + margin.Left)
+	// Y
+	if y+margin.Top > height || y+margin.Top < 0 {
+		return span
+	}
+
+	// width
+	if x+margin.Left+span.border.Left+span.width+span.border.Right > x2 {
+		width := x2 - (x + margin.Left + span.border.Left + span.border.Right)
+		if width <= 0 {
+			return span
+		}
+
+		span.width = width
 	}
 
 	span.margin = margin
@@ -107,12 +123,25 @@ func (span *Span) SetMarign(margin core.Scope) *Span {
 }
 func (span *Span) SetBorder(border core.Scope) *Span {
 	border.ReplaceBorder()
-	currX, _ := span.pdf.GetXY()
-	endX,_ := span.pdf.GetPageEndXY()
 
-	// 最大宽度检测
-	if endX-(currX+span.margin.Left) >= span.width+border.Left+border.Right {
-		span.width += border.Left + border.Right
+	config := span.pdf.GetConfig()
+
+	x2, _ := config.GetEnd()
+	x, y := span.pdf.GetXY()
+
+	_, height := config.GetWidthAndHeight()
+	if y+span.margin.Top+border.Top+border.Bottom > height {
+		return span
+	}
+
+	// width
+	if x+span.margin.Left+border.Left+span.width+border.Right > x2 {
+		width := x2 - (x + span.margin.Left + border.Left + border.Right)
+		if width <= 0 {
+			return span
+		}
+
+		span.width = width
 	}
 
 	span.border = border
@@ -166,7 +195,7 @@ func (span *Span) SetContent(content string) *Span {
 
 	var (
 		blocks       = strings.Split(convertStr, "\n") // 分行
-		contentWidth = span.width - math.Abs(span.border.Left) - math.Abs(span.border.Right)
+		contentWidth = span.width
 	)
 
 	// 必须检查字体
@@ -181,7 +210,9 @@ func (span *Span) SetContent(content string) *Span {
 	if len(blocks) == 1 {
 		if span.pdf.MeasureTextWidth(convertStr) < contentWidth {
 			span.contents = []string{convertStr}
-			span.height = math.Abs(span.border.Top) + math.Abs(span.border.Bottom) + span.lineHeight
+			height := span.border.Top + span.border.Bottom + span.lineHeight
+			span.height = math.Max(height, span.height)
+
 			return span
 		}
 	}
@@ -219,7 +250,7 @@ func (span *Span) SetContent(content string) *Span {
 
 	// 重新计算 span 的高度
 	length := float64(len(span.contents))
-	height := span.border.Top + span.lineHeight*length + span.lineSpace*(length-1)
+	height := span.border.Top + span.border.Bottom + span.lineHeight*length + span.lineSpace*(length-1)
 	span.height = math.Max(height, span.height)
 
 	return span
@@ -236,19 +267,20 @@ func (span *Span) GenerateAtomicCell() error {
 		panic("no font")
 	}
 
-	border = span.border
 	span.pdf.Font(span.font.Family, span.font.Size, span.font.Style)
 	span.pdf.SetFontWithStyle(span.font.Family, span.font.Style, span.font.Size)
 
 	// 垂直居中
 	if span.verticalCentered {
 		length := float64(len(span.contents))
-		height := (length-1)*span.lineSpace + length*span.lineHeight + span.border.Top
+		height := (length-1)*span.lineSpace + length*span.lineHeight + span.border.Top + span.border.Bottom
 		if height < span.height {
 			top := (span.height - height) / 2
 			span.border = core.NewScope(border.Left, top, border.Right, 0)
 		}
 	}
+
+	border = span.border
 
 	if !util.IsEmpty(span.fontColor) {
 		span.pdf.TextColor(util.GetColorRGB(span.fontColor))
@@ -259,16 +291,18 @@ func (span *Span) GenerateAtomicCell() error {
 		if span.horizontalCentered {
 			width := span.pdf.MeasureTextWidth(span.contents[i])
 			if width < span.width {
-				left := (span.width - width) / 2
-				span.border = core.NewScope(left, border.Top, 0, border.Right)
+				left := (border.Left + border.Right + span.width - width) / 2
+				span.border = core.NewScope(left, border.Top, 0, left)
 			}
 		}
 
 		// 水平居右, 只是对当前的行设置新的 Border
 		if span.rightAlign {
 			width := span.pdf.MeasureTextWidth(span.contents[i])
-			left := span.width - width
-			span.border = core.NewScope(left, border.Top, 0, border.Right)
+			if width < span.width {
+				left := span.width - width + span.border.Right+span.border.Left
+				span.border = core.NewScope(left, border.Top, 0, 0)
+			}
 		}
 
 		x, y = span.getContentPosition(sx, sy, i)

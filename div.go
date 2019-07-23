@@ -107,7 +107,6 @@ func (div *Div) SetFrameType(frameType int) *Div {
 	return div
 }
 
-// TODO: the order 
 func (div *Div) SetMarign(margin core.Scope) *Div {
 	margin.ReplaceMarign()
 	config := div.pdf.GetConfig()
@@ -380,7 +379,6 @@ func (div *Div) drawLine(sx, sy float64) {
 			div.pdf.BackgroundColor(x, y, div.width, div.height, div.backColor, "0000")
 		}
 
-		y = sy + div.margin.Top
 		// 两条竖线 + 一条横线
 		if div.frameType != DIV_NONE {
 			div.pdf.LineV(sx+div.margin.Left, y, y+div.height)

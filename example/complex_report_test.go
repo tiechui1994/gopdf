@@ -135,7 +135,6 @@ func ComplexReportFooterExecutor(report *core.Report) {
 	footer := gopdf.NewSpan(10, 0, report)
 	footer.SetFont(textFont)
 	footer.SetFontColor("60, 179, 113")
-	footer.SetBorder(core.Scope{Top: 10})
 	footer.HorizontalCentered().SetContent(content).GenerateAtomicCell()
 }
 func ComplexReportHeaderExecutor(report *core.Report) {
