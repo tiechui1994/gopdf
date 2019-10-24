@@ -902,6 +902,11 @@ func (table *Table) resetTableCells() {
 	)
 
 	writenum := table.getMaxWriteLineNo()
+	// TODO: fix writenum is out of table.cells
+	if writenum >= len(table.cells) {
+		table.cells = table.cells[writenum:]
+		return
+	}
 
 	// cell重置,需要修正空格Cell
 	row := writenum
