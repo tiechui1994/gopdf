@@ -353,7 +353,6 @@ func (report *Report) SetPage(size string, orientation string) {
 	// report.pageStartY = config.startY
 	// report.pageEndX = config.endX
 	// report.pageEndY = config.endY
-	report.config = config
 
 	report.execute(false)
 }
@@ -368,6 +367,16 @@ func (report *Report) setConfig(width, height, contentWidth, contentHeight, star
 	report.pageStartY = startY
 	report.pageEndX = endX
 	report.pageEndY = endY
+	report.config = &Config{
+		startX:        startX,
+		startY:        startY,
+		endX:          endX,
+		endY:          endY,
+		width:         width,
+		height:        height,
+		contentWidth:  contentWidth,
+		contentHeight: contentHeight,
+	}
 }
 
 // 获取底层的所有的原子单元内容
