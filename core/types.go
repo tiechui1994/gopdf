@@ -45,5 +45,6 @@ type Cell interface {
 	GenerateAtomicCell(height float64) (writed, remain int, err error) // 写入的行数, 剩余的行数,错误
 	TryGenerateAtomicCell(height float64) (writed, remain int)         // 尝试写入
 	GetHeight() (height float64)                                       // 当前cell的height
+	SetWidth(width float64)                                            // 设置当前cell的width
 	GetLastHeight() (height float64)                                   // 最近一次cell的height
 }

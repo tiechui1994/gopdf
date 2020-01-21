@@ -300,7 +300,7 @@ func (span *Span) GenerateAtomicCell() error {
 		if span.rightAlign {
 			width := span.pdf.MeasureTextWidth(span.contents[i])
 			if width < span.width {
-				left := span.width - width + span.border.Right+span.border.Left
+				left := span.width - width + span.border.Right + span.border.Left
 				span.border = core.NewScope(left, border.Top, 0, 0)
 			}
 		}
