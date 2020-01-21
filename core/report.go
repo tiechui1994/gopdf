@@ -123,9 +123,9 @@ func (report *Report) LoadCellsFromText(filepath string) error {
 // 转换, 内容 -> PDF文件
 func (report *Report) execute(exec bool) {
 	if exec {
-		report.executePageHeader() // 首页的页眉
 
 		report.pageNo = 1
+		report.executePageHeader() // 首页的页眉
 		report.currX, report.currY = report.GetPageStartXY()
 		report.addAtomicCell("v|PAGE|" + strconv.Itoa(report.pageNo))
 		report.executeDetail()
