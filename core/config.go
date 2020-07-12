@@ -2,13 +2,13 @@ package core
 
 import "fmt"
 
-// 单位像素
+// the units of below is pixels.
 type Config struct {
-	startX, startY float64 // PDF页的开始坐标定位, 必须指定
-	endX, endY     float64 // PDF页的结束坐标定位, 必须指定
-	width, height  float64 // PDF页的宽度和高度, 必须指定
+	startX, startY float64 // PDF page start position
+	endX, endY     float64 // PDF page end postion
+	width, height  float64 // PDF page width and height
 
-	contentWidth, contentHeight float64 // PDF页内容的宽度和高度, 计算得到
+	contentWidth, contentHeight float64 // PDF page content width and height
 }
 
 // Params width, height is pdf page width and height
@@ -57,7 +57,7 @@ func (config *Config) GetEnd() (x, y float64) {
 var defaultConfigs map[string]*Config // page -> config
 
 /**************************************
-A0 ~ A5 纸张像素表示
+A0 ~ A5 page width and height config:
 	'A0': [2383.94, 3370.39],
 	'A1': [1683.78, 2383.94],
 	'A2': [1190.55, 1683.78],
