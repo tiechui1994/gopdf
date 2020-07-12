@@ -1,5 +1,7 @@
 package core
 
+import "fmt"
+
 // 单位像素
 type Config struct {
 	startX, startY float64 // PDF页的开始坐标定位, 必须指定
@@ -9,29 +11,41 @@ type Config struct {
 	contentWidth, contentHeight float64 // PDF页内容的宽度和高度, 计算得到
 }
 
-func (config *Config) checkConfig() {
-	if config.startX < 0 || config.startY < 0 {
-		panic("the pdf page start position invilid")
+// Params width, height is pdf page width and height
+// Params padingH, padingV is pdf horizontal and vertical padding
+// The units of the above parameters are pixels.
+// Params width must more than 2*padingH, and height must more 2*padingV
+func NewConfig(width, height float64, padingH, padingV float64) (*Config, error) {
+	if width <= 0 || height <= 0 || padingH < 0 || padingV < 0 {
+		return nil, fmt.Errorf("params must more than zero")
 	}
 
-	if config.endX < 0 || config.endY < 0 || config.endX <= config.startX || config.endY <= config.startY {
-		panic("the pdf page end position invilid")
+	if width <= 2*padingH || height <= 2*padingV {
+		return nil, fmt.Errorf("this config params invalid")
 	}
 
-	if config.width <= config.endX || config.height <= config.endY {
-		panic("the pdf page width or height invilid")
+	c := &Config{
+		width:  width,
+		height: height,
+
+		startX: padingH,
+		startY: padingV,
+
+		contentWidth:  width - 2*padingH,
+		contentHeight: height - 2*padingV,
 	}
 
-	// 关系验证
-	if config.endX+config.startX != config.width || config.endY+config.startY != config.height {
-		panic("the paf page config invilid")
-	}
+	c.endX = c.startX + c.contentWidth
+	c.endY = c.startY + c.contentHeight
+
+	return c, nil
 }
 
 func (config *Config) GetWidthAndHeight() (width, height float64) {
 	return config.width, config.width
 }
 
+// Get pdf page start position, from the position you can write the pdf body content.
 func (config *Config) GetStart() (x, y float64) {
 	return config.startX, config.startY
 }
@@ -88,12 +102,11 @@ func init() {
 	}
 }
 
+// Register create self pdf config
 func Register(size string, config *Config) {
 	if _, ok := defaultConfigs[size]; ok {
-		return
+		panic("config size has exist")
 	}
-	config.checkConfig()
-	config.contentWidth = config.endX - config.startX
-	config.contentHeight = config.endY - config.startY
+
 	defaultConfigs[size] = config
 }
