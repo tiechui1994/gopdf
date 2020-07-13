@@ -47,7 +47,7 @@ func (c *content) SetText(fontFamily, text string) {
 	var font core.Font
 	switch c.Type {
 	case TEXT_BOLD:
-		font = core.Font{Family: fontFamily, Size: defaultFontSize, Style: "B"}
+		font = core.Font{Family: fontFamily, Size: defaultFontSize, Style: ""}
 	case TEXT_IALIC:
 		font = core.Font{Family: fontFamily, Size: defaultFontSize, Style: ""}
 	case TEXT_WARP:
@@ -191,6 +191,14 @@ func (mt *MarkdownText) GetFontFamily(c content) string {
 	}
 }
 
+const (
+	cut_code = "```"
+	cut_wrap = "`"
+
+	cut_bold  = "**"
+	cut_itaic = "*"
+)
+
 func (mt *MarkdownText) SetText(text string) *MarkdownText {
 
 	runes := []rune(text)
@@ -199,7 +207,7 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 		buf      bytes.Buffer
 		c        content
 		contents []content
-		lastStep string
+		cuts     []string
 	)
 	if strings.HasPrefix(text, ">") {
 		mt.quote = true
@@ -209,49 +217,95 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 	for i := 0; i < n; {
 		switch runes[i] {
 		case '*':
+			if len(cuts) > 0 && (cuts[len(cuts)-1] == cut_wrap || cuts[len(cuts)-1] == cut_code) {
+				buf.WriteRune(runes[i])
+				i += 1
+				continue
+			}
+
 			if buf.Len() > 0 {
 				c.SetText(mt.GetFontFamily(c), buf.String())
 				buf.Reset()
 				contents = append(contents, c)
+			}
+
+			if i+1 < n && string(runes[i:i+2]) == cut_bold {
+				if len(cuts) == 0 || cuts[len(cuts)-1] != cut_bold {
+					c = content{pdf: mt.pdf, Type: TEXT_BOLD}
+					cuts = append(cuts, cut_bold)
+					if runes[i+2] == '`' {
+						buf.WriteRune(runes[i+3])
+						i += 4
+					} else {
+						buf.WriteRune(runes[i+2])
+						i += 3
+					}
+
+				} else {
+					cuts = cuts[:len(cuts)-1]
+					i += 2
+				}
 				continue
 			}
 
-			if i+1 < n && runes[i+1] == '*' {
-				c = content{pdf: mt.pdf, Type: TEXT_BOLD}
-				i += 2
-			} else {
+			if len(cuts) == 0 || cuts[len(cuts)-1] != cut_itaic {
 				c = content{pdf: mt.pdf, Type: TEXT_IALIC}
+				cuts = append(cuts, cut_itaic)
+				if runes[i+1] == '`' {
+					buf.WriteRune(runes[i+2])
+					i += 3
+				} else {
+					buf.WriteRune(runes[i+1])
+					i += 2
+				}
+			} else {
+				cuts = cuts[:len(cuts)-1]
 				i += 1
 			}
 
 		case '`':
+			if len(cuts) > 0 && (cuts[len(cuts)-1] == cut_itaic || cuts[len(cuts)-1] == cut_bold) {
+				log.Println("aa", cuts, string(runes[i:]))
+				i += 1
+				continue
+			}
+
 			if buf.Len() > 0 {
 				c.SetText(mt.GetFontFamily(c), buf.String())
 				buf.Reset()
 				contents = append(contents, c)
+			}
+
+			if i+2 < n && string(runes[i:i+3]) == cut_code {
+				if len(cuts) == 0 || cuts[len(cuts)-1] != cut_code {
+					c = content{pdf: mt.pdf, Type: TEXT_CODE}
+					cuts = append(cuts, cut_code)
+					buf.WriteRune(runes[i+3])
+					i += 4
+				} else {
+					cuts = cuts[:len(cuts)-1]
+					i += 3
+				}
 				continue
 			}
 
-			log.Println("char", i, string(runes[i]))
-
-			// buf.Len() == 0
-			if i+1 < n && i+2 < n && runes[i+1] == '`' && runes[i+2] == '`' {
-				i += 2
-				c = content{pdf: mt.pdf, Type: TEXT_CODE}
-			} else {
+			if len(cuts) == 0 || cuts[len(cuts)-1] != cut_wrap {
 				c = content{pdf: mt.pdf, Type: TEXT_WARP}
+				cuts = append(cuts, cut_wrap)
+				buf.WriteRune(runes[i+1])
+				i += 2
+			} else {
+				cuts = cuts[:len(cuts)-1]
 				i += 1
 			}
 
-			log.Println("c", c)
-
 		case '>':
-			if mt.quote && (i-1 > 0 && runes[i+1] == '\n' || i == 0) {
+			if i == 0 || (i-1 > 0 && runes[i+1] == '\n' ) {
 				i++
-			} else {
-				buf.WriteRune(runes[i])
-				i++
+				continue
 			}
+			buf.WriteRune(runes[i])
+			i++
 
 		default:
 			if buf.Len() == 0 {

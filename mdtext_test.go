@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/tiechui1994/gopdf/core"
-	"encoding/base64"
+	"io/ioutil"
 )
 
 const (
@@ -36,13 +36,25 @@ func MdReport() {
 	r.SaveAtomicCellText("block_test.txt")
 }
 
-func MdReportExecutor(report *core.Report) {
-	text, _ := base64.StdEncoding.DecodeString("PiDms6jmhI86IAo+Cj4gMS7lnKjpk77mjqVD5bqT55qE5L2/55SoLCDkuI3mlK/mjIHmnaHku7bpgInmi6kuIOW5tuS4lENHT+WPguaVsOacieS4peagvOeahOagvOW8jyBgI2NnbyBDRkxBR1M6Li4uYCDmiJbogIUgCj4gYCNjZ28gTERGTEFHUzogLi4uIGAsIOWNsyBgI2Nnb2Ag5ZKMIOWPguaVsChgQ0ZMQUdTYCwgYExERkxBR1NgKSAKPiAKPiAyLuWvueS6jkPor63oqIDlupMoYC5oYCDmlofku7blrprkuYnlhoXlrrkg5ZKMIGAuY2Ag5paH5Lu25a6e546wIGAuaGAg55qE5a6a5LmJKSwg5ZyoQ0dP5b2T5Lit5byV55SoIGAuaGAg5paH5Lu2LCDlv4Xpobvph4fnlKgKPiBg5Yqo5oCB5bqTL+mdmeaAgeW6k2Ag6ZO+5o6l55qE5pa55byPLCDlkKbliJnlj6/og73ml6Dms5XnvJbor5HpgJrov4cuICA=")
+/*
+> 注意:
+>
+> 1.在链接C库的使用, 不支持条件选择. 并且CGO参数有严格的格式 `#cgo CFLAGS:...` 或者
+> `#cgo LDFLAGS: ... `, 即 `#cgo` 和 参数(`CFLAGS`, `LDFLAGS`)
+>
+> 2.对于C语言库(`.h` 文件定义内容 和 `.c` 文件实现 `.h` 的定义), 在CGO当中引用 `.h` 文件, 必须采用
+> `动态库/静态库` 链接的方式, 否则可能无法编译通过.
+> **dd**, `**dd**`, `vivo`, qkwqkwwq,jdjjsdjsd, `**sss**` **`ss`**
+>
+>
+*/
 
+func MdReportExecutor(report *core.Report) {
+	text, _ := ioutil.ReadFile("./md.md")
 	mt, _ := NewMarkdownText(report, 10, map[string]string{
 		FONT_NORMAL: MD_MC,
 		FONT_IALIC:  MD_MC,
-		FONT_BOLD:   MD_MB,
+		FONT_BOLD:   MD_MC,
 	})
 	mt.SetText(string(text))
 
@@ -69,7 +81,4 @@ func MdReportExecutor(report *core.Report) {
 
 func TestMd(t *testing.T) {
 	MdReport()
-}
-
-func TestContent(t *testing.T) {
 }
