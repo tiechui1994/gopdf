@@ -32,8 +32,8 @@ func MdReport() {
 
 	r.RegisterExecutor(core.Executor(MdReportExecutor), core.Detail)
 
-	r.Execute("block_test.pdf")
-	r.SaveAtomicCellText("block_test.txt")
+	r.Execute("mdtext_test.pdf")
+	r.SaveAtomicCellText("mdtext_test.txt")
 }
 
 /*
@@ -57,7 +57,8 @@ func MdReportExecutor(report *core.Report) {
 		FONT_BOLD:   MD_MC,
 	})
 	mt.SetText(string(text))
-
+	mt.GenerateAtomicCell()
+	return
 	ctetx := content{
 		pdf:  report,
 		Type: TEXT_NORMAL,

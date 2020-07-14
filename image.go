@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tiechui1994/gopdf/core"
+	"fmt"
 )
 
 type Image struct {
@@ -18,7 +19,7 @@ type Image struct {
 
 func NewImage(path string, pdf *core.Report) *Image {
 	if _, err := os.Stat(path); err != nil {
-		panic("the path error")
+		panic(fmt.Sprintf("the path error, %v", path))
 	}
 
 	var tempFilePath string
