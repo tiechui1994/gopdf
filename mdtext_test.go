@@ -50,7 +50,7 @@ func MdReport() {
 */
 
 func MdReportExecutor(report *core.Report) {
-	text, _ := ioutil.ReadFile("./md.md")
+	text, _ := ioutil.ReadFile("./cgo.md")
 	mt, _ := NewMarkdownText(report, 10, map[string]string{
 		FONT_NORMAL: MD_MC,
 		FONT_IALIC:  MD_MC,

@@ -278,7 +278,7 @@ func (convert *Converter) BackgroundColor(line string, elements []string) {
 		parseFloatPanic(elements[4], line)*convert.unit, "F")
 
 	// recover origin backgroup color and line color
-	convert.pdf.SetFillColor(0, 0, 0)
+	convert.pdf.SetFillColor(1, 1, 1)
 	convert.pdf.SetStrokeColor(uint8(parseIntPanic(elements[9], line)),
 		uint8(parseIntPanic(elements[10], line)),
 		uint8(parseIntPanic(elements[11], line)))

@@ -27,6 +27,15 @@ const (
 )
 
 const (
+	HEADER_ONE = iota + 1
+	HEADER_TWO
+	HEADER_THR
+	HEADER_FOU
+	HEADER_FIV
+	HEADER_SIX
+)
+
+const (
 	defaultLineHeight   = 18.0
 	defaultFontSize     = 15.0
 	defaultWarpFontSize = 10.0
@@ -84,7 +93,7 @@ func (c *content) SetText(fontFamily string, text ...string) {
 	}
 
 	c.font = font
-
+	text[0] = strings.Replace(text[0], "\t", "    ", -1)
 	c.text = text[0]
 	c.remain = text[0]
 	if c.Type == TEXT_LINK {
@@ -121,24 +130,33 @@ func (c *content) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	for !c.stoped {
 		if c.Type == TEXT_WARP {
 			// other padding is testing data
-			c.pdf.BackgroundColor(x1, y, width, 15.0, "248,248,255",
-				"1111", "220,220,220")
+			// bg: 248,248,255 text:1,1,1 line:	245,245,245,     Typora
+			// bg: 249,242,244 text:199,37,78 line:	245,245,245  GitLab
+			c.pdf.BackgroundColor(x1, y, width, 15.0, "249,242,244",
+				"1111", "245,245,245")
+
+			c.pdf.TextColor(199, 37, 78)
 			c.pdf.Cell(x1, y+3.15, text)
+			c.pdf.TextColor(1, 1, 1)
 		} else if c.Type == TEXT_CODE {
-			c.pdf.BackgroundColor(x1, y, x2-x1, 18.0, "248,248,255",
-				"0000", "220,220,220")
+			// bg: 248,248,255, text: 1,1,1    Typora
+			// bg: 40,42,54, text: 248,248,242  CSDN
+			c.pdf.BackgroundColor(x1, y, x2-x1, 18.0, "40,42,54",
+				"0000", "0,0,0")
+			c.pdf.TextColor(248, 248, 242)
 			c.pdf.Cell(x1, y+3.15, text)
+			c.pdf.TextColor(1, 1, 1)
 		} else if c.Type == TEXT_LINK {
-			// text
+			// text, blue
 			c.pdf.TextColor(0, 0, 255)
 			c.pdf.ExternalLink(x1, y+12.0, 15, text, c.link)
-			c.pdf.TextColor(0, 0, 0)
+			c.pdf.TextColor(1, 1, 1)
 
 			// line
 			c.pdf.LineColor(0, 0, 255)
 			c.pdf.LineType("solid", 0.4)
 			c.pdf.LineH(x1, y+c.precision, x1+width)
-			c.pdf.LineColor(0, 0, 0)
+			c.pdf.LineColor(1, 1, 1)
 		} else {
 			c.pdf.Cell(x1, y-0.45, text)
 		}
@@ -163,7 +181,34 @@ func (c *content) GenerateAtomicCell() (pagebreak, over bool, err error) {
 }
 
 func (c *content) String() string {
-	return fmt.Sprintf("[type=%v,text=%v]", c.Type, c.text)
+	text := strings.Replace(c.remain, "\n", "|", -1)
+	return fmt.Sprintf("[type=%v,text=%v]", c.Type, text)
+}
+
+type header struct {
+	Size       int
+	pdf        *core.Report
+	font       core.Font
+	lineHeight float64
+
+	text          string
+	remain        string
+	needBreakLine bool
+}
+
+func (h *header) SetText(fontFamily string, text ...string) {
+}
+
+func (h *header) SetPadding(need bool, padding float64) {
+}
+
+func (h *header) GenerateAtomicCell() (pagebreak, over bool, err error) {
+	return
+}
+
+func (h *header) String() string {
+	text := strings.Replace(h.remain, "\n", "|", -1)
+	return fmt.Sprintf("[size=%v,text=%v]", h.Size, text)
 }
 
 type mdimage struct {
@@ -196,32 +241,41 @@ type blocksort struct {
 	font     core.Font
 	children []mardown
 
-	sortType  string
-	sortIndex string
+	headerWrited bool
+	sortType     string
+	sortIndex    string
 }
 
 func (bs *blocksort) SetText(fontFamily string, _ ...string) {
-	bs.font = core.Font{Family: fontFamily, Size: 18.0}
+	if bs.sortType == SORT_DISORDER {
+		bs.font = core.Font{Family: fontFamily, Size: 40.0}
+	} else {
+		bs.font = core.Font{Family: fontFamily, Size: 18.0}
+	}
+
 }
 
 func (bs *blocksort) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	bs.pdf.Font(bs.font.Family, bs.font.Size, bs.font.Style)
 	bs.pdf.SetFontWithStyle(bs.font.Family, bs.font.Style, bs.font.Size)
 
-	var text string
-	x, y := bs.pdf.GetXY()
-	switch bs.sortType {
-	case SORT_ORDER:
-		text = fmt.Sprintf(" %v. ", bs.sortIndex)
-		bs.pdf.Cell(x, y, text)
+	if !bs.headerWrited {
+		var text string
+		x, y := bs.pdf.GetXY()
+		switch bs.sortType {
+		case SORT_ORDER:
+			text = fmt.Sprintf(" %v. ", bs.sortIndex)
+			bs.pdf.Cell(x, y, text)
 
-	case SORT_DISORDER:
-		text = " · "
-		bs.pdf.Cell(x, y, text)
+		case SORT_DISORDER:
+			text = " · "
+			bs.pdf.Cell(x, y-13, text)
+		}
+
+		length := bs.pdf.MeasureTextWidth(text)
+		bs.pdf.SetXY(x+length, y)
+		bs.headerWrited = true
 	}
-
-	length := bs.pdf.MeasureTextWidth(text)
-	bs.pdf.SetXY(x+length, y)
 
 	for i, comment := range bs.children {
 		pagebreak, over, err = comment.GenerateAtomicCell()
@@ -232,10 +286,11 @@ func (bs *blocksort) GenerateAtomicCell() (pagebreak, over bool, err error) {
 		if pagebreak {
 			if over && i != len(bs.children)-1 {
 				bs.children = bs.children[i+1:]
-				return pagebreak, false, nil
+				return pagebreak, len(bs.children) == 0, nil
 			}
 
-			return pagebreak, true, nil
+			bs.children = bs.children[i:]
+			return pagebreak, len(bs.children) == 0, nil
 		}
 	}
 
@@ -423,7 +478,7 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 	// [\n \t=#%@&"':<>,(){}_;/\?\.\+\-\=\^\$\[\]\!]
 	relink := regexp.MustCompile(`^\[(.*?)\]\((.*?)\)`)
 	reimage := regexp.MustCompile(`^\!\[image\]\((.*?)\)`)
-	rensort := regexp.MustCompile(`^\-( )*`)
+	rensort := regexp.MustCompile(`^\-( )+`)
 	rerest := regexp.MustCompile(`^\n[\t ]*?\n(\n[\t ]*?\n)*`)
 	runes := []rune(text)
 	n := len(runes)
@@ -442,7 +497,6 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 	restmain := func() {
 		main = nil
 	}
-	_ = restmain
 
 	setsub := func(m mardown) {
 		mainval, mainok := m.(combinedmark)
@@ -450,7 +504,7 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 		// parent exsit, add to parent
 		if main != nil {
 			main.AddChild(m)
-			log.Printf("%+v", main)
+			log.Printf("main %+v", main)
 			return
 		}
 
@@ -461,15 +515,36 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 			return
 		}
 
+		log.Printf("sub %+v", m)
 		contents = append(contents, m)
+	}
+
+	defaultop := func(i *int) {
+		if buf.Len() == 0 {
+			sub = &content{pdf: mt.pdf, Type: TEXT_NORMAL}
+		}
+		buf.WriteRune(runes[*i])
+		*i += 1
+	}
+
+	curIsCode := func() bool {
+		if len(cuts) == 0 {
+			return false
+		}
+
+		last := cuts[len(cuts)-1]
+		if last == "```" || last == "`" {
+			return true
+		}
+
+		return false
 	}
 
 	for i := 0; i < n; {
 		switch runes[i] {
 		case '*':
 			if len(cuts) > 0 && (cuts[len(cuts)-1] == cut_wrap || cuts[len(cuts)-1] == cut_code) {
-				buf.WriteRune(runes[i])
-				i += 1
+				defaultop(&i)
 				continue
 			}
 
@@ -567,7 +642,7 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 
 		case '!':
 			temp := string(runes[i:])
-			if reimage.MatchString(temp) {
+			if !curIsCode() && reimage.MatchString(temp) {
 				if buf.Len() > 0 {
 					sub.SetText(mt.GetFontFamily(sub), buf.String())
 					buf.Reset()
@@ -579,14 +654,13 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 				c.SetText("", submatch[1])
 				setsub(c)
 				i += len([]rune(matchstr))
-				continue
+			} else {
+				defaultop(&i)
 			}
-			buf.WriteRune(runes[i])
-			i += 1
 
 		case '[':
 			temp := string(runes[i:])
-			if relink.MatchString(temp) {
+			if !curIsCode() && relink.MatchString(temp) {
 				if buf.Len() > 0 {
 					sub.SetText(mt.GetFontFamily(sub), buf.String())
 					buf.Reset()
@@ -599,14 +673,13 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 				c.SetText(mt.fonts[FONT_NORMAL], submatch[1], submatch[2])
 				setsub(c)
 				i += len([]rune(matchstr))
-				continue
+			} else {
+				defaultop(&i)
 			}
-			buf.WriteRune(runes[i])
-			i += 1
 
 		case '-':
 			temp := string(runes[i:])
-			if rensort.MatchString(temp) {
+			if !curIsCode() && rensort.MatchString(temp) {
 				if buf.Len() > 0 {
 					sub.SetText(mt.GetFontFamily(sub), buf.String())
 					buf.Reset()
@@ -618,29 +691,25 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 				c.SetText(mt.fonts[FONT_BOLD], "")
 				setsub(c)
 				i += len([]rune(matchstr))
-				continue
+			} else {
+				defaultop(&i)
 			}
-			buf.WriteRune(runes[i])
-			i += 1
 
 		case '>':
-			if i == 0 || (i-1 > 0 && runes[i-1] == '\n' ) {
+			if !curIsCode() && (i == 0 || (i-1 > 0 && runes[i-1] == '\n' )) {
 				i++
-				continue
+			} else {
+				defaultop(&i)
 			}
-			buf.WriteRune(runes[i])
-			i++
 
 		case '\n':
-
 			if i == 0 || main == nil {
-				buf.WriteRune(runes[i])
-				i += 1
+				defaultop(&i)
 				continue
 			}
 
 			temp := string(runes[i:])
-			if rerest.MatchString(temp) {
+			if !curIsCode() && rerest.MatchString(temp) {
 				if buf.Len() > 0 {
 					buf.WriteRune(runes[i])
 					sub.SetText(mt.GetFontFamily(sub), buf.String())
@@ -652,18 +721,19 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 
 				matchstr := rerest.FindString(temp)
 				i += len([]rune(matchstr))
-				continue
+			} else {
+				defaultop(&i)
 			}
-			buf.WriteRune(runes[i])
-			i += 1
 
 		default:
-			if buf.Len() == 0 {
-				sub = &content{pdf: mt.pdf, Type: TEXT_NORMAL}
-			}
-			buf.WriteRune(runes[i])
-			i += 1
+			defaultop(&i)
 		}
+	}
+
+	if buf.Len() > 0 {
+		sub.SetText(mt.GetFontFamily(sub), buf.String())
+		buf.Reset()
+		setsub(sub)
 	}
 
 	//for _, c := range contents {
@@ -689,10 +759,27 @@ func (mt *MarkdownText) GenerateAtomicCell() (err error) {
 		return fmt.Errorf("not set text")
 	}
 
-	for _, c := range mt.contents {
-		pagebreak, over, err := c.GenerateAtomicCell()
+	for i := 0; i < len(mt.contents); {
+		content := mt.contents[i]
+		pagebreak, over, err := content.GenerateAtomicCell()
+		if err != nil {
+			i++
+			continue
+		}
+
 		if pagebreak {
-			log.Println("pagebreak", pagebreak, over, err)
+			log.Println("break", over, content)
+			if over {
+				i++
+			}
+			newX, newY := mt.pdf.GetPageStartXY()
+			mt.pdf.AddNewPage(false)
+			mt.pdf.SetXY(newX, newY)
+			continue
+		}
+
+		if over {
+			i++
 		}
 	}
 

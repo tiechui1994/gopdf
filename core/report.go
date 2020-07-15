@@ -470,10 +470,10 @@ func (report *Report) LineColor(red int, green int, blue int) {
 		"|" + strconv.Itoa(blue))
 }
 
-// bgcolor: background color. style is "r,g,b", eg. "0,0,0" is black
+// bgcolor: background color. style is "r,g,b", eg. "1,1,1" is black
 // lines: whether border lines are needed. eg, "0000" is not needed, "1111" is needed, "0110" is
 // required for TOP, RIGHT lines.
-// lcolor: line color, style is "r,g,b", eg. "0,0,0" is black
+// lcolor: line color, style is "r,g,b", eg. "1,1,1" is black
 func (report *Report) BackgroundColor(x, y, w, h float64, bgcolor string, lines string, lcolor ...string) {
 	if !rline.MatchString(lines) {
 		lines = "0000"
@@ -489,7 +489,7 @@ func (report *Report) BackgroundColor(x, y, w, h float64, bgcolor string, lines 
 	}
 
 	bgred, bggreen, bgblue := util.GetColorRGB(bgcolor)
-	var lred, lgreen, lblue int
+	var lred, lgreen, lblue = 1, 1, 1
 	if lcolor != nil {
 		lred, lgreen, lblue = util.GetColorRGB(lcolor[0])
 	}
