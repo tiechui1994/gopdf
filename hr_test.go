@@ -25,3 +25,29 @@ func ComplexHLineReportExecutor(report *core.Report) {
 func TestComplexHLineReport(t *testing.T) {
 	ComplexHLineReport()
 }
+
+type A interface {
+	A()
+}
+
+type B interface {
+	B()
+}
+
+type T struct {
+}
+
+func (t *T) A() {
+
+}
+func (t *T) B() {
+
+}
+
+func TestAB(t *testing.T) {
+	var b B
+	b = &T{}
+	if _, ok := b.(A); ok {
+		t.Log("ok")
+	}
+}
