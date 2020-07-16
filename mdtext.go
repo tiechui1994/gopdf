@@ -47,7 +47,7 @@ type mardown interface {
 	GenerateAtomicCell() (pagebreak, over bool, err error)
 }
 
-type combinedmark interface {
+type combined interface {
 	AddChild(child mardown)
 }
 
@@ -142,7 +142,7 @@ func (c *content) GenerateAtomicCell() (pagebreak, over bool, err error) {
 			// bg: 248,248,255, text: 1,1,1    Typora
 			// bg: 40,42,54, text: 248,248,242  CSDN
 			c.pdf.BackgroundColor(x1, y, x2-x1, 18.0, "40,42,54",
-				"0000", "0,0,0")
+				"1111", "40,42,54")
 			c.pdf.TextColor(248, 248, 242)
 			c.pdf.Cell(x1, y+3.15, text)
 			c.pdf.TextColor(1, 1, 1)
@@ -185,32 +185,6 @@ func (c *content) String() string {
 	return fmt.Sprintf("[type=%v,text=%v]", c.Type, text)
 }
 
-type header struct {
-	Size       int
-	pdf        *core.Report
-	font       core.Font
-	lineHeight float64
-
-	text          string
-	remain        string
-	needBreakLine bool
-}
-
-func (h *header) SetText(fontFamily string, text ...string) {
-}
-
-func (h *header) SetPadding(need bool, padding float64) {
-}
-
-func (h *header) GenerateAtomicCell() (pagebreak, over bool, err error) {
-	return
-}
-
-func (h *header) String() string {
-	text := strings.Replace(h.remain, "\n", "|", -1)
-	return fmt.Sprintf("[size=%v,text=%v]", h.Size, text)
-}
-
 type mdimage struct {
 	pdf   *core.Report
 	image *Image
@@ -230,6 +204,281 @@ func (mi *mdimage) SetPadding(need bool, padding float64) {
 }
 
 // combined components
+
+type header struct {
+	Size       int
+	pdf        *core.Report
+	fonts      map[string]string
+	children   []mardown
+	lineHeight float64
+
+	text          string
+	remain        string
+	needBreakLine bool
+}
+
+func (h *header) GetFontFamily(md mardown) string {
+	switch md.(type) {
+	case *content:
+		c, _ := md.(*content)
+		switch c.Type {
+		case TEXT_NORMAL:
+			return h.fonts[FONT_NORMAL]
+		case TEXT_BOLD:
+			return h.fonts[FONT_BOLD]
+		case FONT_IALIC:
+			return h.fonts[FONT_IALIC]
+		default:
+			return h.fonts[FONT_NORMAL]
+		}
+	}
+
+	return ""
+}
+
+func (h *header) SetText(_ string, textargs ...string) {
+	var (
+		normal, code, itialic int
+	)
+	switch h.Size {
+	case HEADER_ONE:
+		normal = defaultFontSize + 12
+		h.lineHeight = defaultLineHeight + 16
+	case HEADER_TWO:
+		normal = defaultFontSize + 8
+		h.lineHeight = defaultLineHeight + 12
+	case HEADER_THR:
+		normal = defaultFontSize + 4
+		h.lineHeight = defaultLineHeight + 8
+	case HEADER_FOU:
+		normal = defaultFontSize + 3
+		h.lineHeight = defaultLineHeight + 6
+	case HEADER_FIV:
+		normal = defaultFontSize + 2
+		h.lineHeight = defaultLineHeight + 4
+	case HEADER_SIX:
+		normal = defaultFontSize
+		h.lineHeight = defaultLineHeight
+	}
+
+	_, _, _ = normal, code, itialic
+	text := textargs[0]
+
+	relink := regexp.MustCompile(`^\[(.*?)\]\((.*?)\)`)
+	reimage := regexp.MustCompile(`^\!\[image\]\((.*?)\)`)
+	runes := []rune(text)
+	n := len(runes)
+	log.Println("runes:", len(runes), "text:", strings.Replace(text, "\n", "|", -1))
+	var (
+		buf      bytes.Buffer
+		contents []mardown
+		sub      mardown  // basic composte
+		cuts     []string // mark some cut, eg, **, *, `, ```
+	)
+
+	setsub := func(m mardown) {
+		contents = append(contents, m)
+	}
+
+	defaultop := func(i *int) {
+		if buf.Len() == 0 {
+			sub = &content{pdf: h.pdf, Type: TEXT_NORMAL}
+		}
+		buf.WriteRune(runes[*i])
+		*i += 1
+	}
+
+	curIsCode := func() bool {
+		if len(cuts) == 0 {
+			return false
+		}
+
+		last := cuts[len(cuts)-1]
+		if last == "```" || last == "`" {
+			return true
+		}
+
+		return false
+	}
+
+	for i := 0; i < n; {
+		switch runes[i] {
+		case '*':
+			if len(cuts) > 0 && (cuts[len(cuts)-1] == cut_wrap || cuts[len(cuts)-1] == cut_code) {
+				defaultop(&i)
+				continue
+			}
+
+			if buf.Len() > 0 {
+				sub.SetText(h.GetFontFamily(sub), buf.String())
+				buf.Reset()
+				setsub(sub)
+			}
+
+			if i+1 < n && string(runes[i:i+2]) == cut_bold {
+				if len(cuts) == 0 || cuts[len(cuts)-1] != cut_bold {
+					sub = &content{pdf: h.pdf, Type: TEXT_BOLD}
+					cuts = append(cuts, cut_bold)
+					if runes[i+2] == '`' {
+						buf.WriteRune(runes[i+3])
+						i += 4
+					} else {
+						buf.WriteRune(runes[i+2])
+						i += 3
+					}
+
+				} else {
+					cuts = cuts[:len(cuts)-1]
+					i += 2
+				}
+				continue
+			}
+
+			if len(cuts) == 0 || cuts[len(cuts)-1] != cut_itaic {
+				sub = &content{pdf: h.pdf, Type: TEXT_IALIC}
+				cuts = append(cuts, cut_itaic)
+				if runes[i+1] == '`' {
+					buf.WriteRune(runes[i+2])
+					i += 3
+				} else {
+					buf.WriteRune(runes[i+1])
+					i += 2
+				}
+			} else {
+				cuts = cuts[:len(cuts)-1]
+				i += 1
+			}
+
+		case '`':
+			if len(cuts) > 0 && (cuts[len(cuts)-1] == cut_itaic || cuts[len(cuts)-1] == cut_bold) {
+				i += 1
+				continue
+			}
+
+			if buf.Len() > 0 {
+				sub.SetText(h.GetFontFamily(sub), buf.String())
+				buf.Reset()
+				setsub(sub)
+			}
+
+			// code text
+			if i+2 < n && string(runes[i:i+3]) == cut_code && (i == 0 || runes[i-1] == '\n') {
+				if len(cuts) == 0 || cuts[len(cuts)-1] != cut_code {
+					sub = &content{pdf: h.pdf, Type: TEXT_CODE, needpadding: true}
+					index := strings.Index(string(runes[i:]), "\n")
+					cuts = append(cuts, cut_code)
+					buf.WriteRune(runes[i+index+1])
+					i = i + index + 2
+				} else {
+					cuts = cuts[:len(cuts)-1]
+					i += 3
+				}
+				continue
+			}
+
+			// wrap
+			if i+2 < n && string(runes[i:i+3]) == cut_code {
+				if len(cuts) == 0 || cuts[len(cuts)-1] != cut_code {
+					sub = &content{pdf: h.pdf, Type: TEXT_WARP}
+					cuts = append(cuts, cut_code)
+					buf.WriteRune(runes[i+3])
+					i += 4
+				} else {
+					cuts = cuts[:len(cuts)-1]
+					i += 3
+				}
+				continue
+			}
+
+			// wrap
+			if len(cuts) == 0 || cuts[len(cuts)-1] != cut_wrap {
+				sub = &content{pdf: h.pdf, Type: TEXT_WARP}
+				cuts = append(cuts, cut_wrap)
+				buf.WriteRune(runes[i+1])
+				i += 2
+			} else {
+				cuts = cuts[:len(cuts)-1]
+				i += 1
+			}
+
+		case '!':
+			temp := string(runes[i:])
+			if !curIsCode() && reimage.MatchString(temp) {
+				if buf.Len() > 0 {
+					sub.SetText(h.GetFontFamily(sub), buf.String())
+					buf.Reset()
+					setsub(sub)
+				}
+				matchstr := reimage.FindString(temp)
+				submatch := reimage.FindStringSubmatch(temp)
+				c := &mdimage{pdf: h.pdf}
+				c.SetText("", submatch[1])
+				setsub(c)
+				i += len([]rune(matchstr))
+			} else {
+				defaultop(&i)
+			}
+
+		case '[':
+			temp := string(runes[i:])
+			if !curIsCode() && relink.MatchString(temp) {
+				if buf.Len() > 0 {
+					sub.SetText(h.GetFontFamily(sub), buf.String())
+					buf.Reset()
+					setsub(sub)
+				}
+
+				matchstr := relink.FindString(temp)
+				submatch := relink.FindStringSubmatch(temp)
+				c := &content{pdf: h.pdf, Type: TEXT_LINK}
+				c.SetText(h.fonts[FONT_NORMAL], submatch[1], submatch[2])
+				setsub(c)
+				i += len([]rune(matchstr))
+			} else {
+				defaultop(&i)
+			}
+
+		default:
+			defaultop(&i)
+		}
+	}
+
+	if buf.Len() > 0 {
+		sub.SetText(h.GetFontFamily(sub), buf.String())
+		buf.Reset()
+		setsub(sub)
+	}
+
+	h.children = contents
+}
+
+func (h *header) SetPadding(need bool, padding float64) {
+}
+
+func (h *header) GenerateAtomicCell() (pagebreak, over bool, err error) {
+	for i, comment := range h.children {
+		pagebreak, over, err = comment.GenerateAtomicCell()
+		if err != nil {
+			return
+		}
+
+		if pagebreak {
+			if over && i != len(h.children)-1 {
+				h.children = h.children[i+1:]
+				return pagebreak, len(h.children) == 0, nil
+			}
+
+			h.children = h.children[i:]
+			return pagebreak, len(h.children) == 0, nil
+		}
+	}
+	return
+}
+
+func (h *header) String() string {
+	text := strings.Replace(h.remain, "\n", "|", -1)
+	return fmt.Sprintf("[size=%v,text=%v]", h.Size, text)
+}
 
 const (
 	SORT_ORDER    = "order"
@@ -449,21 +698,22 @@ func NewMarkdownText(pdf *core.Report, x float64, fonts map[string]string) (*Mar
 }
 
 func (mt *MarkdownText) GetFontFamily(md mardown) string {
-	c, ok := md.(*content)
-	if !ok {
-		return ""
+	switch md.(type) {
+	case *content:
+		c, _ := md.(*content)
+		switch c.Type {
+		case TEXT_NORMAL:
+			return mt.fonts[FONT_NORMAL]
+		case TEXT_BOLD:
+			return mt.fonts[FONT_BOLD]
+		case FONT_IALIC:
+			return mt.fonts[FONT_IALIC]
+		default:
+			return mt.fonts[FONT_NORMAL]
+		}
 	}
 
-	switch c.Type {
-	case TEXT_NORMAL:
-		return mt.fonts[FONT_NORMAL]
-	case TEXT_BOLD:
-		return mt.fonts[FONT_BOLD]
-	case FONT_IALIC:
-		return mt.fonts[FONT_IALIC]
-	default:
-		return mt.fonts[FONT_NORMAL]
-	}
+	return ""
 }
 
 const (
@@ -480,14 +730,15 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 	reimage := regexp.MustCompile(`^\!\[image\]\((.*?)\)`)
 	rensort := regexp.MustCompile(`^\-( )+`)
 	rerest := regexp.MustCompile(`^\n[\t ]*?\n(\n[\t ]*?\n)*`)
+	reheader := regexp.MustCompile(`^(#)+[ ]*.*?\n`)
 	runes := []rune(text)
 	n := len(runes)
 	var (
 		buf      bytes.Buffer
 		contents []mardown
-		main     combinedmark // combined composte
-		sub      mardown      // basic composte
-		cuts     []string     // mark some cut, eg, **, *, `, ```
+		main     combined // combined composte
+		sub      mardown  // basic composte
+		cuts     []string // mark some cut, eg, **, *, `, ```
 	)
 	if strings.HasPrefix(text, ">") {
 		mt.quote = true
@@ -499,12 +750,12 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 	}
 
 	setsub := func(m mardown) {
-		mainval, mainok := m.(combinedmark)
+		mainval, mainok := m.(combined)
 
 		// parent exsit, add to parent
 		if main != nil {
 			main.AddChild(m)
-			log.Printf("main %+v", main)
+			//log.Printf("main %+v", main)
 			return
 		}
 
@@ -515,7 +766,7 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 			return
 		}
 
-		log.Printf("sub %+v", m)
+		//log.Printf("sub %+v", m)
 		contents = append(contents, m)
 	}
 
@@ -695,6 +946,37 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 				defaultop(&i)
 			}
 
+		case '#':
+			if !curIsCode() && (i == 0 || runes[i-1] == '\n') {
+				if buf.Len() > 0 {
+					buf.WriteRune(runes[i])
+					sub.SetText(mt.GetFontFamily(sub), buf.String())
+					buf.Reset()
+					setsub(sub)
+				}
+
+				temp := string(runes[i:])
+				log.Println(reheader.MatchString(temp))
+				matchstr := reheader.FindString(temp)
+				var size int
+				headertext := strings.TrimLeftFunc(matchstr, func(r rune) bool {
+					if size >= HEADER_SIX {
+						return false
+					}
+					if r == '#' {
+						size++
+					}
+					return r == '#' || r == ' '
+				})
+				c := &header{pdf: mt.pdf, Size: size, fonts: mt.fonts}
+				log.Println("origin: len", len(matchstr), "size", size)
+				c.SetText("", headertext)
+				setsub(c)
+				i += len([]rune(matchstr))
+			} else {
+				defaultop(&i)
+			}
+
 		case '>':
 			if !curIsCode() && (i == 0 || (i-1 > 0 && runes[i-1] == '\n' )) {
 				i++
@@ -758,6 +1040,9 @@ func (mt *MarkdownText) GenerateAtomicCell() (err error) {
 	if len(mt.contents) == 0 {
 		return fmt.Errorf("not set text")
 	}
+
+	log.Println()
+	log.Println("++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
 	for i := 0; i < len(mt.contents); {
 		content := mt.contents[i]
