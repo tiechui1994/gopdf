@@ -32,8 +32,8 @@ func MdReport() {
 
 	r.RegisterExecutor(core.Executor(MdReportExecutor), core.Detail)
 
-	r.Execute("mdtext_test.pdf")
-	r.SaveAtomicCellText("mdtext_test.txt")
+	r.Execute("markdown_test.pdf")
+	r.SaveAtomicCellText("markdown_test.txt")
 }
 
 /*
@@ -50,7 +50,7 @@ func MdReport() {
 */
 
 func MdReportExecutor(report *core.Report) {
-	text, _ := ioutil.ReadFile("./cgo.md")
+	text, _ := ioutil.ReadFile("./md.md")
 	mt, _ := NewMarkdownText(report, 10, map[string]string{
 		FONT_NORMAL: MD_MC,
 		FONT_IALIC:  MD_MC,

@@ -731,6 +731,17 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 	rensort := regexp.MustCompile(`^\-( )+`)
 	rerest := regexp.MustCompile(`^\n[\t ]*?\n(\n[\t ]*?\n)*`)
 	reheader := regexp.MustCompile(`^(#)+[ ]*.*?\n`)
+
+	rebold := regexp.MustCompile(`^[\*]{2}([^ ](.|\n)*?)[\*]{2}`)
+
+	// \*[^ ]
+	// ([^\*]*\n[^\*]*|\*{2,}|[^(\*\n)]+)*
+	// .\*
+	reitalic := regexp.MustCompile(`^\*[^ ]([^\*]*\n[^\*]*|\*{2,}|[^(\*\n)]+)*.\*`)
+
+	recode := regexp.MustCompile("^`{3}.*?\n(.*)`{3}")
+	recodewarp := regexp.MustCompile("^`{3}.*`{3}")
+	//retextwarp := regexp.MustCompile("^`[^ \f\n\r\t\v]+`") //need program
 	runes := []rune(text)
 	n := len(runes)
 	var (
@@ -794,79 +805,73 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 	for i := 0; i < n; {
 		switch runes[i] {
 		case '*':
-			if len(cuts) > 0 && (cuts[len(cuts)-1] == cut_wrap || cuts[len(cuts)-1] == cut_code) {
-				defaultop(&i)
-				continue
-			}
-
 			if buf.Len() > 0 {
 				sub.SetText(mt.GetFontFamily(sub), buf.String())
 				buf.Reset()
 				setsub(sub)
 			}
 
-			if i+1 < n && string(runes[i:i+2]) == cut_bold {
-				if len(cuts) == 0 || cuts[len(cuts)-1] != cut_bold {
-					sub = &content{pdf: mt.pdf, Type: TEXT_BOLD}
-					cuts = append(cuts, cut_bold)
-					if runes[i+2] == '`' {
-						buf.WriteRune(runes[i+3])
-						i += 4
-					} else {
-						buf.WriteRune(runes[i+2])
-						i += 3
-					}
+			// **
+			if i+1 < n && string(runes[i:i+2]) == cut_bold && rebold.MatchString(string(runes[i:])) {
+				matchstr := rebold.FindString(string(runes[i:]))
+				i += len([]rune(matchstr))
 
-				} else {
-					cuts = cuts[:len(cuts)-1]
-					i += 2
-				}
+				// first
+				sub = &content{pdf: mt.pdf, Type: TEXT_BOLD}
+				sub.SetText(mt.GetFontFamily(sub), strings.Trim(matchstr, "**"))
+				setsub(sub)
 				continue
 			}
 
-			if len(cuts) == 0 || cuts[len(cuts)-1] != cut_itaic {
+			// *
+			if reitalic.MatchString(string(runes[i:])) {
+				matchstr := reitalic.FindString(string(runes[i:]))
+				i += len([]rune(matchstr))
+				log.Println("italic", matchstr)
 				sub = &content{pdf: mt.pdf, Type: TEXT_IALIC}
-				cuts = append(cuts, cut_itaic)
-				if runes[i+1] == '`' {
-					buf.WriteRune(runes[i+2])
-					i += 3
-				} else {
-					buf.WriteRune(runes[i+1])
-					i += 2
-				}
-			} else {
-				cuts = cuts[:len(cuts)-1]
-				i += 1
+				sub.SetText(mt.GetFontFamily(sub), strings.Trim(matchstr, "*"))
+				setsub(sub)
+				continue
 			}
+
+			defaultop(&i)
 
 		case '`':
-			if len(cuts) > 0 && (cuts[len(cuts)-1] == cut_itaic || cuts[len(cuts)-1] == cut_bold) {
-				i += 1
-				continue
-			}
-
 			if buf.Len() > 0 {
 				sub.SetText(mt.GetFontFamily(sub), buf.String())
 				buf.Reset()
 				setsub(sub)
 			}
 
-			// code text
-			if i+2 < n && string(runes[i:i+3]) == cut_code && (i == 0 || runes[i-1] == '\n') {
-				if len(cuts) == 0 || cuts[len(cuts)-1] != cut_code {
-					sub = &content{pdf: mt.pdf, Type: TEXT_CODE, needpadding: true}
-					index := strings.Index(string(runes[i:]), "\n")
-					cuts = append(cuts, cut_code)
-					buf.WriteRune(runes[i+index+1])
-					i = i + index + 2
-				} else {
-					cuts = cuts[:len(cuts)-1]
-					i += 3
+			temp := string(runes[i:])
+			// code text and warp text
+			if i+2 < n && string(runes[i:i+3]) == cut_code {
+				if recode.MatchString(temp) {
+					matchstr := recode.FindString(temp)
+					mrunes := []rune(matchstr)
+					i += len(mrunes)
+					sub = &content{pdf: mt.pdf, Type: TEXT_CODE}
+					var mtext = mrunes[3:]
+					if mrunes[len(mrunes)-4] == '\n' {
+						mtext = mrunes[3:len(runes)-3]
+					}
+					sub.SetText(mt.GetFontFamily(sub), string(mtext))
+					setsub(sub)
+					continue
 				}
-				continue
+
+				if recodewarp.MatchString(temp) {
+					matchstr := recodewarp.FindString(temp)
+					mrunes := []rune(matchstr)
+					i += len(mrunes)
+					sub = &content{pdf: mt.pdf, Type: TEXT_IALIC}
+					sub.SetText(mt.GetFontFamily(sub), string(mrunes[3:len(runes)-3]))
+					setsub(sub)
+					continue
+				}
 			}
 
-			// wrap
+			// wrap text
 			if i+2 < n && string(runes[i:i+3]) == cut_code {
 				if len(cuts) == 0 || cuts[len(cuts)-1] != cut_code {
 					sub = &content{pdf: mt.pdf, Type: TEXT_WARP}
@@ -949,7 +954,6 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 		case '#':
 			if !curIsCode() && (i == 0 || runes[i-1] == '\n') {
 				if buf.Len() > 0 {
-					buf.WriteRune(runes[i])
 					sub.SetText(mt.GetFontFamily(sub), buf.String())
 					buf.Reset()
 					setsub(sub)
@@ -1017,15 +1021,6 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 		buf.Reset()
 		setsub(sub)
 	}
-
-	//for _, c := range contents {
-	//	if cc, ok := c.(*content); ok {
-	//		log.Println("type", cc.Type)
-	//		blocks := strings.Split(cc.text, "\n")
-	//		log.Println("text", len(blocks), blocks)
-	//		log.Printf("\n\n+++++++++++++++++++++++++++++++++++\n\n")
-	//	}
-	//}
 
 	mt.contents = contents
 
