@@ -724,23 +724,35 @@ const (
 	cut_itaic = "*"
 )
 
-func (mt *MarkdownText) SetText(text string) *MarkdownText {
+var (
 	// [\n \t=#%@&"':<>,(){}_;/\?\.\+\-\=\^\$\[\]\!]
-	relink := regexp.MustCompile(`^\[(.*?)\]\((.*?)\)`)
-	reimage := regexp.MustCompile(`^\!\[image\]\((.*?)\)`)
-	rensort := regexp.MustCompile(`^\-( )+`)
-	rerest := regexp.MustCompile(`^\n[\t ]*?\n(\n[\t ]*?\n)*`)
-	reheader := regexp.MustCompile(`^(#)+[ ]*.*?\n`)
+	relink   = regexp.MustCompile(`^\[(.*?)\]\((.*?)\)`)
+	reimage  = regexp.MustCompile(`^\!\[image\]\((.*?)\)`)
+	rensort  = regexp.MustCompile(`^\-( )+`)
+	rerest   = regexp.MustCompile(`^\n[\t ]*?\n(\n[\t ]*?\n)*`)
+	reheader = regexp.MustCompile(`^(#)+[ ]*.*?\n`)
 
-	rebold := regexp.MustCompile(`^[\*]{2}([^ ](.|\n)*?)[\*]{2}`)
+	// ^\*{2}\S
+	// ((\S+\s|\s\S+|\S)+\n)*
+	// \S+\*{2}
+	// need handle "\n\n" special condition
+	rebold = regexp.MustCompile(`^\*{2}\S((\S+\s|\s\S+|\S)+\n)*\S+\*{2}`)
 
-	// \*[^ ]
-	// ([^\*]*\n[^\*]*|\*{2,}|[^(\*\n)]+)*
-	// .\*
-	reitalic := regexp.MustCompile(`^\*[^ ]([^\*]*\n[^\*]*|\*{2,}|[^(\*\n)]+)*.\*`)
+	//^\*\S
+	// ((\S+\s|\s\S+|\S)+\n)*
+	// [^\n\s\*]\*
+	reitalic = regexp.MustCompile(`^\*[^ ]([^\*]*\n[^\*]*|\*{2,}|[^(\*\n)]+)*[^\n]\*`)
 
-	recode := regexp.MustCompile("^`{3}.*?\n(.*)`{3}")
-	recodewarp := regexp.MustCompile("^`{3}.*`{3}")
+	recode     = regexp.MustCompile("^`{3}.*?\n(.*)`{3}")
+	recodewarp = regexp.MustCompile("^`{3}.*`{3}")
+)
+
+func (mt *MarkdownText) parseBoldText(i int) (ok bool, ) {
+	return
+}
+
+func (mt *MarkdownText) SetText(text string) *MarkdownText {
+
 	//retextwarp := regexp.MustCompile("^`[^ \f\n\r\t\v]+`") //need program
 	runes := []rune(text)
 	n := len(runes)
@@ -812,8 +824,10 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 			}
 
 			// **
-			if i+1 < n && string(runes[i:i+2]) == cut_bold && rebold.MatchString(string(runes[i:])) {
-				matchstr := rebold.FindString(string(runes[i:]))
+			temp := string(runes[i:])
+			if i+1 < n && temp[0:2] == cut_bold && rebold.MatchString(temp) {
+				matchstr := rebold.FindString(temp)
+				log.Println("bold", matchstr)
 				i += len([]rune(matchstr))
 
 				// first
@@ -824,8 +838,8 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 			}
 
 			// *
-			if reitalic.MatchString(string(runes[i:])) {
-				matchstr := reitalic.FindString(string(runes[i:]))
+			if reitalic.MatchString(temp) {
+				matchstr := reitalic.FindString(temp)
 				i += len([]rune(matchstr))
 				log.Println("italic", matchstr)
 				sub = &content{pdf: mt.pdf, Type: TEXT_IALIC}
@@ -1029,6 +1043,30 @@ func (mt *MarkdownText) SetText(text string) *MarkdownText {
 
 func (mt *MarkdownText) GetWritedLines() int {
 	return mt.writedLines
+}
+
+func (mt *MarkdownText) PreProccesText(text string) {
+	/*
+	// header and line
+	# xx
+	## xx
+
+	// bold and line
+	xxx
+	==
+
+	// del line
+	~~ xx ~~
+
+	*/
+	// when header (#), the '\n' can not replace
+	// when code (```) include '\n', code text can not replace
+	// when hence (`), if contains '\n[ ]*\n', not hence, not replace, else replace '\n' with ' '
+	// when link ([]()), if [] contains '\n[ ]*\n', not link, if () contains more than two lines,
+	// not link. else replace '\n' with ' '. and image is so on
+	// when sort (-), if contains '\n[ ]+\n', after must new line, else replace '\n' with ' '
+	// when wrap (*), if after|before * is ' ' or '\n[ ]*\n' not warp
+	//
 }
 
 func (mt *MarkdownText) GenerateAtomicCell() (err error) {
