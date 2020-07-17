@@ -669,6 +669,11 @@ func (c *content) GetSubText(x1, x2 float64) (text string, width float64, newlin
 	return "", 0, false
 }
 
+type pretreatment struct {
+	Type  string
+	Value string
+}
+
 type MarkdownText struct {
 	quote       bool
 	pdf         *core.Report
@@ -726,25 +731,34 @@ const (
 
 var (
 	// [\n \t=#%@&"':<>,(){}_;/\?\.\+\-\=\^\$\[\]\!]
-	relink   = regexp.MustCompile(`^\[(.*?)\]\((.*?)\)`)
-	reimage  = regexp.MustCompile(`^\!\[image\]\((.*?)\)`)
-	rensort  = regexp.MustCompile(`^\-( )+`)
-	rerest   = regexp.MustCompile(`^\n[\t ]*?\n(\n[\t ]*?\n)*`)
-	reheader = regexp.MustCompile(`^(#)+[ ]*.*?\n`)
+	rerest = regexp.MustCompile(`^\n[\t ]*?\n(\n[\t ]*?\n)*`)
 
 	// ^\*{2}\S
 	// ((\S+\s|\s\S+|\S)+\n)*
 	// \S+\*{2}
-	// need handle "\n\n" special condition
+	// need handle "\n\s*\n" special condition
 	rebold = regexp.MustCompile(`^\*{2}\S((\S+\s|\s\S+|\S)+\n)*\S+\*{2}`)
 
-	//^\*\S
+	// \*\S
 	// ((\S+\s|\s\S+|\S)+\n)*
-	// [^\n\s\*]\*
-	reitalic = regexp.MustCompile(`^\*[^ ]([^\*]*\n[^\*]*|\*{2,}|[^(\*\n)]+)*[^\n]\*`)
+	// \S+\*
+	// need handle "\n\s*\n" special condition
+	reitalic = regexp.MustCompile(`^\*\S((\S+\s|\s\S+|\S)+\n)*\S+\*`)
 
-	recode     = regexp.MustCompile("^`{3}.*?\n(.*)`{3}")
+	recode     = regexp.MustCompile("^`{3}.*?\n((.|\n)*)")
 	recodewarp = regexp.MustCompile("^`{3}.*`{3}")
+
+	// when current is '='
+	rehighlight = regexp.MustCompile(`.*\n\s{0,3}=+$`)
+
+	// remove \n\s*\n
+	relink  = regexp.MustCompile(`^\[.*\n?(.*\n|.*)\]\(\n?(.*)\n?\)`)
+	reimage = regexp.MustCompile(`^\!\[image\]\(\n?(.*)\n?\)`)
+
+	// stoped by \n\s*\n
+	rensort = regexp.MustCompile(`^-\s{1,4}(.|\n)*`)
+
+	reheader = regexp.MustCompile(`^(#)+.*\n`)
 )
 
 func (mt *MarkdownText) parseBoldText(i int) (ok bool, ) {
@@ -1057,8 +1071,8 @@ func (mt *MarkdownText) PreProccesText(text string) {
 
 	// del line
 	~~ xx ~~
-
 	*/
+
 	// when header (#), the '\n' can not replace
 	// when code (```) include '\n', code text can not replace
 	// when hence (`), if contains '\n[ ]*\n', not hence, not replace, else replace '\n' with ' '
@@ -1066,7 +1080,7 @@ func (mt *MarkdownText) PreProccesText(text string) {
 	// not link. else replace '\n' with ' '. and image is so on
 	// when sort (-), if contains '\n[ ]+\n', after must new line, else replace '\n' with ' '
 	// when wrap (*), if after|before * is ' ' or '\n[ ]*\n' not warp
-	//
+
 }
 
 func (mt *MarkdownText) GenerateAtomicCell() (err error) {
