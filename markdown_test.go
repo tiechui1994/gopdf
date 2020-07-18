@@ -5,6 +5,7 @@ import (
 
 	"github.com/tiechui1994/gopdf/core"
 	"io/ioutil"
+	"regexp"
 )
 
 const (
@@ -61,18 +62,18 @@ func MdReportExecutor(report *core.Report) {
 	return
 	ctetx := content{
 		pdf:  report,
-		Type: TEXT_NORMAL,
+		Type: TYPE_NORMAL,
 	}
 	ctetx.SetText(MD_MC, "中田田日日000088888中田田日日000088888中田田日日000088888中田田日日000088888中田田日日000088888中田田日日000088888")
 
 	btetx := content{
 		pdf:  report,
-		Type: TEXT_WARP,
+		Type: TYPE_WARP,
 	}
 	btetx.SetText(MD_MC, "中田田日日000088888中田田日日000088888中田田日日000088888中田田日日000088888中田田日日000088888中田田日日000088888")
 	itetx := content{
 		pdf:  report,
-		Type: TEXT_NORMAL,
+		Type: TYPE_NORMAL,
 	}
 	ctetx.GenerateAtomicCell()
 	itetx.SetText(MD_MB, "中田田日日000088888空间卡生萨斯卡拉斯科拉11209901接口就爱看手机爱卡就爱29912-0-接口就爱看手机爱卡就爱021-012-12012-021-012-0-021-0120-1201221")
@@ -82,4 +83,18 @@ func MdReportExecutor(report *core.Report) {
 
 func TestMd(t *testing.T) {
 	MdReport()
+}
+
+func TestReSubText(t *testing.T) {
+	data, _ := ioutil.ReadFile("./md.md")
+	text := string(data)
+
+	matched := rensort.FindString(text)
+	t.Log("matched", matched)
+
+	rebreak := regexp.MustCompile(`\n\s*\n`)
+	if rebreak.MatchString(matched) {
+		index := rebreak.FindAllStringIndex(matched, 1)
+		t.Log("index", matched[:index[0][0]], matched[index[0][0]]=='\n')
+	}
 }

@@ -18,12 +18,31 @@ const (
 )
 
 const (
-	TEXT_NORMAL = "normal"
-	TEXT_BOLD   = "bold"
-	TEXT_IALIC  = "italic"
-	TEXT_WARP   = "warp"
-	TEXT_CODE   = "code"
-	TEXT_LINK   = "link"
+	TYPE_ORIGIN = "origin"
+
+	TYPE_NORMAL = "normal"
+	TYPE_BOLD   = "bold"
+	TYPE_IALIC  = "italic"
+	TYPE_WARP   = "warp"
+	TYPE_CODE   = "code"
+	TYPE_LINK   = "link"
+
+	TYPE_HIGHLIGHT = "highlight"
+
+	TYPE_HEADER_ONE = "1"
+	TYPE_HEADER_TWO = "2"
+	TYPE_HEADER_THR = "3"
+	TYPE_HEADER_FOU = "4"
+	TYPE_HEADER_FIV = "5"
+	TYPE_HEADER_SIX = "6"
+
+	TYPE_IMAGE = "image"
+
+	TYPE_DELETE = "delete"
+
+	TYPE_NSORT = "nsort"
+
+	TYPE_REFER = "refer"
 )
 
 const (
@@ -63,7 +82,7 @@ type content struct {
 	length    float64
 	text      string
 	remain    string
-	link      string // special TEXT_LINK
+	link      string // special TYPE_LINK
 	newlines  int
 
 	// when type is code can use
@@ -78,15 +97,15 @@ func (c *content) SetText(fontFamily string, text ...string) {
 
 	var font core.Font
 	switch c.Type {
-	case TEXT_BOLD:
+	case TYPE_BOLD:
 		font = core.Font{Family: fontFamily, Size: defaultFontSize, Style: ""}
-	case TEXT_IALIC:
+	case TYPE_IALIC:
 		font = core.Font{Family: fontFamily, Size: defaultFontSize, Style: ""}
-	case TEXT_WARP:
+	case TYPE_WARP:
 		font = core.Font{Family: fontFamily, Size: defaultWarpFontSize, Style: ""}
-	case TEXT_CODE:
+	case TYPE_CODE:
 		font = core.Font{Family: fontFamily, Size: defaultWarpFontSize, Style: ""}
-	case TEXT_LINK, TEXT_NORMAL:
+	case TYPE_LINK, TYPE_NORMAL:
 		font = core.Font{Family: fontFamily, Size: defaultFontSize, Style: ""}
 	default:
 		panic(fmt.Sprintf("invalid type: %v", c.Type))
@@ -96,7 +115,7 @@ func (c *content) SetText(fontFamily string, text ...string) {
 	text[0] = strings.Replace(text[0], "\t", "    ", -1)
 	c.text = text[0]
 	c.remain = text[0]
-	if c.Type == TEXT_LINK {
+	if c.Type == TYPE_LINK {
 		c.link = text[1]
 	}
 	c.lineHeight = defaultLineHeight
@@ -128,7 +147,7 @@ func (c *content) GenerateAtomicCell() (pagebreak, over bool, err error) {
 
 	text, width, newline := c.GetSubText(x1, x2)
 	for !c.stoped {
-		if c.Type == TEXT_WARP {
+		if c.Type == TYPE_WARP {
 			// other padding is testing data
 			// bg: 248,248,255 text:1,1,1 line:	245,245,245,     Typora
 			// bg: 249,242,244 text:199,37,78 line:	245,245,245  GitLab
@@ -138,7 +157,7 @@ func (c *content) GenerateAtomicCell() (pagebreak, over bool, err error) {
 			c.pdf.TextColor(199, 37, 78)
 			c.pdf.Cell(x1, y+3.15, text)
 			c.pdf.TextColor(1, 1, 1)
-		} else if c.Type == TEXT_CODE {
+		} else if c.Type == TYPE_CODE {
 			// bg: 248,248,255, text: 1,1,1    Typora
 			// bg: 40,42,54, text: 248,248,242  CSDN
 			c.pdf.BackgroundColor(x1, y, x2-x1, 18.0, "40,42,54",
@@ -146,7 +165,7 @@ func (c *content) GenerateAtomicCell() (pagebreak, over bool, err error) {
 			c.pdf.TextColor(248, 248, 242)
 			c.pdf.Cell(x1, y+3.15, text)
 			c.pdf.TextColor(1, 1, 1)
-		} else if c.Type == TEXT_LINK {
+		} else if c.Type == TYPE_LINK {
 			// text, blue
 			c.pdf.TextColor(0, 0, 255)
 			c.pdf.ExternalLink(x1, y+12.0, 15, text, c.link)
@@ -222,9 +241,9 @@ func (h *header) GetFontFamily(md mardown) string {
 	case *content:
 		c, _ := md.(*content)
 		switch c.Type {
-		case TEXT_NORMAL:
+		case TYPE_NORMAL:
 			return h.fonts[FONT_NORMAL]
-		case TEXT_BOLD:
+		case TYPE_BOLD:
 			return h.fonts[FONT_BOLD]
 		case FONT_IALIC:
 			return h.fonts[FONT_IALIC]
@@ -282,7 +301,7 @@ func (h *header) SetText(_ string, textargs ...string) {
 
 	defaultop := func(i *int) {
 		if buf.Len() == 0 {
-			sub = &content{pdf: h.pdf, Type: TEXT_NORMAL}
+			sub = &content{pdf: h.pdf, Type: TYPE_NORMAL}
 		}
 		buf.WriteRune(runes[*i])
 		*i += 1
@@ -317,7 +336,7 @@ func (h *header) SetText(_ string, textargs ...string) {
 
 			if i+1 < n && string(runes[i:i+2]) == cut_bold {
 				if len(cuts) == 0 || cuts[len(cuts)-1] != cut_bold {
-					sub = &content{pdf: h.pdf, Type: TEXT_BOLD}
+					sub = &content{pdf: h.pdf, Type: TYPE_BOLD}
 					cuts = append(cuts, cut_bold)
 					if runes[i+2] == '`' {
 						buf.WriteRune(runes[i+3])
@@ -335,7 +354,7 @@ func (h *header) SetText(_ string, textargs ...string) {
 			}
 
 			if len(cuts) == 0 || cuts[len(cuts)-1] != cut_itaic {
-				sub = &content{pdf: h.pdf, Type: TEXT_IALIC}
+				sub = &content{pdf: h.pdf, Type: TYPE_IALIC}
 				cuts = append(cuts, cut_itaic)
 				if runes[i+1] == '`' {
 					buf.WriteRune(runes[i+2])
@@ -364,7 +383,7 @@ func (h *header) SetText(_ string, textargs ...string) {
 			// code text
 			if i+2 < n && string(runes[i:i+3]) == cut_code && (i == 0 || runes[i-1] == '\n') {
 				if len(cuts) == 0 || cuts[len(cuts)-1] != cut_code {
-					sub = &content{pdf: h.pdf, Type: TEXT_CODE, needpadding: true}
+					sub = &content{pdf: h.pdf, Type: TYPE_CODE, needpadding: true}
 					index := strings.Index(string(runes[i:]), "\n")
 					cuts = append(cuts, cut_code)
 					buf.WriteRune(runes[i+index+1])
@@ -379,7 +398,7 @@ func (h *header) SetText(_ string, textargs ...string) {
 			// wrap
 			if i+2 < n && string(runes[i:i+3]) == cut_code {
 				if len(cuts) == 0 || cuts[len(cuts)-1] != cut_code {
-					sub = &content{pdf: h.pdf, Type: TEXT_WARP}
+					sub = &content{pdf: h.pdf, Type: TYPE_WARP}
 					cuts = append(cuts, cut_code)
 					buf.WriteRune(runes[i+3])
 					i += 4
@@ -392,7 +411,7 @@ func (h *header) SetText(_ string, textargs ...string) {
 
 			// wrap
 			if len(cuts) == 0 || cuts[len(cuts)-1] != cut_wrap {
-				sub = &content{pdf: h.pdf, Type: TEXT_WARP}
+				sub = &content{pdf: h.pdf, Type: TYPE_WARP}
 				cuts = append(cuts, cut_wrap)
 				buf.WriteRune(runes[i+1])
 				i += 2
@@ -430,7 +449,7 @@ func (h *header) SetText(_ string, textargs ...string) {
 
 				matchstr := relink.FindString(temp)
 				submatch := relink.FindStringSubmatch(temp)
-				c := &content{pdf: h.pdf, Type: TEXT_LINK}
+				c := &content{pdf: h.pdf, Type: TYPE_LINK}
 				c.SetText(h.fonts[FONT_NORMAL], submatch[1], submatch[2])
 				setsub(c)
 				i += len([]rune(matchstr))
@@ -595,7 +614,7 @@ func (c *content) GetSubText(x1, x2 float64) (text string, width float64, newlin
 		return "", 0, false
 	}
 
-	needpadding := c.Type == TEXT_CODE && c.needpadding
+	needpadding := c.Type == TYPE_CODE && c.needpadding
 	remainText := c.remain
 	index := strings.Index(c.remain, "\n")
 	if index != -1 {
@@ -620,7 +639,7 @@ func (c *content) GetSubText(x1, x2 float64) (text string, width float64, newlin
 	if length <= width {
 		if newline {
 			c.remain = c.remain[index+1:]
-			c.needpadding = c.Type == TEXT_CODE
+			c.needpadding = c.Type == TYPE_CODE
 		} else {
 			c.remain = ""
 		}
@@ -669,9 +688,15 @@ func (c *content) GetSubText(x1, x2 float64) (text string, width float64, newlin
 	return "", 0, false
 }
 
-type pretreatment struct {
+// pretreatment element
+type pre struct {
 	Type  string
 	Value string
+}
+
+func (p *pre) String() string {
+	value := strings.Replace(p.Value, "\n", "|", -1)
+	return fmt.Sprintf("[type=%v, value=%v]", p.Type, value)
 }
 
 type MarkdownText struct {
@@ -707,9 +732,9 @@ func (mt *MarkdownText) GetFontFamily(md mardown) string {
 	case *content:
 		c, _ := md.(*content)
 		switch c.Type {
-		case TEXT_NORMAL:
+		case TYPE_NORMAL:
 			return mt.fonts[FONT_NORMAL]
-		case TEXT_BOLD:
+		case TYPE_BOLD:
 			return mt.fonts[FONT_BOLD]
 		case FONT_IALIC:
 			return mt.fonts[FONT_IALIC]
@@ -737,7 +762,8 @@ var (
 	// ((\S+\s|\s\S+|\S)+\n)*
 	// \S+\*{2}
 	// need handle "\n\s*\n" special condition
-	rebold = regexp.MustCompile(`^\*{2}\S((\S+\s|\s\S+|\S)+\n)*\S+\*{2}`)
+	reboldprefix = regexp.MustCompile(`^\*{2}\S`)
+	reboldsuffix = regexp.MustCompile(`\S\*{2}$`)
 
 	// \*\S
 	// ((\S+\s|\s\S+|\S)+\n)*
@@ -745,10 +771,15 @@ var (
 	// need handle "\n\s*\n" special condition
 	reitalic = regexp.MustCompile(`^\*\S((\S+\s|\s\S+|\S)+\n)*\S+\*`)
 
-	recode     = regexp.MustCompile("^`{3}.*?\n((.|\n)*)")
-	recodewarp = regexp.MustCompile("^`{3}.*`{3}")
+	// need handle "\n\s*\n" special condition
+	redel = regexp.MustCompile(`^~{2}\S((\S+\s|\s\S+|\S)+\n)*\S+~{2}`)
+
+	recodeprefix     = regexp.MustCompile("^`{3}.*?\n")
+	recodewarp       = regexp.MustCompile("^`{3}.*`{3}")
+	retextwarpprefix = regexp.MustCompile("^`")
 
 	// when current is '='
+	// first global search
 	rehighlight = regexp.MustCompile(`.*\n\s{0,3}=+$`)
 
 	// remove \n\s*\n
@@ -756,9 +787,12 @@ var (
 	reimage = regexp.MustCompile(`^\!\[image\]\(\n?(.*)\n?\)`)
 
 	// stoped by \n\s*\n
-	rensort = regexp.MustCompile(`^-\s{1,4}(.|\n)*`)
+	rensort = regexp.MustCompile(`^-\s{1,4}((\S+\s|\s\S+|\S)+\n)*`)
 
-	reheader = regexp.MustCompile(`^(#)+.*\n`)
+	reheader = regexp.MustCompile(`^(#)+.*`)
+
+	// need handle "\n\s*\n" special condition
+	reref = regexp.MustCompile(`^>((\S+\s|\s\S+|\S)+\n)*`)
 )
 
 func (mt *MarkdownText) parseBoldText(i int) (ok bool, ) {
@@ -766,288 +800,22 @@ func (mt *MarkdownText) parseBoldText(i int) (ok bool, ) {
 }
 
 func (mt *MarkdownText) SetText(text string) *MarkdownText {
-
-	//retextwarp := regexp.MustCompile("^`[^ \f\n\r\t\v]+`") //need program
-	runes := []rune(text)
-	n := len(runes)
 	var (
-		buf      bytes.Buffer
 		contents []mardown
-		main     combined // combined composte
-		sub      mardown  // basic composte
-		cuts     []string // mark some cut, eg, **, *, `, ```
 	)
-	if strings.HasPrefix(text, ">") {
-		mt.quote = true
-		mt.x, _ = mt.pdf.GetPageStartXY()
-	}
-
-	restmain := func() {
-		main = nil
-	}
-
-	setsub := func(m mardown) {
-		mainval, mainok := m.(combined)
-
-		// parent exsit, add to parent
-		if main != nil {
-			main.AddChild(m)
-			//log.Printf("main %+v", main)
-			return
+	pres := mt.PreProccesText(text)
+	for _, pre := range pres {
+		log.Printf("%v", pre.String())
+		switch pre.Type {
+		case TYPE_WARP, TYPE_CODE, TYPE_BOLD, TYPE_NORMAL:
+			c := content{
+				pdf:  mt.pdf,
+				Type: pre.Type,
+			}
+			c.SetText(mt.GetFontFamily(&c), pre.Value)
+			contents = append(contents, &c)
 		}
 
-		// parsent not exsit, set to parent
-		if main == nil && mainok {
-			main = mainval
-			contents = append(contents, m)
-			return
-		}
-
-		//log.Printf("sub %+v", m)
-		contents = append(contents, m)
-	}
-
-	defaultop := func(i *int) {
-		if buf.Len() == 0 {
-			sub = &content{pdf: mt.pdf, Type: TEXT_NORMAL}
-		}
-		buf.WriteRune(runes[*i])
-		*i += 1
-	}
-
-	curIsCode := func() bool {
-		if len(cuts) == 0 {
-			return false
-		}
-
-		last := cuts[len(cuts)-1]
-		if last == "```" || last == "`" {
-			return true
-		}
-
-		return false
-	}
-
-	for i := 0; i < n; {
-		switch runes[i] {
-		case '*':
-			if buf.Len() > 0 {
-				sub.SetText(mt.GetFontFamily(sub), buf.String())
-				buf.Reset()
-				setsub(sub)
-			}
-
-			// **
-			temp := string(runes[i:])
-			if i+1 < n && temp[0:2] == cut_bold && rebold.MatchString(temp) {
-				matchstr := rebold.FindString(temp)
-				log.Println("bold", matchstr)
-				i += len([]rune(matchstr))
-
-				// first
-				sub = &content{pdf: mt.pdf, Type: TEXT_BOLD}
-				sub.SetText(mt.GetFontFamily(sub), strings.Trim(matchstr, "**"))
-				setsub(sub)
-				continue
-			}
-
-			// *
-			if reitalic.MatchString(temp) {
-				matchstr := reitalic.FindString(temp)
-				i += len([]rune(matchstr))
-				log.Println("italic", matchstr)
-				sub = &content{pdf: mt.pdf, Type: TEXT_IALIC}
-				sub.SetText(mt.GetFontFamily(sub), strings.Trim(matchstr, "*"))
-				setsub(sub)
-				continue
-			}
-
-			defaultop(&i)
-
-		case '`':
-			if buf.Len() > 0 {
-				sub.SetText(mt.GetFontFamily(sub), buf.String())
-				buf.Reset()
-				setsub(sub)
-			}
-
-			temp := string(runes[i:])
-			// code text and warp text
-			if i+2 < n && string(runes[i:i+3]) == cut_code {
-				if recode.MatchString(temp) {
-					matchstr := recode.FindString(temp)
-					mrunes := []rune(matchstr)
-					i += len(mrunes)
-					sub = &content{pdf: mt.pdf, Type: TEXT_CODE}
-					var mtext = mrunes[3:]
-					if mrunes[len(mrunes)-4] == '\n' {
-						mtext = mrunes[3:len(runes)-3]
-					}
-					sub.SetText(mt.GetFontFamily(sub), string(mtext))
-					setsub(sub)
-					continue
-				}
-
-				if recodewarp.MatchString(temp) {
-					matchstr := recodewarp.FindString(temp)
-					mrunes := []rune(matchstr)
-					i += len(mrunes)
-					sub = &content{pdf: mt.pdf, Type: TEXT_IALIC}
-					sub.SetText(mt.GetFontFamily(sub), string(mrunes[3:len(runes)-3]))
-					setsub(sub)
-					continue
-				}
-			}
-
-			// wrap text
-			if i+2 < n && string(runes[i:i+3]) == cut_code {
-				if len(cuts) == 0 || cuts[len(cuts)-1] != cut_code {
-					sub = &content{pdf: mt.pdf, Type: TEXT_WARP}
-					cuts = append(cuts, cut_code)
-					buf.WriteRune(runes[i+3])
-					i += 4
-				} else {
-					cuts = cuts[:len(cuts)-1]
-					i += 3
-				}
-				continue
-			}
-
-			// wrap
-			if len(cuts) == 0 || cuts[len(cuts)-1] != cut_wrap {
-				sub = &content{pdf: mt.pdf, Type: TEXT_WARP}
-				cuts = append(cuts, cut_wrap)
-				buf.WriteRune(runes[i+1])
-				i += 2
-			} else {
-				cuts = cuts[:len(cuts)-1]
-				i += 1
-			}
-
-		case '!':
-			temp := string(runes[i:])
-			if !curIsCode() && reimage.MatchString(temp) {
-				if buf.Len() > 0 {
-					sub.SetText(mt.GetFontFamily(sub), buf.String())
-					buf.Reset()
-					setsub(sub)
-				}
-				matchstr := reimage.FindString(temp)
-				submatch := reimage.FindStringSubmatch(temp)
-				c := &mdimage{pdf: mt.pdf}
-				c.SetText("", submatch[1])
-				setsub(c)
-				i += len([]rune(matchstr))
-			} else {
-				defaultop(&i)
-			}
-
-		case '[':
-			temp := string(runes[i:])
-			if !curIsCode() && relink.MatchString(temp) {
-				if buf.Len() > 0 {
-					sub.SetText(mt.GetFontFamily(sub), buf.String())
-					buf.Reset()
-					setsub(sub)
-				}
-
-				matchstr := relink.FindString(temp)
-				submatch := relink.FindStringSubmatch(temp)
-				c := &content{pdf: mt.pdf, Type: TEXT_LINK}
-				c.SetText(mt.fonts[FONT_NORMAL], submatch[1], submatch[2])
-				setsub(c)
-				i += len([]rune(matchstr))
-			} else {
-				defaultop(&i)
-			}
-
-		case '-':
-			temp := string(runes[i:])
-			if !curIsCode() && rensort.MatchString(temp) {
-				if buf.Len() > 0 {
-					sub.SetText(mt.GetFontFamily(sub), buf.String())
-					buf.Reset()
-					setsub(sub)
-				}
-
-				matchstr := rensort.FindString(temp)
-				c := &blocksort{pdf: mt.pdf, sortType: SORT_DISORDER}
-				c.SetText(mt.fonts[FONT_BOLD], "")
-				setsub(c)
-				i += len([]rune(matchstr))
-			} else {
-				defaultop(&i)
-			}
-
-		case '#':
-			if !curIsCode() && (i == 0 || runes[i-1] == '\n') {
-				if buf.Len() > 0 {
-					sub.SetText(mt.GetFontFamily(sub), buf.String())
-					buf.Reset()
-					setsub(sub)
-				}
-
-				temp := string(runes[i:])
-				log.Println(reheader.MatchString(temp))
-				matchstr := reheader.FindString(temp)
-				var size int
-				headertext := strings.TrimLeftFunc(matchstr, func(r rune) bool {
-					if size >= HEADER_SIX {
-						return false
-					}
-					if r == '#' {
-						size++
-					}
-					return r == '#' || r == ' '
-				})
-				c := &header{pdf: mt.pdf, Size: size, fonts: mt.fonts}
-				log.Println("origin: len", len(matchstr), "size", size)
-				c.SetText("", headertext)
-				setsub(c)
-				i += len([]rune(matchstr))
-			} else {
-				defaultop(&i)
-			}
-
-		case '>':
-			if !curIsCode() && (i == 0 || (i-1 > 0 && runes[i-1] == '\n' )) {
-				i++
-			} else {
-				defaultop(&i)
-			}
-
-		case '\n':
-			if i == 0 || main == nil {
-				defaultop(&i)
-				continue
-			}
-
-			temp := string(runes[i:])
-			if !curIsCode() && rerest.MatchString(temp) {
-				if buf.Len() > 0 {
-					buf.WriteRune(runes[i])
-					sub.SetText(mt.GetFontFamily(sub), buf.String())
-					buf.Reset()
-					setsub(sub)
-				}
-
-				restmain()
-
-				matchstr := rerest.FindString(temp)
-				i += len([]rune(matchstr))
-			} else {
-				defaultop(&i)
-			}
-
-		default:
-			defaultop(&i)
-		}
-	}
-
-	if buf.Len() > 0 {
-		sub.SetText(mt.GetFontFamily(sub), buf.String())
-		buf.Reset()
-		setsub(sub)
 	}
 
 	mt.contents = contents
@@ -1059,7 +827,7 @@ func (mt *MarkdownText) GetWritedLines() int {
 	return mt.writedLines
 }
 
-func (mt *MarkdownText) PreProccesText(text string) {
+func (mt *MarkdownText) PreProccesText(text string) []pre {
 	/*
 	// header and line
 	# xx
@@ -1081,6 +849,314 @@ func (mt *MarkdownText) PreProccesText(text string) {
 	// when sort (-), if contains '\n[ ]+\n', after must new line, else replace '\n' with ' '
 	// when wrap (*), if after|before * is ' ' or '\n[ ]*\n' not warp
 
+	runes := []rune(text)
+	n := len(runes)
+
+	// break some 
+	rebreak := regexp.MustCompile(`\n\s*\n`)
+
+	type prehighlight struct {
+		pre
+		last int
+	}
+
+	var (
+		i           int
+		buf         bytes.Buffer
+		pres        []pre
+		ignoreindex map[int]prehighlight
+	)
+	ignoreindex = make(map[int]prehighlight)
+	hgindexs := rehighlight.FindAllStringIndex(text, -1)
+	if len(hgindexs) > 0 {
+		for _, tuple := range hgindexs {
+			index, last := tuple[0], tuple[1]
+			brindex := strings.LastIndex(string(runes[index:last]), "\n")
+			ignoreindex[index] = prehighlight{
+				pre: pre{
+					Type:  TYPE_HIGHLIGHT,
+					Value: string(runes[index:brindex]),
+				},
+				last: last,
+			}
+		}
+	}
+	resetbuf := func() {
+		if buf.Len() > 0 {
+			pres = append(pres, pre{
+				Type:  TYPE_NORMAL,
+				Value: buf.String(),
+			})
+			buf.Reset()
+		}
+	}
+	defaultop := func() {
+		temp := string(runes[i:])
+		rebreakseg := regexp.MustCompile(`^\n\s*\n`)
+
+		if runes[i] == '\n' && rebreakseg.MatchString(temp) {
+			buf.WriteRune('\n')
+			resetbuf()
+			matched := rebreakseg.FindString(temp)
+			i += len([]rune(matched))
+			return
+		}
+
+		buf.WriteRune(runes[i])
+		i++
+	}
+
+	for i < n {
+		if val, ok := ignoreindex[i]; ok {
+			pres = append(pres, val.pre)
+			i = val.last
+			continue
+		}
+
+		temp := string(runes[i:])
+		switch runes[i] {
+		case '*':
+			if reboldprefix.MatchString(temp) {
+				resetbuf()
+				k := i + 2
+				ok, index := deepinSearch(runes[k:], "**", true)
+
+				if ok && reboldsuffix.MatchString(string(runes[k:k+index])) {
+					pres = append(pres, pre{
+						Type:  TYPE_BOLD,
+						Value: strings.Trim(string(runes[i:k+index]), "**"),
+					})
+					i = k + index
+					continue
+				}
+
+				pres = append(pres, pre{
+					Type:  TYPE_ORIGIN,
+					Value: string(runes[i:k+index]),
+				})
+				i = k + index
+				continue
+			}
+
+			if reitalic.MatchString(temp) {
+				resetbuf()
+				matched := reitalic.FindString(temp)
+				i += len([]rune(matched))
+				if rebreak.MatchString(matched) {
+					matched = rebreak.ReplaceAllString(matched, "\n")
+					pres = append(pres, pre{
+						Type:  TYPE_ORIGIN,
+						Value: strings.Replace(matched, "\n", " ", -1),
+					})
+					continue
+				}
+
+				matched = strings.Replace(matched, "\n", " ", -1)
+				pres = append(pres, pre{
+					Type:  TYPE_IALIC,
+					Value: strings.Trim(matched, "*"),
+				})
+				continue
+			}
+
+			defaultop()
+
+		case '`':
+			if (i == 0 || runes[i-1] == '\n') && recodeprefix.MatchString(temp) {
+				resetbuf()
+				prefix := recodeprefix.FindString(temp)
+				k := i + len([]rune(prefix))
+				ok, index := deepinSearch(runes[k:], "\n```", false)
+				if ok {
+					pres = append(pres, pre{
+						Type:  TYPE_CODE,
+						Value: strings.Trim(string(runes[k:k+index]), "```"),
+					})
+					i = k + index
+					continue
+				}
+
+				pres = append(pres, pre{
+					Type:  TYPE_ORIGIN,
+					Value: string(runes[i:k+index]),
+				})
+				i = k + index
+				continue
+			} else if recodewarp.MatchString(temp) {
+				resetbuf()
+				matched := recodewarp.FindString(temp)
+				i += len([]rune(matched))
+				pres = append(pres, pre{
+					Type:  TYPE_WARP,
+					Value: strings.Trim(matched, "````"),
+				})
+				continue
+			} else if retextwarpprefix.MatchString(temp) {
+				resetbuf()
+				prefix := retextwarpprefix.FindString(temp)
+				k := i + len([]rune(prefix))
+				ok, index := deepinSearch(runes[k:], "`", true)
+				if ok {
+					pres = append(pres, pre{
+						Type:  TYPE_WARP,
+						Value: strings.Trim(string(runes[i:k+index]), "`"),
+					})
+					i = k + index
+					continue
+				}
+
+				pres = append(pres, pre{
+					Type:  TYPE_ORIGIN,
+					Value: string(runes[i:k+index]),
+				})
+				i = k + index
+				continue
+			}
+
+			defaultop()
+
+		case '#':
+			if (i == 0 || runes[i-1] == '\n') && reheader.MatchString(temp) {
+				resetbuf()
+				matched := reheader.FindString(temp)
+				i += len([]rune(matched))
+				var size int
+				matched = strings.TrimLeftFunc(matched, func(r rune) bool {
+					if size == HEADER_SIX {
+						return false
+					}
+					if r == '#' {
+						size++
+					}
+					return r == '#'
+				})
+				pres = append(pres, pre{
+					Type:  fmt.Sprintf("%v", size),
+					Value: matched,
+				})
+				continue
+			}
+			defaultop()
+
+		case '!':
+			if reimage.MatchString(temp) {
+				resetbuf()
+				matched := reimage.FindString(temp)
+				i += len([]rune(matched))
+				if rebreak.MatchString(matched) {
+					matched = rebreak.ReplaceAllString(matched, "\n")
+					pres = append(pres, pre{
+						Type:  TYPE_ORIGIN,
+						Value: strings.Replace(matched, "\n", " ", -1),
+					})
+					continue
+				}
+
+				si := strings.Index(matched, "]")
+				se := strings.LastIndex(matched, ")")
+				pres = append(pres, pre{
+					Type:  TYPE_IMAGE,
+					Value: matched[si+2:se],
+				})
+				continue
+			}
+			defaultop()
+
+		case '[':
+			if relink.MatchString(temp) {
+				resetbuf()
+				matched := relink.FindString(temp)
+				i += len([]rune(matched))
+				if rebreak.MatchString(matched) {
+					matched = rebreak.ReplaceAllString(matched, "\n")
+					pres = append(pres, pre{
+						Type:  TYPE_ORIGIN,
+						Value: strings.Replace(matched, "\n", " ", -1),
+					})
+					continue
+				}
+
+				matched = strings.Replace(matched, "\n", " ", -1)
+				pres = append(pres, pre{
+					Type:  TYPE_LINK,
+					Value: matched,
+				})
+				continue
+			}
+			defaultop()
+
+		case '~':
+			if redel.MatchString(temp) {
+				resetbuf()
+				matched := redel.FindString(temp)
+				i += len([]rune(matched))
+				if rebreak.MatchString(matched) {
+					matched = rebreak.ReplaceAllString(matched, "\n")
+					pres = append(pres, pre{
+						Type:  TYPE_ORIGIN,
+						Value: strings.Replace(matched, "\n", " ", -1),
+					})
+					continue
+				}
+
+				matched = strings.Replace(matched, "\n", " ", -1)
+				pres = append(pres, pre{
+					Type:  TYPE_DELETE,
+					Value: strings.Trim(matched, "~~"),
+				})
+				continue
+			}
+
+		case '-':
+			if (i == 0 || runes[i-1] == '\n') && rensort.MatchString(temp) {
+				resetbuf()
+				matched := rensort.FindString(temp)
+
+				// break
+				if rebreak.MatchString(matched) {
+					index := rebreak.FindAllStringIndex(matched, 1)
+					matched = matched[:index[0][0]+1]
+				}
+
+				i += len([]rune(matched))
+				pres = append(pres, pre{
+					Type:  TYPE_NSORT,
+					Value: strings.Replace(matched, "\n", " ", -1),
+				})
+				continue
+			}
+			defaultop()
+
+		case '>':
+			if (i == 0 || runes[i-1] == '\n') && reref.MatchString(temp) {
+				resetbuf()
+				matched := reref.FindString(temp)
+				if rebreak.MatchString(matched) {
+					index := rebreak.FindAllStringIndex(matched, 1)
+					matched = matched[:index[0][0]+1]
+				}
+
+				i += len([]rune(matched))
+
+				rereplace := regexp.MustCompile(`\n\s*>`)
+				matched = rereplace.ReplaceAllString(matched, " ")
+				matched = strings.Replace(matched, "\n", " ", -1)
+				pres = append(pres, pre{
+					Type:  TYPE_REFER,
+					Value: matched,
+				})
+				continue
+			}
+			defaultop()
+
+		default:
+			defaultop()
+		}
+	}
+
+	resetbuf()
+
+	return pres
 }
 
 func (mt *MarkdownText) GenerateAtomicCell() (err error) {
@@ -1116,4 +1192,39 @@ func (mt *MarkdownText) GenerateAtomicCell() (err error) {
 	}
 
 	return nil
+}
+
+func deepinSearch(runes []rune, cut string, igblankline bool) (ok bool, index int) {
+	cs := len([]rune(cut))
+	var (
+		i        int
+		cur, pre int
+	)
+
+	cur, pre = 0, -1
+	for i < len(runes) {
+		if igblankline {
+			//  \f\n\r\t\v
+			if runes[i] != ' ' && runes[i] != '\f' && runes[i] != '\r' && runes[i] != '\t' && runes[i] != '\v' {
+				cur++
+			}
+
+			if runes[i] == '\n' {
+				if cur == 0 && pre == 0 {
+					return false, i
+				}
+				pre, cur = cur, 0
+				i++
+				continue
+			}
+		}
+
+		if i+cs < len(runes) && string(runes[i:i+cs]) == cut {
+			return true, i + cs
+		}
+
+		i++
+	}
+
+	return false, cs
 }

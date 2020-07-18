@@ -124,7 +124,7 @@ struct {
 		int p1;
 		int r;
 		char __pad12[4];
-} __attribute__((__packed__, __gcc_struct__)) *_cgo_a = v;
+} __attribute__((__packed__, __gcc_struct__)) *_cgo_a = v; 
 ```
 
 其中, p0, p1分别对应 sum 的第一个和第二个参数, r 对应 sum 的返回值. `_pad12` 用于填充结构体保证对齐CPU机器字的整数倍.
