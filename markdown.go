@@ -771,6 +771,9 @@ var (
 	// need handle "\n\s*\n" special condition
 	reitalic = regexp.MustCompile(`^\*\S((\S+\s|\s\S+|\S)+\n)*\S+\*`)
 
+	reitalicprefix = regexp.MustCompile(`^\*\S`)
+	reitalicsuffix = regexp.MustCompile(`\S\*$`)
+
 	// need handle "\n\s*\n" special condition
 	redel = regexp.MustCompile(`^~{2}\S((\S+\s|\s\S+|\S)+\n)*\S+~{2}`)
 
@@ -916,11 +919,12 @@ func (mt *MarkdownText) PreProccesText(text string) []pre {
 		temp := string(runes[i:])
 		switch runes[i] {
 		case '*':
+			log.Println("--------->", string(temp[:8]))
 			if reboldprefix.MatchString(temp) {
 				resetbuf()
 				k := i + 2
 				ok, index := deepinSearch(runes[k:], "**", true)
-
+				log.Println(ok, string(runes[i:k+index]), index)
 				if ok && reboldsuffix.MatchString(string(runes[k:k+index])) {
 					pres = append(pres, pre{
 						Type:  TYPE_BOLD,
@@ -938,7 +942,7 @@ func (mt *MarkdownText) PreProccesText(text string) []pre {
 				continue
 			}
 
-			if reitalic.MatchString(temp) {
+			if reitalicprefix.MatchString(temp) {
 				resetbuf()
 				matched := reitalic.FindString(temp)
 				i += len([]rune(matched))
