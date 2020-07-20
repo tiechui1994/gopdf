@@ -11,19 +11,37 @@ type String struct {
 }
 
 func Str(text string) *String {
-	return &str{
+	return &String{
 		data: []rune(text),
 	}
 }
 
-func (s *String) replace(regex string, repl string) string {
-	re := regexp.MustCompile(regex)
+func (s *String) replace(regex interface{}, repl string) string {
+	var re *regexp.Regexp
+	switch regex.(type) {
+	case string:
+		re = regexp.MustCompile(regex.(string))
+	case *regexp.Regexp:
+		re, _ = regex.(*regexp.Regexp)
+	default:
+		panic("invalid regex")
+	}
+
 	return re.ReplaceAllString(string(s.data), repl)
 }
 
-func (s *String) replaceFunc(regex string, repl string) string {
-	re := regexp.MustCompile(regex)
-	return re.ReplaceAllString(string(s.data), repl)
+func (s *String) replaceFunc(regex interface{}, fn func(string) string) string {
+	var re *regexp.Regexp
+	switch regex.(type) {
+	case string:
+		re = regexp.MustCompile(regex.(string))
+	case *regexp.Regexp:
+		re, _ = regex.(*regexp.Regexp)
+	default:
+		panic("invalid regex")
+	}
+
+	return re.ReplaceAllStringFunc(string(s.data), fn)
 }
 
 func (s *String) charAt(i int) string {
@@ -32,6 +50,18 @@ func (s *String) charAt(i int) string {
 	}
 
 	return string(s.data[i])
+}
+
+func (s *String) split(c interface{}) []string {
+	switch c.(type) {
+	case string:
+		return strings.Split(string(s.data), c.(string))
+	case *regexp.Regexp:
+		re, _ := c.(*regexp.Regexp)
+		return re.Split(string(s.data), -1)
+	default:
+		return strings.Split(string(s.data), " ")
+	}
 }
 
 func decodeURIComponent(str string) string {
