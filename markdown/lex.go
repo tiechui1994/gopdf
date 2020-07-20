@@ -1,15 +1,19 @@
 package markdown
 
-type token struct {
-	Depth  int
-	Raw    string
-	Text   string
-	Tokens []token
-	Type   string
+import "regexp"
+
+type link struct {
+	href  string
+	title string
+}
+
+type Tokens struct {
+	tokens []Token
+	link   map[string]link
 }
 
 type Lex struct {
-	tokens    []token
+	tokens    Tokens
 	options   *Options
 	tokenizer *Tokenizer
 }
@@ -21,6 +25,7 @@ func New(opt *Options) *Lex {
 	}
 
 	lex.options = opt
+	lex.tokens.link = make(map[string]link)
 	if lex.options.tokenizer == nil {
 		lex.options.tokenizer = new(Tokenizer)
 	}
@@ -49,16 +54,21 @@ func New(opt *Options) *Lex {
 	return lex
 }
 
-func (lex *Lex) lex(src string) []token {
+func (lex *Lex) lex(src string) Tokens {
+	rebreak := regexp.MustCompile(`\r\n|\r`)
+	retab := regexp.MustCompile(`\t`)
+	src = retab.ReplaceAllString(rebreak.ReplaceAllString(src, "\n"), "    ")
 	lex.blockTokens(src, lex.tokens, true)
 	lex.inline(lex.tokens)
 	return lex.tokens
 }
 
-func (lex *Lex) blockTokens() {
-
+func (lex *Lex) blockTokens(src string, tokens Tokens, top bool) {
+	rereplace := regexp.MustCompile(`^ +$`)
+	src = rereplace.ReplaceAllString(src, "")
+	
 }
 
-func (lex *Lex) inline() {
+func (lex *Lex) inline(tokens Tokens) {
 
 }

@@ -3,11 +3,13 @@ package markdown
 import "regexp"
 
 type Token struct {
-	Type  string
-	Raw   string
-	Href  string
-	Title string
-	Text  string
+	Depth  int
+	Raw    string
+	Text   string
+	Type   string
+	Href   string
+	Title  string
+	Tokens []Token
 }
 
 func outputLink(cap []string, link struct {
