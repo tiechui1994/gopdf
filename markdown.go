@@ -1232,3 +1232,100 @@ func deepinSearch(runes []rune, cut string, igblankline bool) (ok bool, index in
 
 	return false, cs
 }
+
+type Token struct {
+	Depth  int
+	Raw    string
+	Text   string
+	Type   string
+	Href   string
+	Title  string
+	Tokens []Token
+}
+
+var (
+	// block
+	newline = `^\n+`
+	code    = `^( {4}[^\n]+\n*)+`
+
+	//^ {0,3}(`{3, }(? = [^`\n]*\n)|~{3,})([^\n]*)\n(?:|([\s\S]*?)\n)(?: {0,3}\1[~`]* *(?:\n+|$ )|$)
+	fences = `^ {0,3}($1{3, }(? = [^$1\n]*\n)|~{3,})([^\n]*)\n(?:|([\s\S]*?)\n)(?: {0,3}\1[~$1]* *(?:\n+|$ )|$)`
+
+	hr         = `^ {0,3}((?:- *){3,}|(?:_ *){3,}|(?:\* *){3,})(?:\n+|$)`
+	heading    = `^ {0,3}(#{1,6}) +([^\n]*?)(?: +#+)? *(?:\n+|$)`
+	blockquote = `^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+`
+	list       = `^( {0,3})(bull) [\s\S]+?(?:hr|def|\n{2,}(?! )(?!\1bull )\n*|\s*$)`
+	def        = `^ {0,3}\[(label)\]: *\n? *<?([^\s>]+)>?(?:(?: +\n? *| *\n *)(title))? *(?:\n+|$)`
+	lheading   = `^([^\n]+)\n {0,3}(=+|-+) *(?:\n+|$)`
+	_paragraph = `^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html)[^\n]+)*)`
+	text       = `^[^\n]+`
+
+	_label = `(?!\s*\])(?:\\[\[\]]|[^\[\]])+`
+	_title = `(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))`
+
+	bullet   = `(?:[*+-]|\d{1,9}[.)])`
+	item     = `^( *)(bull) ?[^\n]*(?:\n(?!\1bull ?)[^\n]*)*`
+	_comment = `<!--(?!-?>)[\s\S]*?-->`
+
+	// inline
+	escape   = `^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_$1{|}~])`
+	autolink = `^<(scheme:[^\s\x00-\x1f<>]*|email)>`
+	tag      = `^comment` +
+		`|^</[a-zA-Z][\\w:-]*\\s*>` +
+		`|^<[a-zA-Z][\\w-]*(?:attribute)*?\\s*/?>` +
+		`|^<\\?[\\s\\S]*?\\?>` +
+		`|^<![a-zA-Z]+\\s[\\s\\S]*?>` +
+		`|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>`
+
+	link          = `^!?\[(label)\]\(\s*(href)(?:\s+(title))?\s*\)`
+	reflink       = `^!?\[(label)\]\[(?!\s*\])((?:\\[\[\]]?|[^\[\]\\])+)\]`
+	nolink        = `^!?\[(?!\s*\])((?:\[[^\[\]]*\]|\\[\[\]]|[^\[\]])*)\](?:\[\])?`
+	reflinkSearch = `reflink|nolink(?!\\()`
+
+	strong_start  = `^(?:(\*\*(?=[*punctuation]))|\*\*)(?![\s])|__`
+	strong_middle = `^\*\*(?:(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)|\*(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)*?\*)+?\*\*$|^__(?![\s])((?:(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)|_(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)*?_)+?)__$`
+	strong_endast = `[^punctuation\s]\*\*(?!\*)|[punctuation]\*\*(?!\*)(?:(?=[punctuation\s]|$))`
+	strong_endund = `[^\s]__(?!_)(?:(?=[punctuation\s])|$)`
+
+	em_start  = `^(?:(\*(?=[punctuation]))|\*)(?![*\s])|_`
+	em_middle = `^\*(?:(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)|\*(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)*?\*)+?\*$|^_(?![_\s])(?:(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)|_(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)*?_)+?_$`
+	em_endast = `[^punctuation\s]\*(?!\*)|[punctuation]\*(?!\*)(?:(?=[punctuation\s]|$))`
+	em_endund = `[^\s]_(?!_)(?:(?=[punctuation\s])|$)`
+
+	icode        = `^($1+)([^$1]|[^$1][\s\S]*?[^$1])\1(?!$1)`
+	br           = `^( {2,}|\\)\n(?!\s*$)`
+	itext        = `^($1+|[^$1])(?:[\s\S]*?(?:(?=[\\<!\[$1*]|\b_|$)|[^ ](?= {2,}\n))|(?= {2,}\n))`
+	punctuation  = `^([\s*punctuation])`
+	_punctuation = `!"#$%&\'()+\\-.,/:;<=>?@\\[\\]$1^{|}~`
+	_blockSkip   = `\\[[^\\]]*?\\]\\([^\\)]*?\\)|$1[^$1]*?$1|<[^>]*?>`
+	_overlapSkip = `__[^_]*?__|\\*\\*\\[^\\*\\]*?\\*\\*`
+
+	_escape = `\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_$1{|}~])`
+	_scheme = `[a-zA-Z][a-zA-Z0-9+.-]{1,31}`
+	_email  = `[a-zA-Z0-9.!#$%&'*+/=?^_$1{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])`
+
+	_attribute = `\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>$1]+)?`
+
+	_llabel = `(?:\[(?:\\.|[^\[\]\\])*\]|\\.|$1[^$1]*$1|[^\[\]\\$1])*?`
+	_href   = `<(?:\\[<>]?|[^\s<>\\])*>|[^\s\x00-\x1f]*`
+	_ltitle = `"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)`
+)
+
+var (
+	re_newline = regexp.MustCompile(newline)
+	re_code    = regexp.MustCompile(code)
+	re_fences  = regexp.MustCompile(fences)
+)
+
+func PreProccesText(text string) {
+	re_break := regexp.MustCompile(`\r\n|\r`)
+	re_blank := regexp.MustCompile(`\t`)
+	text = re_blank.ReplaceAllString(re_break.ReplaceAllString(text, "\n"), "    ")
+
+	re_blank = regexp.MustCompile(`^ +$`)
+	src := []rune(text)
+	src = []rune(re_blank.ReplaceAllString(string(src), ""))
+	for len(src) != 0 {
+		_ = src
+	}
+}

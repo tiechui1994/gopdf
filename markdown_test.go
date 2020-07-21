@@ -6,6 +6,7 @@ import (
 	"github.com/tiechui1994/gopdf/core"
 	"io/ioutil"
 	"regexp"
+	"encoding/base64"
 )
 
 const (
@@ -95,6 +96,11 @@ func TestReSubText(t *testing.T) {
 	rebreak := regexp.MustCompile(`\n\s*\n`)
 	if rebreak.MatchString(matched) {
 		index := rebreak.FindAllStringIndex(matched, 1)
-		t.Log("index", matched[:index[0][0]], matched[index[0][0]]=='\n')
+		t.Log("index", matched[:index[0][0]], matched[index[0][0]] == '\n')
 	}
+}
+
+func TestA(t *testing.T) {
+	data, _ := base64.StdEncoding.DecodeString("XiB7MCwzfShgezMsIH0oPyA9IFteYFxuXSpcbil8fnszLH0pKFteXG5dKilcbig/OnwoW1xzXFNdKj8pXG4pKD86IHswLDN9XDFbfmBdKiAqKD86XG4rfCQKKXwkKQ==")
+	t.Logf("%#v", data)
 }
