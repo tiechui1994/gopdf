@@ -1245,77 +1245,94 @@ type Token struct {
 
 var (
 	// block
-	newline = `^\n+`
-	code    = `^( {4}[^\n]+\n*)+`
+	block_newline = `^\n+`
+	block_code    = `^( {4}[^\n]+\n*)+`
 
 	//^ {0,3}(`{3, }(? = [^`\n]*\n)|~{3,})([^\n]*)\n(?:|([\s\S]*?)\n)(?: {0,3}\1[~`]* *(?:\n+|$ )|$)
-	fences = `^ {0,3}($1{3, }(? = [^$1\n]*\n)|~{3,})([^\n]*)\n(?:|([\s\S]*?)\n)(?: {0,3}\1[~$1]* *(?:\n+|$ )|$)`
+	block_fences = `^ {0,3}($1{3, }(? = [^$1\n]*\n)|~{3,})([^\n]*)\n(?:|([\s\S]*?)\n)(?: {0,3}\1[~$1]* *(?:\n+|$ )|$)`
 
-	hr         = `^ {0,3}((?:- *){3,}|(?:_ *){3,}|(?:\* *){3,})(?:\n+|$)`
-	heading    = `^ {0,3}(#{1,6}) +([^\n]*?)(?: +#+)? *(?:\n+|$)`
-	blockquote = `^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+`
-	list       = `^( {0,3})(bull) [\s\S]+?(?:hr|def|\n{2,}(?! )(?!\1bull )\n*|\s*$)`
-	def        = `^ {0,3}\[(label)\]: *\n? *<?([^\s>]+)>?(?:(?: +\n? *| *\n *)(title))? *(?:\n+|$)`
-	lheading   = `^([^\n]+)\n {0,3}(=+|-+) *(?:\n+|$)`
-	_paragraph = `^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html)[^\n]+)*)`
-	text       = `^[^\n]+`
+	block_hr         = `^ {0,3}((?:- *){3,}|(?:_ *){3,}|(?:\* *){3,})(?:\n+|$)`
+	block_heading    = `^ {0,3}(#{1,6}) +([^\n]*?)(?: +#+)? *(?:\n+|$)`
+	block_blockquote = `^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+`
+	block_list       = `^( {0,3})(bull) [\s\S]+?(?:hr|def|\n{2,}(?! )(?!\1bull )\n*|\s*$)`
+	block_def        = `^ {0,3}\[(label)\]: *\n? *<?([^\s>]+)>?(?:(?: +\n? *| *\n *)(title))? *(?:\n+|$)`
+	block_lheading   = `^([^\n]+)\n {0,3}(=+|-+) *(?:\n+|$)`
+	block_paragraph  = `^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html)[^\n]+)*)`
+	block_text       = `^[^\n]+`
 
-	_label = `(?!\s*\])(?:\\[\[\]]|[^\[\]])+`
-	_title = `(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))`
+	block_label = `(?!\s*\])(?:\\[\[\]]|[^\[\]])+`
+	block_title = `(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))`
 
-	bullet   = `(?:[*+-]|\d{1,9}[.)])`
-	item     = `^( *)(bull) ?[^\n]*(?:\n(?!\1bull ?)[^\n]*)*`
-	_comment = `<!--(?!-?>)[\s\S]*?-->`
+	block_bullet  = `(?:[*+-]|\d{1,9}[.)])`
+	block_item    = `^( *)(bull) ?[^\n]*(?:\n(?!\1bull ?)[^\n]*)*`
+	block_comment = `<!--(?!-?>)[\s\S]*?-->`
 
 	// inline
-	escape   = `^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_$1{|}~])`
-	autolink = `^<(scheme:[^\s\x00-\x1f<>]*|email)>`
-	tag      = `^comment` +
+	inline_escape   = `^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_$1{|}~])`
+	inline_autolink = `^<(scheme:[^\s\x00-\x1f<>]*|email)>`
+	inline_tag      = `^comment` +
 		`|^</[a-zA-Z][\\w:-]*\\s*>` +
 		`|^<[a-zA-Z][\\w-]*(?:attribute)*?\\s*/?>` +
 		`|^<\\?[\\s\\S]*?\\?>` +
 		`|^<![a-zA-Z]+\\s[\\s\\S]*?>` +
 		`|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>`
 
-	link          = `^!?\[(label)\]\(\s*(href)(?:\s+(title))?\s*\)`
-	reflink       = `^!?\[(label)\]\[(?!\s*\])((?:\\[\[\]]?|[^\[\]\\])+)\]`
-	nolink        = `^!?\[(?!\s*\])((?:\[[^\[\]]*\]|\\[\[\]]|[^\[\]])*)\](?:\[\])?`
-	reflinkSearch = `reflink|nolink(?!\\()`
+	inline_link          = `^!?\[(label)\]\(\s*(href)(?:\s+(title))?\s*\)`
+	inline_reflink       = `^!?\[(label)\]\[(?!\s*\])((?:\\[\[\]]?|[^\[\]\\])+)\]`
+	inline_nolink        = `^!?\[(?!\s*\])((?:\[[^\[\]]*\]|\\[\[\]]|[^\[\]])*)\](?:\[\])?`
+	inline_reflinkSearch = `reflink|nolink(?!\\()`
 
-	strong_start  = `^(?:(\*\*(?=[*punctuation]))|\*\*)(?![\s])|__`
-	strong_middle = `^\*\*(?:(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)|\*(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)*?\*)+?\*\*$|^__(?![\s])((?:(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)|_(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)*?_)+?)__$`
-	strong_endast = `[^punctuation\s]\*\*(?!\*)|[punctuation]\*\*(?!\*)(?:(?=[punctuation\s]|$))`
-	strong_endund = `[^\s]__(?!_)(?:(?=[punctuation\s])|$)`
+	inline_strong_start  = `^(?:(\*\*(?=[*punctuation]))|\*\*)(?![\s])|__`
+	inline_strong_middle = `^\*\*(?:(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)|\*(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)*?\*)+?\*\*$|^__(?![\s])((?:(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)|_(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)*?_)+?)__$`
+	inline_strong_endast = `[^punctuation\s]\*\*(?!\*)|[punctuation]\*\*(?!\*)(?:(?=[punctuation\s]|$))`
+	inline_strong_endund = `[^\s]__(?!_)(?:(?=[punctuation\s])|$)`
 
-	em_start  = `^(?:(\*(?=[punctuation]))|\*)(?![*\s])|_`
-	em_middle = `^\*(?:(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)|\*(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)*?\*)+?\*$|^_(?![_\s])(?:(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)|_(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)*?_)+?_$`
-	em_endast = `[^punctuation\s]\*(?!\*)|[punctuation]\*(?!\*)(?:(?=[punctuation\s]|$))`
-	em_endund = `[^\s]_(?!_)(?:(?=[punctuation\s])|$)`
+	inline_em_start  = `^(?:(\*(?=[punctuation]))|\*)(?![*\s])|_`
+	inline_em_middle = `^\*(?:(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)|\*(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)*?\*)+?\*$|^_(?![_\s])(?:(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)|_(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)*?_)+?_$`
+	inline_em_endast = `[^punctuation\s]\*(?!\*)|[punctuation]\*(?!\*)(?:(?=[punctuation\s]|$))`
+	inline_em_endund = `[^\s]_(?!_)(?:(?=[punctuation\s])|$)`
 
-	icode        = `^($1+)([^$1]|[^$1][\s\S]*?[^$1])\1(?!$1)`
-	br           = `^( {2,}|\\)\n(?!\s*$)`
-	itext        = `^($1+|[^$1])(?:[\s\S]*?(?:(?=[\\<!\[$1*]|\b_|$)|[^ ](?= {2,}\n))|(?= {2,}\n))`
-	punctuation  = `^([\s*punctuation])`
-	_punctuation = `!"#$%&\'()+\\-.,/:;<=>?@\\[\\]$1^{|}~`
-	_blockSkip   = `\\[[^\\]]*?\\]\\([^\\)]*?\\)|$1[^$1]*?$1|<[^>]*?>`
-	_overlapSkip = `__[^_]*?__|\\*\\*\\[^\\*\\]*?\\*\\*`
+	inline_icode        = `^($1+)([^$1]|[^$1][\s\S]*?[^$1])\1(?!$1)`
+	inline_br           = `^( {2,}|\\)\n(?!\s*$)`
+	inline_itext        = `^($1+|[^$1])(?:[\s\S]*?(?:(?=[\\<!\[$1*]|\b_|$)|[^ ](?= {2,}\n))|(?= {2,}\n))`
+	inline_punctuation  = `^([\s*punctuation])`
+	inline__punctuation = `!"#$%&\'()+\\-.,/:;<=>?@\\[\\]$1^{|}~`
+	inline_blockSkip    = `\\[[^\\]]*?\\]\\([^\\)]*?\\)|$1[^$1]*?$1|<[^>]*?>`
+	inline_overlapSkip  = `__[^_]*?__|\\*\\*\\[^\\*\\]*?\\*\\*`
 
-	_escape = `\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_$1{|}~])`
-	_scheme = `[a-zA-Z][a-zA-Z0-9+.-]{1,31}`
-	_email  = `[a-zA-Z0-9.!#$%&'*+/=?^_$1{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])`
+	inline__escape = `\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_$1{|}~])`
+	inline_scheme  = `[a-zA-Z][a-zA-Z0-9+.-]{1,31}`
+	inline_email   = `[a-zA-Z0-9.!#$%&'*+/=?^_$1{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])`
 
-	_attribute = `\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>$1]+)?`
+	inline_attribute = `\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>$1]+)?`
 
-	_llabel = `(?:\[(?:\\.|[^\[\]\\])*\]|\\.|$1[^$1]*$1|[^\[\]\\$1])*?`
-	_href   = `<(?:\\[<>]?|[^\s<>\\])*>|[^\s\x00-\x1f]*`
-	_ltitle = `"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)`
+	inline_label = `(?:\[(?:\\.|[^\[\]\\])*\]|\\.|$1[^$1]*$1|[^\[\]\\$1])*?`
+	inline_href  = `<(?:\\[<>]?|[^\s<>\\])*>|[^\s\x00-\x1f]*`
+	inline_title = `"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)`
 )
 
 var (
-	re_newline = regexp.MustCompile(newline)
-	re_code    = regexp.MustCompile(code)
-	re_fences  = regexp.MustCompile(fences)
+	block  map[string]*regexp.Regexp
+	inline map[string]*regexp.Regexp
 )
+
+func InitFunc() {
+	block = make(map[string]*regexp.Regexp)
+	inline = make(map[string]*regexp.Regexp)
+
+	block["newline"] = regexp.MustCompile(block_newline)
+	block["code"] = regexp.MustCompile(block_code)
+	block["fences"] = regexp.MustCompile(block_fences)
+	block["hr"] = regexp.MustCompile(block_hr)
+	block["heading"] = regexp.MustCompile(block_heading)
+	block["blockquote"] = regexp.MustCompile(block_blockquote)
+	block["list"] = regexp.MustCompile(block_list)
+	block["def"] = regexp.MustCompile(block_def)
+	block["lheading"] = regexp.MustCompile(block_lheading)
+	block["paragraph"] = regexp.MustCompile(block_paragraph)
+	block["text"] = regexp.MustCompile(block_text)
+
+}
 
 func PreProccesText(text string) {
 	re_break := regexp.MustCompile(`\r\n|\r`)

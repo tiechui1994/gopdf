@@ -1,6 +1,8 @@
 package markdown
 
-import "regexp"
+import (
+	"regexp"
+)
 
 type link struct {
 	href  string
@@ -66,7 +68,14 @@ func (lex *Lex) lex(src string) Tokens {
 func (lex *Lex) blockTokens(src string, tokens Tokens, top bool) {
 	rereplace := regexp.MustCompile(`^ +$`)
 	src = rereplace.ReplaceAllString(src, "")
-	
+
+	for src != "" {
+		token := lex.tokenizer.space(src)
+		if token.Type != "" {
+			tokens.tokens = append(tokens.tokens, token)
+		}
+	}
+
 }
 
 func (lex *Lex) inline(tokens Tokens) {

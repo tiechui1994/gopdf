@@ -19,7 +19,7 @@ func outputLink(cap []string, link struct {
 	href := link.href
 	title := link.title
 	if title != "" {
-		title = Escape(title, false)
+		//title = Escape(title, false)
 	} else {
 		title = ""
 	}
@@ -39,7 +39,7 @@ func outputLink(cap []string, link struct {
 			Raw:   raw,
 			Href:  href,
 			Title: title,
-			Text:  Escape(text, false),
+			//Text:  Escape(text, false),
 		}
 	}
 }
@@ -59,4 +59,8 @@ func NewTokenizer(opt *Options) *Tokenizer {
 	return &Tokenizer{
 		options: option,
 	}
+}
+
+func (s *Tokenizer) space(str string) Token  {
+	return Token{}
 }

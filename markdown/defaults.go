@@ -10,7 +10,7 @@ type Options struct {
 	highlight    interface{}
 	mangle       bool
 	pedantic     bool
-	renderer     Options
+	renderer     *Options
 	sanitize     bool
 	sanitizer    interface{}
 	silent       bool

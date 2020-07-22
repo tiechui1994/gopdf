@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"net/url"
 	"strings"
+	"log"
 )
 
 type String struct {
@@ -26,7 +27,7 @@ func (s *String) replace(regex interface{}, repl string) string {
 	default:
 		panic("invalid regex")
 	}
-
+	log.Println(string(s.data), repl, re.MatchString(string(s.data)))
 	return re.ReplaceAllString(string(s.data), repl)
 }
 
