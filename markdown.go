@@ -1260,8 +1260,8 @@ var (
 	block_paragraph  = `^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html)[^\n]+)*)`
 	block_text       = `^[^\n]+`
 
-	block_label = `(?!\s*\])(?:\\[\[\]]|[^\[\]])+`
-	block_title = `(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))`
+	block__label = `(?!\s*\])(?:\\[\[\]]|[^\[\]])+`
+	block__title = `(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))`
 
 	block_bullet  = `(?:[*+-]|\d{1,9}[.)])`
 	block_item    = `^( *)(bull) ?[^\n]*(?:\n(?!\1bull ?)[^\n]*)*`
@@ -1311,6 +1311,45 @@ var (
 	inline_title = `"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)`
 )
 
+/**
+function edit(regex, opt) {
+  regex = regex.source || regex;
+  opt = opt || '';
+  const obj = {
+    replace: (name, val) => {
+      val = val.source || val;
+      val = val.replace(caret, '$1');
+      regex = regex.replace(name, val);
+      return obj;
+    },
+    getRegex: () => {
+      return new RegExp(regex, opt);
+    }
+  };
+  return obj;
+}
+*/
+
+type editor struct {
+	getRegex func() *regexp.Regexp
+	replace  func(name, value string) *editor
+}
+
+func edit(re *regexp.Regexp) *editor {
+	e := new(editor)
+
+	e.getRegex = func() *regexp.Regexp {
+		return re
+	}
+
+	e.replace = func(name, value string) *editor {
+		caret := regexp.MustCompile(`(^|[^\[])\^`)
+		return e
+	}
+
+	return e
+}
+
 var (
 	block  map[string]*regexp.Regexp
 	inline map[string]*regexp.Regexp
@@ -1329,9 +1368,12 @@ func InitFunc() {
 	block["list"] = regexp.MustCompile(block_list)
 	block["def"] = regexp.MustCompile(block_def)
 	block["lheading"] = regexp.MustCompile(block_lheading)
-	block["paragraph"] = regexp.MustCompile(block_paragraph)
+	block["_paragraph"] = regexp.MustCompile(block_paragraph)
 	block["text"] = regexp.MustCompile(block_text)
+	block["_label"] = regexp.MustCompile(block__label)
+	block["_title"] = regexp.MustCompile(block__title)
 
+	block["def"] = edit(block["def"]).getRegex()
 }
 
 func PreProccesText(text string) {
