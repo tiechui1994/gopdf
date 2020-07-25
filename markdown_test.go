@@ -6,7 +6,8 @@ import (
 	"github.com/tiechui1994/gopdf/core"
 	"io/ioutil"
 	"regexp"
-	"encoding/base64"
+	"strings"
+	"log"
 )
 
 const (
@@ -101,6 +102,13 @@ func TestReSubText(t *testing.T) {
 }
 
 func TestA(t *testing.T) {
-	data, _ := base64.StdEncoding.DecodeString("XiB7MCwzfShgezMsIH0oPyA9IFteYFxuXSpcbil8fnszLH0pKFteXG5dKilcbig/OnwoW1xzXFNdKj8pXG4pKD86IHswLDN9XDFbfmBdKiAqKD86XG4rfCQKKXwkKQ==")
-	t.Logf("%#v", data)
+	InitFunc()
+	for k, v := range block {
+		if strings.HasPrefix(k, "_") {
+			continue
+		}
+		log.Println("key", k)
+		log.Println("regex", v)
+		log.Println()
+	}
 }
