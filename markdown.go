@@ -1249,8 +1249,8 @@ var (
 	block_newline = `^\n+`
 	block_code    = `^( {4}[^\n]+\n*)+`
 
-	//^ {0,3}(`{3, }(? = [^`\n]*\n)|~{3,})([^\n]*)\n(?:|([\s\S]*?)\n)(?: {0,3}\1[~`]* *(?:\n+|$ )|$)
-	block_fences = `^ {0,3}($1{3, }(?= [^$1\n]*\n)|~{3,})([^\n]*)\n(?:|([\s\S]*?)\n)(?: {0,3}\1[~$1]* *(?:\n+|$ )|$)`
+	//^ {0,3}(`{3,}(?=[^`\n]*\n)|~{3,})([^\n]*)\n(?:|([\s\S]*?)\n)(?: {0,3}\1[~`]* *(?:\n+|$)|$)
+	block_fences = `^ {0,3}($1{3,}(?=[^$1\n]*\n)|~{3,})([^\n]*)\n(?:|([\s\S]*?)\n)(?: {0,3}\1[~$1]* *(?:\n+|$)|$)`
 
 	block_hr         = `^ {0,3}((?:- *){3,}|(?:_ *){3,}|(?:\* *){3,})(?:\n+|$)`
 	block_heading    = `^ {0,3}(#{1,6}) +([^\n]*?)(?: +#+)? *(?:\n+|$)`
@@ -1395,10 +1395,11 @@ func InitFunc() {
 	block["fences"] = regexp2.MustCompile(block_fences, option)
 	block["hr"] = regexp2.MustCompile(block_hr, option)
 	block["heading"] = regexp2.MustCompile(block_heading, option)
+	block["list"] = regexp2.MustCompile(block_list, option)
+	block["def"] = regexp2.MustCompile(block_def, option)
 	block["lheading"] = regexp2.MustCompile(block_lheading, option)
 	block["text"] = regexp2.MustCompile(block_text, option)
 
-	block["def"] = regexp2.MustCompile(block_def, option)
 	block["_label"] = regexp2.MustCompile(block__label, option)
 	block["_title"] = regexp2.MustCompile(block__title, option)
 	block["def"] = edit(block["def"]).
@@ -1436,14 +1437,38 @@ func InitFunc() {
 
 }
 
-func PreProccesText(text string) {
-	re_break := regexp.MustCompile(`\r\n|\r`)
-	re_blank := regexp.MustCompile(`\t`)
-	text = re_blank.ReplaceAllString(re_break.ReplaceAllString(text, "\n"), "    ")
+type token struct {
+	Depth  int
+	Raw    string
+	Text   string
+	Type   string
+	Href   string
+	Title  string
+	Tokens []token
+}
 
-	re_blank = regexp.MustCompile(`^ +$`)
+func space(src []rune) token {
+	newline := block["newline"]
+	if match, _ := newline.FindRunesMatch(src); match.Length > 0 {
+		log.Println(match.Captures[0].String())
+		return token{
+			Type: "space",
+			Raw:  match.Captures[0].String(),
+		}
+	}
+	return token{Raw: "\n"}
+}
+
+func PreProccesText(text string) {
+	re_break := regexp2.MustCompile(`\r\n|\r`, regexp2.None)
+	text, _ = re_break.Replace(text, "", 0, -1)
+	re_blank := regexp2.MustCompile(`\t`, regexp2.None)
+	text, _ = re_blank.Replace(text, "    ", 0, -1)
+
+	re_blank = regexp2.MustCompile(`^ +$`, regexp2.Multiline)
+	text, _ = re_blank.Replace(text, "", 0, -1)
+
 	src := []rune(text)
-	src = []rune(re_blank.ReplaceAllString(string(src), ""))
 	for len(src) != 0 {
 		_ = src
 	}
