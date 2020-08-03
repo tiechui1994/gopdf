@@ -92,7 +92,6 @@ func ComplexReportExecutor(report *core.Report) {
 	report.SetMargin(6, 3)
 	baseInfoDiv.Copy("详细过程").GenerateAtomicCell()
 	report.SetMargin(0, 3)
-	SimpleTableReportExecutor(report)
 
 	// todo: 评论
 	report.SetMargin(0, 10)

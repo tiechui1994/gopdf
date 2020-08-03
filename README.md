@@ -1,38 +1,44 @@
-# gopdf
+## gopdf
 
-gopdf 是一个生成PDF文档的 Golang 库.
+![GitHub](https://img.shields.io/github/license/tiechui1994/gopdf)
+![GitHub issues](https://img.shields.io/github/issues/tiechui1994/gopdf)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/tiechui1994/gopdf)
 
-特点:
+## 项目介绍
+
+gopdf 是一个生成 `PDF` 文档的 `Golang` 库. 主要有以下的特点:
 
 - 支持 Unicode 字符 (包括中文, 日语, 朝鲜语, 等等.)
-- PDF 文档自动分页
-- PDF 文档自动换行
-- PDF 文档自动化全局定位, 不需要用户去手动定位
-- PDF 默认的配置选项简单, 且已经内置了常用的几种方式
-- PDF 文档采用类似 html 页面的属性设置, 通俗易懂
-- PDF 支持图片插入, 格式可以是PNG或者JPEG, 图片会进行适当压缩
-- PDF 支持文档压缩
-- PDF 转换单位内置处理
-- Executor 可以嵌套使用
+- 文档内容的自动定位与分页, 减少用户的工作量.
+- 支持图片插入, 格式可以是 `PNG` 或者 `JPEG`, 图片会进行适当压缩.
+- 文档压缩
+- 复杂表格组件, 块文本等
 
-安装:
+## 安装
 
 ```
 go get -u github.com/tiechui1994/gopdf
 ```
 
-案例: 
+## 案例展示: 
 
-[代码](./example/complex_report_test.go#L26)
+![image](./example/pictures/example.png)
 
-![](./example/pictures/example.png)
+代码参考 `example/complex_report_test`
+
+![image](./example/pictures/table.png)
+
+代码参考 `example/simple_table_test`
+
+![image](./example/pictures/mutil-table.png)
+
+代码参考 `example/mutil_table_test`
 
 
-[代码](./table_test.go#L19)
+## 未来开发计划
 
-![](./example/pictures/table.png)
+1. 准备尝试开发 `Markdown` 的语法解析库, 然后通过解析库将 `markdown` 转换成 pdf, 可以支持定义一些颜色风格. 目前正
+在研究 `marked.js` 前段库, 寻找灵感.
 
+2. 开发更加通俗易用的组件, 比如 `paragraph`, `tablecell` 等.
 
-[代码](./table_test.go#L164)
-
-![](./example/pictures/mutil-table.png)

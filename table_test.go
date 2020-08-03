@@ -20,7 +20,7 @@ var (
 	seed = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
-func ComplexTableReportWithData() {
+func SimpleTable() {
 	r := core.CreateReport()
 	font1 := core.FontMap{
 		FontName: TABLE_IG,
@@ -37,13 +37,12 @@ func ComplexTableReportWithData() {
 	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
 	r.SetPage("A4", "P")
 
-	r.RegisterExecutor(core.Executor(ComplexTableReportWithDataExecutor), core.Detail)
+	r.RegisterExecutor(core.Executor(SimpleTableExecutor), core.Detail)
 
-	r.Execute("table_test_data.pdf")
-	r.SaveAtomicCellText("table_test_data.txt")
+	r.Execute("simple_table.pdf")
 	fmt.Println(r.GetCurrentPageNo())
 }
-func ComplexTableReportWithDataExecutor(report *core.Report) {
+func SimpleTableExecutor(report *core.Report) {
 	lineSpace := 1.0
 	lineHeight := 18.0
 
@@ -158,7 +157,7 @@ func ComplexTableReportExecutor(report *core.Report) {
 	form.GenerateAtomicCell()
 }
 
-func ManyTableReportWithData() {
+func MutilTable() {
 	r := core.CreateReport()
 	font1 := core.FontMap{
 		FontName: TABLE_IG,
@@ -175,11 +174,11 @@ func ManyTableReportWithData() {
 	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
 	r.SetPage("A4", "P")
 
-	r.RegisterExecutor(core.Executor(ManyTableReportWithDataExecutor), core.Detail)
+	r.RegisterExecutor(core.Executor(MutilTableExecutor), core.Detail)
 
-	r.Execute("many_table_data.pdf")
+	r.Execute("mutil_table.pdf")
 }
-func ManyTableReportWithDataExecutor(report *core.Report) {
+func MutilTableExecutor(report *core.Report) {
 	lineSpace := 1.0
 	lineHeight := 18.0
 
@@ -293,13 +292,13 @@ func TestComplexTableReport(t *testing.T) {
 	ComplexTableReport()
 }
 
-func TestComplexTableReportWithData(t *testing.T) {
-	ComplexTableReportWithData()
+func TestSimpleTable(t *testing.T) {
+	SimpleTable()
 }
 
 func TestManyTableReportWithData(t *testing.T) {
 	start := time.Now().Unix()
-	ManyTableReportWithData()
+	MutilTable()
 	end := time.Now().Unix()
 	fmt.Println("i", 1, end-start)
 }
