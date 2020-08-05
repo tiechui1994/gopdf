@@ -5,8 +5,20 @@ import (
 	"strings"
 
 	"github.com/dlclark/regexp2"
-	"log"
+	"fmt"
 )
+
+func matchAll(re *regexp2.Regexp, src []rune) ([]*regexp2.Match, error) {
+	matches := make([]*regexp2.Match, 0)
+	matched, err := re.FindRunesMatch(src)
+
+	for err == nil && matched != nil {
+		matches = append(matches, matched)
+		matched, err = re.FindNextMatch(matched)
+	}
+
+	return matches, err
+}
 
 var (
 	// block
@@ -157,8 +169,8 @@ func InitFunc() {
 		getRegex()
 
 	block["item"] = regexp2.MustCompile(block_item, option)
-	block["bullet"] = regexp2.MustCompile(block_bullet, option)
-	block["item"] = edit(block["item"], regexp2.Multiline).
+	block["bullet"] = regexp2.MustCompile(block_bullet, option|regexp2.ECMAScript)
+	block["item"] = edit(block["item"], regexp2.Multiline|regexp2.RE2).
 		replace("bull", block["bullet"].String()).
 		getRegex()
 
@@ -187,123 +199,302 @@ func InitFunc() {
 }
 
 type token struct {
-	Depth  int
-	Raw    string
-	Text   string
-	Type   string
-	Href   string
-	Title  string
-	Tokens []token
-	Extend map[string]interface{}
+	Depth  int                    `json:"depth"`
+	Raw    string                 `json:"raw"`
+	Text   string                 `json:"text"`
+	Type   string                 `json:"type"`
+	Href   string                 `json:"href,omitempty"`
+	Title  string                 `json:"title,omitempty"`
+	Tokens []token                `json:"tokens"`
+	Extend map[string]interface{} `json:"extend"`
 }
 
-func space(src []rune) token {
-	newline := block["newline"]
-	if match, _ := newline.FindRunesMatch(src); match.Length > 0 {
-		log.Println(match.Captures[0].String())
+func space(src []rune) (tok token, err error) {
+	match, err := block["newline"].FindRunesMatch(src)
+	if err != nil || match == nil {
+		return tok, err
+	}
+
+	raw := match.GroupByNumber(0).Runes()
+	if len(raw) > 1 {
 		return token{
 			Type: "space",
-			Raw:  match.Captures[0].String(),
-		}
+			Raw:  string(raw),
+		}, nil
 	}
-	return token{Raw: "\n"}
+
+	return token{
+		Raw: "\n",
+	}, nil
 }
 
 func code(src []rune, tokens []token) (tok token, err error) {
 	match, err := block["code"].FindRunesMatch(src)
-	if err != nil {
+	if err != nil || match == nil {
 		return tok, err
 	}
 
-	if match.Length > 0 && len(tokens) > 0 {
-		last := tokens[len(tokens)-1]
-		raw := match.Captures[0].String()
-		if last.Type == "paragraph" {
-			return token{
-				Raw:  raw,
-				Text: strings.TrimRight(raw, " "),
-			}, nil
-		}
-
-		text, _ := regexp2.MustCompile(`^ {4}`, regexp2.Multiline).Replace(raw, "", 0, -1)
+	last := tokens[len(tokens)-1]
+	raw := match.GroupByNumber(0).String()
+	if last.Type == "paragraph" {
 		return token{
-			Type: "code",
 			Raw:  raw,
-			Text: text,
+			Text: strings.TrimRight(raw, " "),
 		}, nil
 	}
 
-	return tok, nil
+	text, _ := regexp2.MustCompile(`^ {4}`, regexp2.Multiline).Replace(raw, "", 0, -1)
+	return token{
+		Type: "code",
+		Raw:  raw,
+		Text: text,
+	}, nil
 }
 
 func fences(src []rune) (tok token, err error) {
 	match, err := block["fences"].FindRunesMatch(src)
-	if err != nil {
-		return
+	if err != nil || match == nil {
+		return tok, err
 	}
 
-	if match.Length > 0 {
-		raw := match.Captures[0].String()
-		return token{
-			Type: "code",
-			Raw:  raw,
-			Text: raw,
-		}, nil
-	}
-	return
+	raw := match.GroupByNumber(0).String()
+	return token{
+		Type: "code",
+		Raw:  raw,
+		Text: raw,
+	}, nil
 }
 
 func heading(src []rune) (tok token, err error) {
 	match, err := block["heading"].FindRunesMatch(src)
-	if err != nil {
-		return
+	if err != nil || match == nil {
+		return tok, err
 	}
 
-	if match.Length > 0 {
-		raw := match.Captures[0].String()
-		text := match.Captures[2].String()
-		return token{
-			Type:  "heading",
-			Raw:   raw,
-			Depth: len(match.Captures[1].String()),
-			Text:  text,
-		}, nil
-	}
-	return
+	raw := match.GroupByNumber(0).String()
+	text := match.GroupByNumber(2).String()
+	return token{
+		Type:  "heading",
+		Raw:   raw,
+		Depth: len(match.Captures[1].String()),
+		Text:  text,
+	}, nil
 }
 
 func hr(src []rune) (tok token, err error) {
 	match, err := block["hr"].FindRunesMatch(src)
-	if err != nil {
+	if err != nil || match == nil {
 		return tok, err
 	}
-	if match.Length > 0 {
-		text := match.Captures[0].String()
-		return token{
-			Type: "hr",
-			Raw:  text,
-		}, nil
-	}
-	return tok, nil
+	text := match.GroupByNumber(0).String()
+	return token{
+		Type: "hr",
+		Raw:  text,
+	}, nil
 }
 
 func blockquote(src []rune) (tok token, err error) {
 	match, err := block["blockquote"].FindRunesMatch(src)
+	if err != nil || match == nil {
+		return tok, err
+	}
+
+	raw := match.GroupByNumber(0).String()
+	regex := regexp2.MustCompile(`^ *> ?`, regexp2.Multiline)
+	text, _ := regex.Replace(raw, "", 0, -1)
+
+	return token{
+		Type: "blockquote",
+		Raw:  raw,
+		Text: text,
+	}, nil
+}
+
+func list(src []rune) (tok token, err error) {
+	match, err := block["list"].FindRunesMatch(src)
 	if err != nil {
 		return tok, err
 	}
-	if match.Length > 0 {
-		raw := match.Captures[0].String()
-		regex := regexp2.MustCompile(`^ *> ?`, regexp2.Multiline)
-		text, _ := regex.Replace(raw, "", 0, -1)
+	var raw = match.GroupByNumber(0).Runes()
+	var bull = match.GroupByNumber(2).Runes()
+	isordered := len(bull) > 1
+	isparen := bull[len(bull)-1] == ')'
 
+	var start string
+	if isordered {
+		start = string(bull[0:len(bull)-1])
+	}
+
+	list := token{
+		Type: "list",
+		Raw:  string(raw),
+		Extend: map[string]interface{}{
+			"ordered": isordered,
+			"start":   start,
+			"loose":   false,
+		},
+		Tokens: []token{},
+	}
+
+	itemmatch, err := matchAll(block["item"], raw)
+	if err != nil {
+		return tok, err
+	}
+
+	var next bool
+	length := len(itemmatch)
+	replace := regexp.MustCompile(`^ *([*+-]|\d+[.)]) *`)
+	reloose := regexp2.MustCompile(`\n\n(?!\s*$)`, regexp2.RE2)
+	retask := regexp.MustCompile(`^\[[ xX]\] `)
+	for i := 0; i < length; i++ {
+		item := itemmatch[i].Runes()
+		raw := item
+		space := len(item)
+		item = []rune(replace.ReplaceAllString(string(item), ""))
+
+		index := strings.Index(string(item), "\n ")
+		if index != -1 {
+			space -= len(item)
+			temp, _ := regexp2.MustCompile(`'^ {1,`+string(space)+`}`, regexp2.Multiline).Replace(string(item), "", 0, -1)
+			item = []rune(temp)
+		}
+
+		if i != length-1 {
+			t, _ := block["bullet"].FindRunesMatch(itemmatch[i+1].Runes())
+			b := t.GroupByNumber(0).Runes()
+
+			var condiotion bool
+			if isordered {
+				condiotion = len(b) == 1 || (!isparen && b[len(b)-1] == ')')
+			} else {
+				condiotion = len(b) > 1
+			}
+
+			// todo: do nothing
+			if condiotion {
+			}
+		}
+
+		temp, _ := reloose.MatchRunes(item)
+		loose := next || temp
+		if i != length-1 {
+			next = item[len(item)-1] == '\n'
+			if !loose {
+				loose = next
+			}
+		}
+
+		if loose {
+			list.Extend["loose"] = true
+		}
+
+		ischecked := "undefined"
+		istask := retask.MatchString(string(item))
+		if istask {
+			ischecked = fmt.Sprintf("%v", item[1] != ' ')
+			item = []rune(regexp.MustCompile(`^\[[ xX]\] +`).ReplaceAllString(string(item), ""))
+		}
+
+		extend := map[string]interface{}{
+			"task":  istask,
+			"loose": loose,
+		}
+		if ischecked != "undefined" {
+			extend["checked"] = ischecked == "true"
+		}
+
+		list.Tokens = append(list.Tokens, token{
+			Type:   "list_item",
+			Raw:    string(raw),
+			Text:   string(item),
+			Extend: extend,
+		})
+	}
+
+	return list, nil
+}
+
+func def(src []rune) (tok token, err error) {
+	match, err := block["def"].FindRunesMatch(src)
+	if err != nil {
+		return tok, err
+	}
+
+	g3 := match.GroupByNumber(3).Runes()
+	if string(g3) != "" {
+		g3 = g3[1:len(g3)-1]
+	}
+
+	g1 := match.GroupByNumber(1).String()
+	tag := regexp.MustCompile(`\s+`).ReplaceAllString(strings.ToLower(g1), " ")
+
+	return token{
+		Extend: map[string]interface{}{
+			"tag": tag,
+		},
+		Raw:   match.GroupByNumber(0).String(),
+		Href:  match.GroupByNumber(2).String(),
+		Title: string(g3),
+	}, nil
+}
+
+func lheading(src []rune) (tok token, err error) {
+	match, err := block["lheading"].FindRunesMatch(src)
+	if err != nil {
+		return tok, err
+	}
+
+	var depth = 2
+	text := match.GroupByNumber(2).Runes()
+	if text[0] == '=' {
+		depth = 1
+	}
+	return token{
+		Type:  "heading",
+		Raw:   match.GroupByNumber(0).String(),
+		Text:  string(text),
+		Depth: depth,
+	}, nil
+}
+
+func paragraph(src []rune) (tok token, err error) {
+	match, err := block["paragraph"].FindRunesMatch(src)
+	if err != nil {
+		return tok, err
+	}
+
+	text := match.GroupByNumber(1).Runes()
+	if text[len(text)-1] == '\n' {
+		text = text[0:len(text)-1]
+	}
+
+	return token{
+		Type: "paragraph",
+		Raw:  match.GroupByNumber(0).String(),
+		Text: string(text),
+	}, nil
+}
+
+func text(src []rune, tokens []token) (tok token, err error) {
+	match, err := block["text"].FindRunesMatch(src)
+	if err != nil {
+		return tok, err
+	}
+
+	raw := match.GroupByNumber(0).String()
+	last := tokens[len(tokens)-1]
+	if last.Type == "text" {
 		return token{
-			Type: "blockquote",
 			Raw:  raw,
-			Text: text,
+			Text: raw,
 		}, nil
 	}
-	return tok, nil
+
+	return token{
+		Type: "text",
+		Raw:  raw,
+		Text: raw,
+	}, nil
 }
 
 func PreProccesText(text string) {
