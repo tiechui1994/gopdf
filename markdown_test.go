@@ -52,7 +52,7 @@ func MdReportExecutor(report *core.Report) {
 		return
 	}
 	var fonts = map[string]string{
-		FONT_BOLD:   MD_MC,
+		FONT_BOLD:   MD_MB,
 		FONT_NORMAL: MD_MC,
 		FONT_IALIC:  MD_MC,
 	}
