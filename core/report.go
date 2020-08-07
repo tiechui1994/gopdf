@@ -123,9 +123,9 @@ func (report *Report) LoadCellsFromText(filepath string) error {
 // 转换, 内容 -> PDF文件
 func (report *Report) execute(exec bool) {
 	if exec {
-		report.executePageHeader() // 首页的页眉
 
 		report.pageNo = 1
+		report.executePageHeader() // 首页的页眉
 		report.currX, report.currY = report.GetPageStartXY()
 		report.addAtomicCell("v|PAGE|" + strconv.Itoa(report.pageNo))
 		report.executeDetail()
@@ -320,38 +320,63 @@ func (report *Report) SetPage(size string, orientation string) {
 		switch orientation {
 		case "P":
 			report.addAtomicCell("P|" + unit + "|A4|P")
-			report.pageWidth = config.width
-			report.pageHeight = config.height
+			// report.pageWidth = config.width
+			// report.pageHeight = config.height
+			report.setConfig(config.width, config.height, config.contentWidth, config.contentHeight, config.startX, config.startY, config.endX, config.endY)
 		case "L":
 			report.addAtomicCell("P|" + unit + "|A4|L")
 			report.pageWidth = config.height
 			report.pageHeight = config.width
+			report.setConfig(config.height, config.width, config.contentHeight, config.contentWidth, config.startY, config.startX, config.endY, config.endX)
 		}
 	case "LTR":
 		switch orientation {
 		case "P":
 			report.pageWidth = config.width
 			report.pageHeight = config.height
+			report.setConfig(config.width, config.height, config.contentWidth, config.contentHeight, config.startX, config.startY, config.endX, config.endY)
 			report.addAtomicCell("P|" + unit + "|" + strconv.FormatFloat(report.pageWidth, 'f', 4, 64) +
 				"|" + strconv.FormatFloat(report.pageHeight, 'f', 4, 64))
 		case "L":
 			report.pageWidth = config.height
 			report.pageHeight = config.width
+			report.setConfig(config.height, config.width, config.contentHeight, config.contentWidth, config.startY, config.startX, config.endY, config.endX)
 			report.addAtomicCell("P  |" + unit + "|" + strconv.FormatFloat(report.pageWidth, 'f', 4, 64) +
 				"|" + strconv.FormatFloat(report.pageHeight, 'f', 4, 64))
 		}
 	}
 
-	report.contentWidth = config.contentWidth
-	report.contentHeight = config.contentHeight
+	// report.contentWidth = config.contentWidth
+	// report.contentHeight = config.contentHeight
 
-	report.pageStartX = config.startX
-	report.pageStartY = config.startY
-	report.pageEndX = config.endX
-	report.pageEndY = config.endY
-	report.config = config
+	// report.pageStartX = config.startX
+	// report.pageStartY = config.startY
+	// report.pageEndX = config.endX
+	// report.pageEndY = config.endY
 
 	report.execute(false)
+}
+
+func (report *Report) setConfig(width, height, contentWidth, contentHeight, startX, startY, endX, endY float64) {
+	report.pageWidth = width
+	report.pageHeight = height
+	report.contentWidth = contentWidth
+	report.contentHeight = contentHeight
+
+	report.pageStartX = startX
+	report.pageStartY = startY
+	report.pageEndX = endX
+	report.pageEndY = endY
+	report.config = &Config{
+		startX:        startX,
+		startY:        startY,
+		endX:          endX,
+		endY:          endY,
+		width:         width,
+		height:        height,
+		contentWidth:  contentWidth,
+		contentHeight: contentHeight,
+	}
 }
 
 // 获取底层的所有的原子单元内容

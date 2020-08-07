@@ -1,7 +1,9 @@
 package gopdf
 
 import (
+	"fmt"
 	"math"
+	"strconv"
 
 	"github.com/tiechui1994/gopdf/core"
 )
@@ -46,12 +48,12 @@ core.Cell接口的实现类可以生成自定义的单元格. 默认的一个实
 注: 目前在table的分页当中, 背景颜色和线条存在bug.
 **/
 
-// 构建表格
+//Table 构建表格
 type Table struct {
 	pdf           *core.Report
 	rows, cols    int // 行数,列数
 	width, height float64
-	colwidths     []float64      // 列宽百分比: 应加起来为1
+	colwidths     []SizedColumn  // 列宽百分比: 应加起来为1
 	rowheights    []float64      // 保存行高
 	cells         [][]*TableCell // 单元格
 
@@ -60,11 +62,19 @@ type Table struct {
 
 	nextrow, nextcol int // 下一个位置
 
-	tableCheck bool      // table 完整性检查
-	cachedRow  []float64 // 缓存行
-	cachedCol  []float64 // 缓存列
+	tableCheck  bool                // table 完整性检查
+	cachedRow   []float64           // 缓存行
+	cachedCol   []float64           // 缓存列
+	sizedColumn map[int]SizedColumn // 缓存列
 }
 
+//SizedColumn 列的宽度
+type SizedColumn struct {
+	col   int     //列序号
+	width float64 //列宽，是一个小于1的浮点数，且所有列宽的总数为1
+}
+
+//TableCell 表格的单元格
 type TableCell struct {
 	table            *Table // table元素
 	row, col         int    // 位置
@@ -76,11 +86,13 @@ type TableCell struct {
 	cellwrited int       // 写入的行数
 }
 
+//SetElement 设置单元格的元素
 func (cell *TableCell) SetElement(e core.Cell) *TableCell {
 	cell.element = e
 	return cell
 }
 
+//NewTable 新建表格
 func NewTable(cols, rows int, width, lineHeight float64, pdf *core.Report) *Table {
 	contentWidth, _ := pdf.GetContentWidthAndHeight()
 	if width > contentWidth {
@@ -97,13 +109,14 @@ func NewTable(cols, rows int, width, lineHeight float64, pdf *core.Report) *Tabl
 		nextcol: 0,
 		nextrow: 0,
 
-		lineHeight: lineHeight,
-		colwidths:  []float64{},
-		rowheights: []float64{},
+		lineHeight:  lineHeight,
+		colwidths:   []SizedColumn{},
+		rowheights:  []float64{},
+		sizedColumn: map[int]SizedColumn{},
 	}
-
+	//TODO:列宽处理
 	for i := 0; i < cols; i++ {
-		t.colwidths = append(t.colwidths, float64(1.0)/float64(cols))
+		t.colwidths = append(t.colwidths, SizedColumn{col: i, width: float64(1.0) / float64(cols)})
 	}
 
 	cells := make([][]*TableCell, rows)
@@ -116,7 +129,7 @@ func NewTable(cols, rows int, width, lineHeight float64, pdf *core.Report) *Tabl
 	return t
 }
 
-// 创建长宽为1的单元格
+//NewCell 创建长宽为1的单元格
 func (table *Table) NewCell() *TableCell {
 	row, col := table.nextrow, table.nextcol
 	if row == -1 && col == -1 {
@@ -141,7 +154,7 @@ func (table *Table) NewCell() *TableCell {
 	return cell
 }
 
-// 创建固定长度的单元格
+//NewCellByRange 创建固定长度的单元格
 func (table *Table) NewCellByRange(w, h int) *TableCell {
 	colspan, rowspan := w, h
 	if colspan <= 0 || rowspan <= 0 {
@@ -200,7 +213,36 @@ func (table *Table) NewCellByRange(w, h int) *TableCell {
 	return cell
 }
 
-// 检测当前cell的宽和高是否合法
+// SetSpan 设置合并单元格
+func (table *Table) SetSpan(row, col int, rowspan, colspan int) {
+	// 防止非法的宽度
+	if !table.checkSpan(row, col, rowspan, colspan) {
+		panic("inlivid layout, please check w and h")
+	}
+	cell := table.cells[row][col]
+	cell.rowspan = rowspan
+	cell.colspan = colspan
+	cell.height = table.lineHeight * float64(rowspan)
+	cell.element.SetWidth(table.GetColWidth(row, col))
+	if rowspan > 1 {
+		for i := 1; i < rowspan; i++ {
+			nextCell := table.cells[row+i][col]
+			nextCell.element = nil
+			nextCell.rowspan = 0
+			nextCell.colspan = 0
+		}
+	}
+	if colspan > 1 {
+		for i := 1; i < colspan; i++ {
+			nextCell := table.cells[row][col+i]
+			nextCell.element = nil
+			nextCell.rowspan = 0
+			nextCell.colspan = 0
+		}
+	}
+}
+
+//checkSpan 检测当前cell的宽和高是否合法
 func (table *Table) checkSpan(row, col int, rowspan, colspan int) bool {
 	var (
 		cells          = table.cells
@@ -248,12 +290,12 @@ func (table *Table) checkSpan(row, col int, rowspan, colspan int) bool {
 	return false
 }
 
-// 设置下一个单元格开始坐标
+//setNext 设置下一个单元格开始坐标
 func (table *Table) setNext(colspan, rowspan int) {
 	table.nextcol += colspan
 	if table.nextcol == table.cols {
 		table.nextcol = 0
-		table.nextrow += 1
+		table.nextrow++
 	}
 
 	// 获取最近行的空白Cell的坐标
@@ -279,7 +321,45 @@ func (table *Table) setNext(colspan, rowspan int) {
 
 /********************************************************************************************************************/
 
-// 获取某列的宽度
+//SetColumnWidth 设置指定列的列宽
+func (table *Table) SetColumnWidth(col int, width float64) {
+	// 查找所有设置过列宽的列，然后计算出设置后的列宽,假设列总宽为x，剩余的列平均分配1-x
+	var totalSizedWidth float64
+	sizedColumnCount := len(table.sizedColumn)
+	for i := 0; i < sizedColumnCount; i++ {
+		totalSizedWidth += table.sizedColumn[i].width
+	}
+	newTotalSizedWidth := totalSizedWidth + width
+	if newTotalSizedWidth < 1 {
+		table.sizedColumn[col] = SizedColumn{col: col, width: width}
+		table.colwidths[col].width = width
+	}
+	sizedColumnCount++
+	if table.cols == sizedColumnCount {
+		return
+	}
+	existNotSizedWidth := floatRound((1-newTotalSizedWidth)/float64(table.cols-sizedColumnCount), 2)
+	for i := 0; i < table.cols; i++ {
+		if _, ok := table.sizedColumn[i]; ok == false {
+			table.colwidths[i].width = existNotSizedWidth
+		}
+	}
+	// 验证所有的宽度是否超过了1
+	var total float64
+	for i := 0; i < table.cols; i++ {
+		total += table.colwidths[i].width
+	}
+	table.colwidths[table.cols-1].width = table.colwidths[table.cols-1].width + 1.0 - total
+}
+
+// 截取小数位数
+func floatRound(f float64, n int) float64 {
+	format := "%." + strconv.Itoa(n) + "f"
+	res, _ := strconv.ParseFloat(fmt.Sprintf(format, f), 64)
+	return res
+}
+
+//GetColWidth 获取某列的宽度
 func (table *Table) GetColWidth(row, col int) float64 {
 	if row < 0 || row > len(table.cells) || col < 0 || col > len(table.cells[row]) {
 		panic("the index out range")
@@ -287,25 +367,24 @@ func (table *Table) GetColWidth(row, col int) float64 {
 
 	count := 0.0
 	for i := 0; i < table.cells[row][col].colspan; i++ {
-		count += table.colwidths[i+col] * table.width
+		count += table.colwidths[i+col].width * table.width
 	}
 
 	return count
 }
 
-// 设置表的行高, 行高必须大于当前使用字体的行高
+//SetLineHeight 设置表的行高, 行高必须大于当前使用字体的行高
 func (table *Table) SetLineHeight(lineHeight float64) {
 	table.lineHeight = lineHeight
 }
 
-// 设置表的外
+//SetMargin 设置表的外
 func (table *Table) SetMargin(margin core.Scope) {
 	margin.ReplaceMarign()
 	table.margin = margin
 }
 
-/********************************************************************************************************************/
-
+//GenerateAtomicCell 自动新建单元格
 func (table *Table) GenerateAtomicCell() error {
 	var (
 		sx, sy        = table.pdf.GetXY() // 基准坐标
@@ -959,7 +1038,7 @@ func (table *Table) cachedPoints(sx, sy float64) {
 	}
 
 	var (
-		x, y = sx+table.margin.Left, sy+table.margin.Top
+		x, y = sx + table.margin.Left, sy + table.margin.Top
 	)
 
 	// 只会缓存一次
@@ -968,7 +1047,7 @@ func (table *Table) cachedPoints(sx, sy float64) {
 
 		for col := 0; col < table.cols; col++ {
 			table.cachedCol[col] = x
-			x += table.colwidths[col] * table.width
+			x += table.colwidths[col].width * table.width
 		}
 	}
 	table.cachedRow = make([]float64, rows)
@@ -1009,7 +1088,7 @@ func (table *Table) getHLinePosition(sx, sy float64, col, row int) (x1, y1 float
 			x1 = table.cachedCol[cell.col+cell.colspan]
 		}
 	} else {
-		x1 = x + table.colwidths[col]*table.width
+		x1 = x + table.colwidths[col].width*table.width
 	}
 
 	return x, y, x1, y
@@ -1039,7 +1118,7 @@ func (table *Table) checkTableConstraint() {
 		for j := 0; j < table.cols; j++ {
 			cell := table.cells[i][j]
 			if cell != nil {
-				cells += 1
+				cells++
 			}
 			if cell != nil && cell.element != nil {
 				area += cell.rowspan * cell.colspan

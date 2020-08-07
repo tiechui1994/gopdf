@@ -31,7 +31,7 @@ type TextCell struct {
 }
 
 func NewTextCell(width, lineHeight, lineSpace float64, pdf *core.Report) *TextCell {
-	endX,_ := pdf.GetPageEndXY()
+	endX, _ := pdf.GetPageEndXY()
 	curX, _ := pdf.GetXY()
 	if width > endX-curX {
 		width = endX - curX
@@ -212,7 +212,6 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 		}
 
 		y = sy + float64(i)*(cell.lineHeight+cell.lineSpace) + cell.border.Top
-
 		// 字体颜色控制
 		if !util.IsEmpty(cell.fontColor) {
 			cell.pdf.TextColor(util.GetColorRGB(cell.fontColor))
@@ -271,7 +270,9 @@ func (cell *TextCell) TryGenerateAtomicCell(maxheight float64) (int, int) {
 func (cell *TextCell) GetHeight() float64 {
 	return cell.height
 }
-
+func (cell *TextCell) SetWidth(width float64) {
+	cell.width = width
+}
 func (cell *TextCell) GetLastHeight() float64 {
 	return cell.lastheight
 }
