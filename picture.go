@@ -7,25 +7,54 @@ import (
 	"image/jpeg"
 	"image/png"
 	"os"
+	"fmt"
+	"io"
+
+	"golang.org/x/image/bmp"
+	"golang.org/x/image/webp"
+
 )
 
-func GetImageType(picturePath string) (pictureType string, err error) {
-	_, err = os.Stat(picturePath)
+const (
+	PNG  = "png"
+	BMP  = "bmp"
+	WEBP = "webp"
+	JPEG = "jpeg"
+)
+
+func Convert2JPEG(srcPath string, dstPath string) error {
+	_, err := os.Stat(srcPath)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	fd, err := os.Open(picturePath)
+	fd, err := os.Open(srcPath)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	_, pictureType, err = image.DecodeConfig(fd)
+	_, pictureType, err := image.DecodeConfig(fd)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return pictureType, nil
+	switch pictureType {
+	case JPEG:
+		writer, err := os.Create(dstPath)
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(writer, fd)
+		return err
+	case PNG:
+		return ConvertPNG2JPEG(srcPath, dstPath)
+	case WEBP:
+		return ConvertWEBP2JPEG(srcPath, dstPath)
+	case BMP:
+		return ConvertWEBP2JPEG(srcPath, dstPath)
+	default:
+		return fmt.Errorf("invalid picture type")
+	}
 }
 
 func GetImageWidthAndHeight(picturePath string) (w, h int) {
@@ -56,6 +85,54 @@ func ConvertPNG2JPEG(srcPath, dstPath string) (err error) {
 	defer srcFile.Close()
 
 	srcImage, err := png.Decode(srcFile)
+	if err != nil {
+		return err
+	}
+
+	dstFile, err := os.Create(dstPath)
+	if err != nil {
+		return
+	}
+	defer dstFile.Close()
+
+	dstImage := image.NewRGBA(srcImage.Bounds())
+	draw.Draw(dstImage, dstImage.Bounds(), srcImage, srcImage.Bounds().Min, draw.Src)
+
+	return jpeg.Encode(dstFile, dstImage, nil)
+}
+
+func ConvertBMP2JPEG(srcPath, dstPath string) (err error) {
+	srcFile, err := os.Open(srcPath)
+	if err != nil {
+		return
+	}
+	defer srcFile.Close()
+
+	srcImage, err := bmp.Decode(srcFile)
+	if err != nil {
+		return err
+	}
+
+	dstFile, err := os.Create(dstPath)
+	if err != nil {
+		return
+	}
+	defer dstFile.Close()
+
+	dstImage := image.NewRGBA(srcImage.Bounds())
+	draw.Draw(dstImage, dstImage.Bounds(), srcImage, srcImage.Bounds().Min, draw.Src)
+
+	return jpeg.Encode(dstFile, dstImage, nil)
+}
+
+func ConvertWEBP2JPEG(srcPath, dstPath string) (err error) {
+	srcFile, err := os.Open(srcPath)
+	if err != nil {
+		return
+	}
+	defer srcFile.Close()
+
+	srcImage, err := webp.Decode(srcFile)
 	if err != nil {
 		return err
 	}

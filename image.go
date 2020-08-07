@@ -3,10 +3,10 @@ package gopdf
 import (
 	"os"
 	"path/filepath"
-	"strings"
-
 	"github.com/tiechui1994/gopdf/core"
 	"fmt"
+	"log"
+	"time"
 )
 
 type Image struct {
@@ -22,28 +22,23 @@ func NewImage(path string, pdf *core.Report) *Image {
 		panic(fmt.Sprintf("the path error, %v", path))
 	}
 
-	var tempFilePath string
-	picturePath, _ := filepath.Abs(path)
-	imageType, _ := GetImageType(picturePath)
-	if imageType == "png" {
-		index := strings.LastIndex(picturePath, ".")
-		tempFilePath = picturePath[0:index] + ".jpeg"
-		err := ConvertPNG2JPEG(picturePath, tempFilePath)
-		if err != nil {
-			panic(err)
-		}
-		picturePath = tempFilePath
+	dstPath := fmt.Sprintf("/tmp/%v.jpeg", time.Now().UnixNano())
+	srcPath, _ := filepath.Abs(path)
+	err := Convert2JPEG(srcPath, dstPath)
+	if err != nil {
+		log.Println(err)
+		return nil
 	}
 
-	w, h := GetImageWidthAndHeight(picturePath)
+	w, h := GetImageWidthAndHeight(dstPath)
 	image := &Image{
 		pdf:          pdf,
-		path:         picturePath,
-		width:        float64(w / 10),
-		height:       float64(h / 10),
-		tempFilePath: tempFilePath,
+		path:         dstPath,
+		width:        float64(w),
+		height:       float64(h),
+		tempFilePath: dstPath,
 	}
-	if tempFilePath != "" {
+	if dstPath != "" {
 		pdf.AddCallBack(image.delTempImage)
 	}
 
@@ -63,35 +58,35 @@ func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Re
 		panic("the path error")
 	}
 
-	var tempFilePath string
-	picturePath, _ := filepath.Abs(path)
-	imageType, _ := GetImageType(picturePath)
+	dstPath := fmt.Sprintf("/tmp/%v.jpeg", time.Now().UnixNano())
+	srcPath, _ := filepath.Abs(path)
+	err := Convert2JPEG(srcPath, dstPath)
+	if err != nil {
+		return nil
+	}
 
-	if imageType == "png" {
-		index := strings.LastIndex(picturePath, ".")
-		tempFilePath = picturePath[0:index] + ".jpeg"
-		err := ConvertPNG2JPEG(picturePath, tempFilePath)
-		if err != nil {
-			panic(err.Error())
+	w, h := GetImageWidthAndHeight(dstPath)
+	if width > 0 && height > 0 {
+		if float64(h)*width/float64(w) > height {
+			width = float64(w) * height / float64(h)
+		} else {
+			height = float64(h) * width / float64(w)
 		}
-		picturePath = tempFilePath
+	} else if width > 0 {
+		height = float64(h) * width / float64(w)
+	} else if height > 0 {
+		width = float64(w) * height / float64(h)
 	}
 
-	w, h := GetImageWidthAndHeight(picturePath)
-	if float64(h)*width/float64(w) > height {
-		width = float64(w) * height / float64(h)
-	} else {
-		height = float64(h) * width / float64(w)
-	}
 	image := &Image{
 		pdf:          pdf,
-		path:         picturePath,
+		path:         dstPath,
 		width:        width,
 		height:       height,
-		tempFilePath: tempFilePath,
+		tempFilePath: dstPath,
 	}
 
-	if tempFilePath != "" {
+	if dstPath != "" {
 		pdf.AddCallBack(image.delTempImage)
 	}
 
@@ -118,14 +113,19 @@ func (image *Image) GenerateAtomicCell() error {
 	)
 
 	x, y := sx+image.margin.Left, sy+image.margin.Top
-	_, pageEndY := image.pdf.GetPageEndXY()
+	pageEndX, pageEndY := image.pdf.GetPageEndXY()
 	if y < pageEndY && y+float64(image.height) > pageEndY {
 		image.pdf.AddNewPage(false)
 	}
 
 	image.pdf.Image(image.path, x, y, x+float64(image.width), y+float64(image.height))
-	sx, _ = image.pdf.GetPageStartXY()
-	image.pdf.SetXY(sx, y+float64(image.height)+image.margin.Bottom)
+	if x+float64(image.width) >= pageEndX {
+		sx, _ = image.pdf.GetPageStartXY()
+		image.pdf.SetXY(sx, y+float64(image.height)+image.margin.Bottom)
+	} else {
+		image.pdf.SetXY(x+float64(image.width), y)
+	}
+
 	return nil
 }
 

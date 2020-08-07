@@ -1,40 +1,26 @@
 [
   {
     "type": "heading",
-    "raw": "Marked - Markdown Parser\\n===============\\n\\n",
+    "raw": "Markdown Quick Reference\n========================\n\n",
     "depth": 1,
-    "text": "Marked - Markdown Parser",
+    "text": "Markdown Quick Reference",
     "tokens": [
       {
         "type": "text",
-        "raw": "Marked - Markdown Parser",
-        "text": "Marked - Markdown Parser"
+        "raw": "Markdown Quick Reference",
+        "text": "Markdown Quick Reference"
       }
     ]
   },
   {
     "type": "paragraph",
-    "raw": "[Marked] lets you convert [Markdown] into HTML.  Markdown is a simple text format whose goal is to be very easy to read and write, even when not converted to HTML.  This demo page will let you type anything you like and see how it gets converted.  Live.  No more waiting around.",
-    "text": "[Marked] lets you convert [Markdown] into HTML.  Markdown is a simple text format whose goal is to be very easy to read and write, even when not converted to HTML.  This demo page will let you type anything you like and see how it gets converted.  Live.  No more waiting around.",
+    "raw": "This guide is a very brief overview, with examples, of the syntax that [Markdown] supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It iss shown as *text* and not *rendered HTML*.",
+    "text": "This guide is a very brief overview, with examples, of the syntax that [Markdown] supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It iss shown as *text* and not *rendered HTML*.",
     "tokens": [
       {
-        "type": "link",
-        "raw": "[Marked]",
-        "href": "https://github.com/markedjs/marked/",
-        "title": null,
-        "text": "Marked",
-        "tokens": [
-          {
-            "type": "text",
-            "raw": "Marked",
-            "text": "Marked"
-          }
-        ]
-      },
-      {
         "type": "text",
-        "raw": " lets you convert ",
-        "text": " lets you convert "
+        "raw": "This guide is a very brief overview, with examples, of the syntax that ",
+        "text": "This guide is a very brief overview, with examples, of the syntax that "
       },
       {
         "type": "link",
@@ -52,78 +38,247 @@
       },
       {
         "type": "text",
-        "raw": " into HTML.  Markdown is a simple text format whose goal is to be very easy to read and write, even when not converted to HTML.  This demo page will let you type anything you like and see how it gets converted.  Live.  No more waiting around.",
-        "text": " into HTML.  Markdown is a simple text format whose goal is to be very easy to read and write, even when not converted to HTML.  This demo page will let you type anything you like and see how it gets converted.  Live.  No more waiting around."
+        "raw": " supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It iss shown as ",
+        "text": " supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It&#39;s shown as "
+      },
+      {
+        "type": "em",
+        "raw": "*text*",
+        "text": "text",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "text",
+            "text": "text"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": " and not ",
+        "text": " and not "
+      },
+      {
+        "type": "em",
+        "raw": "*rendered HTML*",
+        "text": "rendered HTML",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "rendered HTML",
+            "text": "rendered HTML"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": ".",
+        "text": "."
       }
     ]
   },
   {
     "type": "space",
-    "raw": "\\n\\n"
+    "raw": "\n\n"
   },
   {
     "type": "heading",
-    "raw": "How To Use The Demo\\n-------------------\\n\\n",
-    "depth": 2,
-    "text": "How To Use The Demo",
+    "raw": "Simple Text Formatting\n======================\n\n",
+    "depth": 1,
+    "text": "Simple Text Formatting",
     "tokens": [
       {
         "type": "text",
-        "raw": "How To Use The Demo",
-        "text": "How To Use The Demo"
+        "raw": "Simple Text Formatting",
+        "text": "Simple Text Formatting"
       }
     ]
   },
   {
-    "type": "list",
-    "raw": "1. Type in stuff on the left.\\n2. See the live updates on the right.\\n\\n",
-    "ordered": true,
-    "start": 1,
-    "loose": false,
-    "items": [
+    "type": "paragraph",
+    "raw": "First thing is first. You can use *stars* or _underscores_ for italics. **Double stars** and __double underscores__ for bold. ***Three together*** for ___both___.",
+    "text": "First thing is first. You can use *stars* or _underscores_ for italics. **Double stars** and __double underscores__ for bold. ***Three together*** for ___both___.",
+    "tokens": [
       {
-        "type": "list_item",
-        "raw": "1. Type in stuff on the left.",
-        "task": false,
-        "loose": false,
-        "text": "Type in stuff on the left.",
+        "type": "text",
+        "raw": "First thing is first. You can use ",
+        "text": "First thing is first. You can use "
+      },
+      {
+        "type": "em",
+        "raw": "*stars*",
+        "text": "stars",
         "tokens": [
           {
             "type": "text",
-            "raw": "Type in stuff on the left.",
-            "text": "Type in stuff on the left.",
+            "raw": "stars",
+            "text": "stars"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": " or ",
+        "text": " or "
+      },
+      {
+        "type": "em",
+        "raw": "_underscores_",
+        "text": "underscores",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "underscores",
+            "text": "underscores"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": " for italics. ",
+        "text": " for italics. "
+      },
+      {
+        "type": "strong",
+        "raw": "**Double stars**",
+        "text": "Double stars",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "Double stars",
+            "text": "Double stars"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": " and ",
+        "text": " and "
+      },
+      {
+        "type": "strong",
+        "raw": "__double underscores__",
+        "text": "double underscores",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "double underscores",
+            "text": "double underscores"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": " for bold. ",
+        "text": " for bold. "
+      },
+      {
+        "type": "strong",
+        "raw": "***Three together***",
+        "text": "*Three together*",
+        "tokens": [
+          {
+            "type": "em",
+            "raw": "*Three together*",
+            "text": "Three together",
             "tokens": [
               {
                 "type": "text",
-                "raw": "Type in stuff on the left.",
-                "text": "Type in stuff on the left."
+                "raw": "Three together",
+                "text": "Three together"
               }
             ]
           }
         ]
       },
       {
-        "type": "list_item",
-        "raw": "2. See the live updates on the right.\\n\\n",
-        "task": false,
-        "loose": false,
-        "text": "See the live updates on the right.\\n\\n",
+        "type": "text",
+        "raw": " for ",
+        "text": " for "
+      },
+      {
+        "type": "strong",
+        "raw": "___both___",
+        "text": "_both_",
         "tokens": [
           {
-            "type": "text",
-            "raw": "See the live updates on the right.",
-            "text": "See the live updates on the right.",
+            "type": "em",
+            "raw": "_both_",
+            "text": "both",
             "tokens": [
               {
                 "type": "text",
-                "raw": "See the live updates on the right.",
-                "text": "See the live updates on the right."
+                "raw": "both",
+                "text": "both"
               }
             ]
-          },
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": ".",
+        "text": "."
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\n\n"
+  },
+  {
+    "type": "paragraph",
+    "raw": "Paragraphs are pretty easy too. Just have a blank line between chunks of text.",
+    "text": "Paragraphs are pretty easy too. Just have a blank line between chunks of text.",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Paragraphs are pretty easy too. Just have a blank line between chunks of text.",
+        "text": "Paragraphs are pretty easy too. Just have a blank line between chunks of text."
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\n\n"
+  },
+  {
+    "type": "blockquote",
+    "raw": "> This chunk of text is in a block quote. Its multiple lines will all be\n> indented a bit from the rest of the text.\n>\n> > Multiple levels of block quotes also work.\n",
+    "text": "This chunk of text is in a block quote. Its multiple lines will all be\nindented a bit from the rest of the text.\n\n> Multiple levels of block quotes also work.\n",
+    "tokens": [
+      {
+        "type": "paragraph",
+        "raw": "This chunk of text is in a block quote. Its multiple lines will all be\nindented a bit from the rest of the text.",
+        "text": "This chunk of text is in a block quote. Its multiple lines will all be\nindented a bit from the rest of the text.",
+        "tokens": [
           {
-            "type": "space",
-            "raw": "\\n\\n"
+            "type": "text",
+            "raw": "This chunk of text is in a block quote. Its multiple lines will all be\nindented a bit from the rest of the text.",
+            "text": "This chunk of text is in a block quote. Its multiple lines will all be\nindented a bit from the rest of the text."
+          }
+        ]
+      },
+      {
+        "type": "space",
+        "raw": "\n\n"
+      },
+      {
+        "type": "blockquote",
+        "raw": "> Multiple levels of block quotes also work.\n",
+        "text": "Multiple levels of block quotes also work.\n",
+        "tokens": [
+          {
+            "type": "paragraph",
+            "raw": "Multiple levels of block quotes also work.",
+            "text": "Multiple levels of block quotes also work.",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "Multiple levels of block quotes also work.",
+                "text": "Multiple levels of block quotes also work."
+              }
+            ]
           }
         ]
       }
@@ -131,55 +286,529 @@
   },
   {
     "type": "paragraph",
-    "raw": "That is it.  Pretty simple.  There is also a drop-down option in the upper right to switch between various views:",
-    "text": "That is it.  Pretty simple.  There is also a drop-down option in the upper right to switch between various views:",
+    "raw": "Sometimes you want to include code, such as when you are explaining how `<h1>` HTML tags work, or maybe you are a programmer and you are discussing `someMethod()`.",
+    "text": "Sometimes you want to include code, such as when you are explaining how `<h1>` HTML tags work, or maybe you are a programmer and you are discussing `someMethod()`.",
     "tokens": [
       {
         "type": "text",
-        "raw": "That is it.  Pretty simple.  There is also a drop-down option in the upper right to switch between various views:",
-        "text": "That is it.  Pretty simple.  There is also a drop-down option in the upper right to switch between various views:"
+        "raw": "Sometimes you want to include code, such as when you are explaining how ",
+        "text": "Sometimes you want to include code, such as when you are explaining how "
+      },
+      {
+        "type": "codespan",
+        "raw": "`<h1>`",
+        "text": "&lt;h1&gt;"
+      },
+      {
+        "type": "text",
+        "raw": " HTML tags work, or maybe you are a programmer and you are discussing ",
+        "text": " HTML tags work, or maybe you are a programmer and you are discussing "
+      },
+      {
+        "type": "codespan",
+        "raw": "`someMethod()`",
+        "text": "someMethod()"
+      },
+      {
+        "type": "text",
+        "raw": ".",
+        "text": "."
       }
     ]
   },
   {
     "type": "space",
-    "raw": "\\n\\n"
+    "raw": "\n\n"
+  },
+  {
+    "type": "paragraph",
+    "raw": "If you want to include code and have new\nlines preserved, indent the line with a tab\nor at least four spaces:",
+    "text": "If you want to include code and have new\nlines preserved, indent the line with a tab\nor at least four spaces:",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "If you want to include code and have new\nlines preserved, indent the line with a tab\nor at least four spaces:",
+        "text": "If you want to include code and have new\nlines preserved, indent the line with a tab\nor at least four spaces:"
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\n\n"
+  },
+  {
+    "type": "code",
+    "raw": "    Extra spaces work here too.\n    This is also called preformatted text and it is useful for showing examples.\n    The text will stay as text, so any *markdown* or <u>HTML</u> you add will\n    not show up formatted. This way you can show markdown examples in a\n    markdown document.\n\n",
+    "codeBlockStyle": "indented",
+    "text": "Extra spaces work here too.\nThis is also called preformatted text and it is useful for showing examples.\nThe text will stay as text, so any *markdown* or <u>HTML</u> you add will\nnot show up formatted. This way you can show markdown examples in a\nmarkdown document."
+  },
+  {
+    "type": "blockquote",
+    "raw": ">     You can also use preformatted text with your blockquotes\n>     as long as you add at least five spaces.\n",
+    "text": "    You can also use preformatted text with your blockquotes\n    as long as you add at least five spaces.\n",
+    "tokens": [
+      {
+        "type": "code",
+        "raw": "    You can also use preformatted text with your blockquotes\n    as long as you add at least five spaces.\n",
+        "codeBlockStyle": "indented",
+        "text": "You can also use preformatted text with your blockquotes\nas long as you add at least five spaces."
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\n\n"
+  },
+  {
+    "type": "heading",
+    "raw": "Headings\n========\n\n",
+    "depth": 1,
+    "text": "Headings",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Headings",
+        "text": "Headings"
+      }
+    ]
+  },
+  {
+    "type": "paragraph",
+    "raw": "There are a couple of ways to make headings. Using three or more equals signs on a line under a heading makes it into an \"h1\" style. Three or more hyphens under a line makes it \"h2\" (slightly smaller). You can also use multiple pound symbols (`#`) before and after a heading. Pounds after the title are ignored. Here are some examples:",
+    "text": "There are a couple of ways to make headings. Using three or more equals signs on a line under a heading makes it into an \"h1\" style. Three or more hyphens under a line makes it \"h2\" (slightly smaller). You can also use multiple pound symbols (`#`) before and after a heading. Pounds after the title are ignored. Here are some examples:",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "There are a couple of ways to make headings. Using three or more equals signs on a line under a heading makes it into an \"h1\" style. Three or more hyphens under a line makes it \"h2\" (slightly smaller). You can also use multiple pound symbols (",
+        "text": "There are a couple of ways to make headings. Using three or more equals signs on a line under a heading makes it into an &quot;h1&quot; style. Three or more hyphens under a line makes it &quot;h2&quot; (slightly smaller). You can also use multiple pound symbols ("
+      },
+      {
+        "type": "codespan",
+        "raw": "`#`",
+        "text": "#"
+      },
+      {
+        "type": "text",
+        "raw": ") before and after a heading. Pounds after the title are ignored. Here are some examples:",
+        "text": ") before and after a heading. Pounds after the title are ignored. Here are some examples:"
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\n\n"
+  },
+  {
+    "type": "heading",
+    "raw": "This is H1\n==========\n\n",
+    "depth": 1,
+    "text": "This is H1",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "This is H1",
+        "text": "This is H1"
+      }
+    ]
+  },
+  {
+    "type": "heading",
+    "raw": "This is H2\n----------\n\n",
+    "depth": 2,
+    "text": "This is H2",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "This is H2",
+        "text": "This is H2"
+      }
+    ]
+  },
+  {
+    "type": "heading",
+    "raw": "# This is H1\n",
+    "depth": 1,
+    "text": "This is H1",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "This is H1",
+        "text": "This is H1"
+      }
+    ]
+  },
+  {
+    "type": "heading",
+    "raw": "## This is H2\n",
+    "depth": 2,
+    "text": "This is H2",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "This is H2",
+        "text": "This is H2"
+      }
+    ]
+  },
+  {
+    "type": "heading",
+    "raw": "### This is H3 with some extra pounds ###\n",
+    "depth": 3,
+    "text": "This is H3 with some extra pounds",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "This is H3 with some extra pounds",
+        "text": "This is H3 with some extra pounds"
+      }
+    ]
+  },
+  {
+    "type": "heading",
+    "raw": "#### You get the idea ####\n",
+    "depth": 4,
+    "text": "You get the idea",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "You get the idea",
+        "text": "You get the idea"
+      }
+    ]
+  },
+  {
+    "type": "heading",
+    "raw": "##### I don ist need extra pounds at the end\n",
+    "depth": 5,
+    "text": "I don ist need extra pounds at the end",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "I don ist need extra pounds at the end",
+        "text": "I don&#39;t need extra pounds at the end"
+      }
+    ]
+  },
+  {
+    "type": "heading",
+    "raw": "###### H6 is the max\n\n\n",
+    "depth": 6,
+    "text": "H6 is the max",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "H6 is the max",
+        "text": "H6 is the max"
+      }
+    ]
+  },
+  {
+    "type": "heading",
+    "raw": "Links\n=====\n\n",
+    "depth": 1,
+    "text": "Links",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Links",
+        "text": "Links"
+      }
+    ]
+  },
+  {
+    "type": "paragraph",
+    "raw": "Let iss link to a few sites. First, let iss use the bare URL, like <https://www.github.com>. Great for text, but ugly for HTML.\nNext is an inline link to [Google](https://www.google.com). A little nicer.\nThis is a reference-style link to [Wikipedia] [1].\nLastly, here iss a pretty link to [Yahoo]. The reference-style and pretty links both automatically use the links defined below, but they could be defined *anywhere* in the markdown and are removed from the HTML. The names are also case insensitive, so you can use [YaHoO] and have it link properly.",
+    "text": "Let iss link to a few sites. First, let iss use the bare URL, like <https://www.github.com>. Great for text, but ugly for HTML.\nNext is an inline link to [Google](https://www.google.com). A little nicer.\nThis is a reference-style link to [Wikipedia] [1].\nLastly, here iss a pretty link to [Yahoo]. The reference-style and pretty links both automatically use the links defined below, but they could be defined *anywhere* in the markdown and are removed from the HTML. The names are also case insensitive, so you can use [YaHoO] and have it link properly.",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Let iss link to a few sites. First, let iss use the bare URL, like ",
+        "text": "Let&#39;s link to a few sites. First, let&#39;s use the bare URL, like "
+      },
+      {
+        "type": "link",
+        "raw": "<https://www.github.com>",
+        "text": "https://www.github.com",
+        "href": "https://www.github.com",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "https://www.github.com",
+            "text": "https://www.github.com"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": ". Great for text, but ugly for HTML.\nNext is an inline link to ",
+        "text": ". Great for text, but ugly for HTML.\nNext is an inline link to "
+      },
+      {
+        "type": "link",
+        "raw": "[Google](https://www.google.com)",
+        "href": "https://www.google.com",
+        "title": null,
+        "text": "Google",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "Google",
+            "text": "Google"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": ". A little nicer.\nThis is a reference-style link to ",
+        "text": ". A little nicer.\nThis is a reference-style link to "
+      },
+      {
+        "type": "text",
+        "raw": "[",
+        "text": "["
+      },
+      {
+        "type": "text",
+        "raw": "Wikipedia] ",
+        "text": "Wikipedia] "
+      },
+      {
+        "type": "link",
+        "raw": "[1]",
+        "href": "https://www.wikipedia.org",
+        "title": null,
+        "text": "1",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "1",
+            "text": "1"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": ".\nLastly, here iss a pretty link to ",
+        "text": ".\nLastly, here&#39;s a pretty link to "
+      },
+      {
+        "type": "link",
+        "raw": "[Yahoo]",
+        "href": "https://www.yahoo.com",
+        "title": null,
+        "text": "Yahoo",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "Yahoo",
+            "text": "Yahoo"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": ". The reference-style and pretty links both automatically use the links defined below, but they could be defined ",
+        "text": ". The reference-style and pretty links both automatically use the links defined below, but they could be defined "
+      },
+      {
+        "type": "em",
+        "raw": "*anywhere*",
+        "text": "anywhere",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "anywhere",
+            "text": "anywhere"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": " in the markdown and are removed from the HTML. The names are also case insensitive, so you can use ",
+        "text": " in the markdown and are removed from the HTML. The names are also case insensitive, so you can use "
+      },
+      {
+        "type": "link",
+        "raw": "[YaHoO]",
+        "href": "https://www.yahoo.com",
+        "title": null,
+        "text": "YaHoO",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "YaHoO",
+            "text": "YaHoO"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": " and have it link properly.",
+        "text": " and have it link properly."
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\n\n"
+  },
+  {
+    "type": "paragraph",
+    "raw": "Title attributes may be added to links by adding text after a link.\nThis is the [inline link](https://www.bing.com \"Bing\") with a \"Bing\" title.\nYou can also go to [W3C] [2] and maybe visit a [friend].",
+    "text": "Title attributes may be added to links by adding text after a link.\nThis is the [inline link](https://www.bing.com \"Bing\") with a \"Bing\" title.\nYou can also go to [W3C] [2] and maybe visit a [friend].",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Title attributes may be added to links by adding text after a link.\nThis is the ",
+        "text": "Title attributes may be added to links by adding text after a link.\nThis is the "
+      },
+      {
+        "type": "link",
+        "raw": "[inline link](https://www.bing.com \"Bing\")",
+        "href": "https://www.bing.com",
+        "title": "Bing",
+        "text": "inline link",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "inline link",
+            "text": "inline link"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": " with a \"Bing\" title.\nYou can also go to ",
+        "text": " with a &quot;Bing&quot; title.\nYou can also go to "
+      },
+      {
+        "type": "text",
+        "raw": "[",
+        "text": "["
+      },
+      {
+        "type": "text",
+        "raw": "W3C] ",
+        "text": "W3C] "
+      },
+      {
+        "type": "link",
+        "raw": "[2]",
+        "href": "https://w3c.org",
+        "title": "The W3C puts out specs for web-based things",
+        "text": "2",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "2",
+            "text": "2"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": " and maybe visit a ",
+        "text": " and maybe visit a "
+      },
+      {
+        "type": "link",
+        "raw": "[friend]",
+        "href": "https://facebook.com",
+        "title": "Facebook!",
+        "text": "friend",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "friend",
+            "text": "friend"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": ".",
+        "text": "."
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\n\n"
+  },
+  {
+    "type": "paragraph",
+    "raw": "Email addresses in plain text are not linked: test@example.com.\nEmail addresses wrapped in angle brackets are linked: <test@example.com>.\nThey are also obfuscated so that email harvesting spam robots hopefully won ist get them.",
+    "text": "Email addresses in plain text are not linked: test@example.com.\nEmail addresses wrapped in angle brackets are linked: <test@example.com>.\nThey are also obfuscated so that email harvesting spam robots hopefully won ist get them.",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Email addresses in plain text are not linked: ",
+        "text": "Email addresses in plain text are not linked: "
+      },
+      {
+        "type": "link",
+        "raw": "test@example.com",
+        "text": "test@example.com",
+        "href": "test@example.com"
+      },
+      {
+        "type": "text",
+        "raw": ".\nEmail addresses wrapped in angle brackets are linked: ",
+        "text": ".\nEmail addresses wrapped in angle brackets are linked: "
+      },
+      {
+        "type": "link",
+        "raw": "<test@example.com>",
+        "text": "<test@example.com>",
+        "href": "<test@example.com>"
+      },
+      {
+        "type": "text",
+        "raw": ".\nThey are also obfuscated so that email harvesting spam robots hopefully won ist get them.",
+        "text": ".\nThey are also obfuscated so that email harvesting spam robots hopefully won&#39;t get them."
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\n\n\n"
+  },
+  {
+    "type": "heading",
+    "raw": "Lists\n=====\n\n",
+    "depth": 1,
+    "text": "Lists",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Lists",
+        "text": "Lists"
+      }
+    ]
   },
   {
     "type": "list",
-    "raw": "- **Preview:**  A live display of the generated HTML as it would render in a browser.\\n- **HTML Source:**  The generated HTML before your browser makes it pretty.\\n- **Lexer Data:**  What [marked] uses internally, in case you like gory stuff like this.\\n- **Quick Reference:**  A brief run-down of how to format things using markdown.\\n\\n",
+    "raw": "* This is a bulleted list\n* Great for shopping lists\n- You can also use hyphens\n+ Or plus symbols\n\n",
     "ordered": false,
     "start": "",
     "loose": false,
     "items": [
       {
         "type": "list_item",
-        "raw": "- **Preview:**  A live display of the generated HTML as it would render in a browser.",
+        "raw": "* This is a bulleted list",
         "task": false,
         "loose": false,
-        "text": "**Preview:**  A live display of the generated HTML as it would render in a browser.",
+        "text": "This is a bulleted list",
         "tokens": [
           {
             "type": "text",
-            "raw": "**Preview:**  A live display of the generated HTML as it would render in a browser.",
-            "text": "**Preview:**  A live display of the generated HTML as it would render in a browser.",
+            "raw": "This is a bulleted list",
+            "text": "This is a bulleted list",
             "tokens": [
               {
-                "type": "strong",
-                "raw": "**Preview:**",
-                "text": "Preview:",
-                "tokens": [
-                  {
-                    "type": "text",
-                    "raw": "Preview:",
-                    "text": "Preview:"
-                  }
-                ]
-              },
-              {
                 "type": "text",
-                "raw": "  A live display of the generated HTML as it would render in a browser.",
-                "text": "  A live display of the generated HTML as it would render in a browser."
+                "raw": "This is a bulleted list",
+                "text": "This is a bulleted list"
               }
             ]
           }
@@ -187,32 +816,20 @@
       },
       {
         "type": "list_item",
-        "raw": "- **HTML Source:**  The generated HTML before your browser makes it pretty.",
+        "raw": "* Great for shopping lists",
         "task": false,
         "loose": false,
-        "text": "**HTML Source:**  The generated HTML before your browser makes it pretty.",
+        "text": "Great for shopping lists",
         "tokens": [
           {
             "type": "text",
-            "raw": "**HTML Source:**  The generated HTML before your browser makes it pretty.",
-            "text": "**HTML Source:**  The generated HTML before your browser makes it pretty.",
+            "raw": "Great for shopping lists",
+            "text": "Great for shopping lists",
             "tokens": [
               {
-                "type": "strong",
-                "raw": "**HTML Source:**",
-                "text": "HTML Source:",
-                "tokens": [
-                  {
-                    "type": "text",
-                    "raw": "HTML Source:",
-                    "text": "HTML Source:"
-                  }
-                ]
-              },
-              {
                 "type": "text",
-                "raw": "  The generated HTML before your browser makes it pretty.",
-                "text": "  The generated HTML before your browser makes it pretty."
+                "raw": "Great for shopping lists",
+                "text": "Great for shopping lists"
               }
             ]
           }
@@ -220,51 +837,20 @@
       },
       {
         "type": "list_item",
-        "raw": "- **Lexer Data:**  What [marked] uses internally, in case you like gory stuff like this.",
+        "raw": "- You can also use hyphens",
         "task": false,
         "loose": false,
-        "text": "**Lexer Data:**  What [marked] uses internally, in case you like gory stuff like this.",
+        "text": "You can also use hyphens",
         "tokens": [
           {
             "type": "text",
-            "raw": "**Lexer Data:**  What [marked] uses internally, in case you like gory stuff like this.",
-            "text": "**Lexer Data:**  What [marked] uses internally, in case you like gory stuff like this.",
+            "raw": "You can also use hyphens",
+            "text": "You can also use hyphens",
             "tokens": [
               {
-                "type": "strong",
-                "raw": "**Lexer Data:**",
-                "text": "Lexer Data:",
-                "tokens": [
-                  {
-                    "type": "text",
-                    "raw": "Lexer Data:",
-                    "text": "Lexer Data:"
-                  }
-                ]
-              },
-              {
                 "type": "text",
-                "raw": "  What ",
-                "text": "  What "
-              },
-              {
-                "type": "link",
-                "raw": "[marked]",
-                "href": "https://github.com/markedjs/marked/",
-                "title": null,
-                "text": "marked",
-                "tokens": [
-                  {
-                    "type": "text",
-                    "raw": "marked",
-                    "text": "marked"
-                  }
-                ]
-              },
-              {
-                "type": "text",
-                "raw": " uses internally, in case you like gory stuff like this.",
-                "text": " uses internally, in case you like gory stuff like this."
+                "raw": "You can also use hyphens",
+                "text": "You can also use hyphens"
               }
             ]
           }
@@ -272,38 +858,624 @@
       },
       {
         "type": "list_item",
-        "raw": "- **Quick Reference:**  A brief run-down of how to format things using markdown.\\n\\n",
+        "raw": "+ Or plus symbols\n\n",
         "task": false,
         "loose": false,
-        "text": "**Quick Reference:**  A brief run-down of how to format things using markdown.\\n\\n",
+        "text": "Or plus symbols\n\n",
         "tokens": [
           {
             "type": "text",
-            "raw": "**Quick Reference:**  A brief run-down of how to format things using markdown.",
-            "text": "**Quick Reference:**  A brief run-down of how to format things using markdown.",
+            "raw": "Or plus symbols",
+            "text": "Or plus symbols",
             "tokens": [
               {
-                "type": "strong",
-                "raw": "**Quick Reference:**",
-                "text": "Quick Reference:",
-                "tokens": [
-                  {
-                    "type": "text",
-                    "raw": "Quick Reference:",
-                    "text": "Quick Reference:"
-                  }
-                ]
-              },
-              {
                 "type": "text",
-                "raw": "  A brief run-down of how to format things using markdown.",
-                "text": "  A brief run-down of how to format things using markdown."
+                "raw": "Or plus symbols",
+                "text": "Or plus symbols"
               }
             ]
           },
           {
             "type": "space",
-            "raw": "\\n\\n"
+            "raw": "\n\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "paragraph",
+    "raw": "The above is an \"unordered\" list. Now, on for a bit of order.",
+    "text": "The above is an \"unordered\" list. Now, on for a bit of order.",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "The above is an \"unordered\" list. Now, on for a bit of order.",
+        "text": "The above is an &quot;unordered&quot; list. Now, on for a bit of order."
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\n\n"
+  },
+  {
+    "type": "list",
+    "raw": "1. Numbered lists are also easy\n2. Just start with a number\n3738762. However, the actual number doesn ist matter when converted to HTML.\n1. This will still show up as 4.\n\n",
+    "ordered": true,
+    "start": 1,
+    "loose": false,
+    "items": [
+      {
+        "type": "list_item",
+        "raw": "1. Numbered lists are also easy",
+        "task": false,
+        "loose": false,
+        "text": "Numbered lists are also easy",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "Numbered lists are also easy",
+            "text": "Numbered lists are also easy",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "Numbered lists are also easy",
+                "text": "Numbered lists are also easy"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "2. Just start with a number",
+        "task": false,
+        "loose": false,
+        "text": "Just start with a number",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "Just start with a number",
+            "text": "Just start with a number",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "Just start with a number",
+                "text": "Just start with a number"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "3738762. However, the actual number doesn ist matter when converted to HTML.",
+        "task": false,
+        "loose": false,
+        "text": "However, the actual number doesn ist matter when converted to HTML.",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "However, the actual number doesn ist matter when converted to HTML.",
+            "text": "However, the actual number doesn ist matter when converted to HTML.",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "However, the actual number doesn ist matter when converted to HTML.",
+                "text": "However, the actual number doesn&#39;t matter when converted to HTML."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "1. This will still show up as 4.\n\n",
+        "task": false,
+        "loose": false,
+        "text": "This will still show up as 4.\n\n",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "This will still show up as 4.",
+            "text": "This will still show up as 4.",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "This will still show up as 4.",
+                "text": "This will still show up as 4."
+              }
+            ]
+          },
+          {
+            "type": "space",
+            "raw": "\n\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "paragraph",
+    "raw": "You might want a few advanced lists:",
+    "text": "You might want a few advanced lists:",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "You might want a few advanced lists:",
+        "text": "You might want a few advanced lists:"
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\n\n"
+  },
+  {
+    "type": "list",
+    "raw": "- This top-level list is wrapped in paragraph tags\n- This generates an extra space between each top-level item.\n\n- You do it by adding a blank line\n\n- This nested list also has blank lines between the list items.\n\n- How to create nested lists\n  1. Start your regular list\n  2. Indent nested lists with two spaces\n  3. Further nesting means you should indent with two more spaces\n    * This line is indented with four spaces.\n\n- List items can be quite lengthy. You can keep typing and either continue\nthem on the next line with no indentation.\n\n- Alternately, if that looks ugly, you can also\n  indent the next line a bit for a prettier look.\n\n- You can put large blocks of text in your list by just indenting with two spaces.\n\n  This is formatted the same as code, but you can inspect the HTML\n  and find that it iss just wrapped in a `<p>` tag and *won ist* be shown\n  as preformatted text.\n\n  You can keep adding more and more paragraphs to a single\n  list item by adding the traditional blank line and then keep\n  on indenting the paragraphs with two spaces.\n\n  You really only need to indent the first line,\nbut that looks ugly.\n\n- Lists support blockquotes\n\n  > Just like this example here. By the way, you can\n  > nest lists inside blockquotes!\n  > - Fantastic!\n\n- Lists support preformatted text\n\n      You just need to indent an additional four spaces.\n\n\n",
+    "ordered": false,
+    "start": "",
+    "loose": true,
+    "items": [
+      {
+        "type": "list_item",
+        "raw": "- This top-level list is wrapped in paragraph tags",
+        "task": false,
+        "loose": false,
+        "text": "This top-level list is wrapped in paragraph tags",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "This top-level list is wrapped in paragraph tags",
+            "text": "This top-level list is wrapped in paragraph tags",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "This top-level list is wrapped in paragraph tags",
+                "text": "This top-level list is wrapped in paragraph tags"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "- This generates an extra space between each top-level item.\n",
+        "task": false,
+        "loose": true,
+        "text": "This generates an extra space between each top-level item.\n",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "This generates an extra space between each top-level item.",
+            "text": "This generates an extra space between each top-level item.",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "This generates an extra space between each top-level item.",
+                "text": "This generates an extra space between each top-level item."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "- You do it by adding a blank line\n",
+        "task": false,
+        "loose": true,
+        "text": "You do it by adding a blank line\n",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "You do it by adding a blank line",
+            "text": "You do it by adding a blank line",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "You do it by adding a blank line",
+                "text": "You do it by adding a blank line"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "- This nested list also has blank lines between the list items.\n",
+        "task": false,
+        "loose": true,
+        "text": "This nested list also has blank lines between the list items.\n",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "This nested list also has blank lines between the list items.",
+            "text": "This nested list also has blank lines between the list items.",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "This nested list also has blank lines between the list items.",
+                "text": "This nested list also has blank lines between the list items."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "- How to create nested lists\n  1. Start your regular list\n  2. Indent nested lists with two spaces\n  3. Further nesting means you should indent with two more spaces\n    * This line is indented with four spaces.\n",
+        "task": false,
+        "loose": true,
+        "text": "How to create nested lists\n1. Start your regular list\n2. Indent nested lists with two spaces\n3. Further nesting means you should indent with two more spaces\n  * This line is indented with four spaces.\n",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "How to create nested lists",
+            "text": "How to create nested lists",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "How to create nested lists",
+                "text": "How to create nested lists"
+              }
+            ]
+          },
+          {
+            "type": "list",
+            "raw": "1. Start your regular list\n2. Indent nested lists with two spaces\n3. Further nesting means you should indent with two more spaces\n  * This line is indented with four spaces.\n",
+            "ordered": true,
+            "start": 1,
+            "loose": false,
+            "items": [
+              {
+                "type": "list_item",
+                "raw": "1. Start your regular list",
+                "task": false,
+                "loose": false,
+                "text": "Start your regular list",
+                "tokens": [
+                  {
+                    "type": "text",
+                    "raw": "Start your regular list",
+                    "text": "Start your regular list",
+                    "tokens": [
+                      {
+                        "type": "text",
+                        "raw": "Start your regular list",
+                        "text": "Start your regular list"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "raw": "2. Indent nested lists with two spaces",
+                "task": false,
+                "loose": false,
+                "text": "Indent nested lists with two spaces",
+                "tokens": [
+                  {
+                    "type": "text",
+                    "raw": "Indent nested lists with two spaces",
+                    "text": "Indent nested lists with two spaces",
+                    "tokens": [
+                      {
+                        "type": "text",
+                        "raw": "Indent nested lists with two spaces",
+                        "text": "Indent nested lists with two spaces"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "raw": "3. Further nesting means you should indent with two more spaces\n  * This line is indented with four spaces.\n",
+                "task": false,
+                "loose": false,
+                "text": "Further nesting means you should indent with two more spaces\n* This line is indented with four spaces.\n",
+                "tokens": [
+                  {
+                    "type": "text",
+                    "raw": "Further nesting means you should indent with two more spaces",
+                    "text": "Further nesting means you should indent with two more spaces",
+                    "tokens": [
+                      {
+                        "type": "text",
+                        "raw": "Further nesting means you should indent with two more spaces",
+                        "text": "Further nesting means you should indent with two more spaces"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "list",
+                    "raw": "* This line is indented with four spaces.\n",
+                    "ordered": false,
+                    "start": "",
+                    "loose": false,
+                    "items": [
+                      {
+                        "type": "list_item",
+                        "raw": "* This line is indented with four spaces.\n",
+                        "task": false,
+                        "loose": false,
+                        "text": "This line is indented with four spaces.\n",
+                        "tokens": [
+                          {
+                            "type": "text",
+                            "raw": "This line is indented with four spaces.",
+                            "text": "This line is indented with four spaces.",
+                            "tokens": [
+                              {
+                                "type": "text",
+                                "raw": "This line is indented with four spaces.",
+                                "text": "This line is indented with four spaces."
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "- List items can be quite lengthy. You can keep typing and either continue\nthem on the next line with no indentation.\n",
+        "task": false,
+        "loose": true,
+        "text": "List items can be quite lengthy. You can keep typing and either continue\nthem on the next line with no indentation.\n",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "List items can be quite lengthy. You can keep typing and either continue\nthem on the next line with no indentation.",
+            "text": "List items can be quite lengthy. You can keep typing and either continue\nthem on the next line with no indentation.",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "List items can be quite lengthy. You can keep typing and either continue\nthem on the next line with no indentation.",
+                "text": "List items can be quite lengthy. You can keep typing and either continue\nthem on the next line with no indentation."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "- Alternately, if that looks ugly, you can also\n  indent the next line a bit for a prettier look.\n",
+        "task": false,
+        "loose": true,
+        "text": "Alternately, if that looks ugly, you can also\nindent the next line a bit for a prettier look.\n",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "Alternately, if that looks ugly, you can also\nindent the next line a bit for a prettier look.",
+            "text": "Alternately, if that looks ugly, you can also\nindent the next line a bit for a prettier look.",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "Alternately, if that looks ugly, you can also\nindent the next line a bit for a prettier look.",
+                "text": "Alternately, if that looks ugly, you can also\nindent the next line a bit for a prettier look."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "- You can put large blocks of text in your list by just indenting with two spaces.\n\n  This is formatted the same as code, but you can inspect the HTML\n  and find that it iss just wrapped in a `<p>` tag and *won ist* be shown\n  as preformatted text.\n\n  You can keep adding more and more paragraphs to a single\n  list item by adding the traditional blank line and then keep\n  on indenting the paragraphs with two spaces.\n\n  You really only need to indent the first line,\nbut that looks ugly.\n",
+        "task": false,
+        "loose": true,
+        "text": "You can put large blocks of text in your list by just indenting with two spaces.\n\nThis is formatted the same as code, but you can inspect the HTML\nand find that it iss just wrapped in a `<p>` tag and *won ist* be shown\nas preformatted text.\n\nYou can keep adding more and more paragraphs to a single\nlist item by adding the traditional blank line and then keep\non indenting the paragraphs with two spaces.\n\nYou really only need to indent the first line,\nbut that looks ugly.\n",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "You can put large blocks of text in your list by just indenting with two spaces.",
+            "text": "You can put large blocks of text in your list by just indenting with two spaces.",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "You can put large blocks of text in your list by just indenting with two spaces.",
+                "text": "You can put large blocks of text in your list by just indenting with two spaces."
+              }
+            ]
+          },
+          {
+            "type": "space",
+            "raw": "\n\n"
+          },
+          {
+            "type": "text",
+            "raw": "This is formatted the same as code, but you can inspect the HTML\nand find that it iss just wrapped in a `<p>` tag and *won ist* be shown\nas preformatted text.",
+            "text": "This is formatted the same as code, but you can inspect the HTML\nand find that it iss just wrapped in a `<p>` tag and *won ist* be shown\nas preformatted text.",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "This is formatted the same as code, but you can inspect the HTML\nand find that it iss just wrapped in a ",
+                "text": "This is formatted the same as code, but you can inspect the HTML\nand find that it&#39;s just wrapped in a "
+              },
+              {
+                "type": "codespan",
+                "raw": "`<p>`",
+                "text": "&lt;p&gt;"
+              },
+              {
+                "type": "text",
+                "raw": " tag and ",
+                "text": " tag and "
+              },
+              {
+                "type": "em",
+                "raw": "*won ist*",
+                "text": "won ist",
+                "tokens": [
+                  {
+                    "type": "text",
+                    "raw": "won ist",
+                    "text": "won&#39;t"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "raw": " be shown\nas preformatted text.",
+                "text": " be shown\nas preformatted text."
+              }
+            ]
+          },
+          {
+            "type": "space",
+            "raw": "\n\n"
+          },
+          {
+            "type": "text",
+            "raw": "You can keep adding more and more paragraphs to a single\nlist item by adding the traditional blank line and then keep\non indenting the paragraphs with two spaces.",
+            "text": "You can keep adding more and more paragraphs to a single\nlist item by adding the traditional blank line and then keep\non indenting the paragraphs with two spaces.",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "You can keep adding more and more paragraphs to a single\nlist item by adding the traditional blank line and then keep\non indenting the paragraphs with two spaces.",
+                "text": "You can keep adding more and more paragraphs to a single\nlist item by adding the traditional blank line and then keep\non indenting the paragraphs with two spaces."
+              }
+            ]
+          },
+          {
+            "type": "space",
+            "raw": "\n\n"
+          },
+          {
+            "type": "text",
+            "raw": "You really only need to indent the first line,\nbut that looks ugly.",
+            "text": "You really only need to indent the first line,\nbut that looks ugly.",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "You really only need to indent the first line,\nbut that looks ugly.",
+                "text": "You really only need to indent the first line,\nbut that looks ugly."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "- Lists support blockquotes\n\n  > Just like this example here. By the way, you can\n  > nest lists inside blockquotes!\n  > - Fantastic!\n",
+        "task": false,
+        "loose": true,
+        "text": "Lists support blockquotes\n\n> Just like this example here. By the way, you can\n> nest lists inside blockquotes!\n> - Fantastic!\n",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "Lists support blockquotes",
+            "text": "Lists support blockquotes",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "Lists support blockquotes",
+                "text": "Lists support blockquotes"
+              }
+            ]
+          },
+          {
+            "type": "space",
+            "raw": "\n\n"
+          },
+          {
+            "type": "blockquote",
+            "raw": "> Just like this example here. By the way, you can\n> nest lists inside blockquotes!\n> - Fantastic!\n",
+            "text": "Just like this example here. By the way, you can\nnest lists inside blockquotes!\n- Fantastic!\n",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "Just like this example here. By the way, you can\nnest lists inside blockquotes!",
+                "text": "Just like this example here. By the way, you can\nnest lists inside blockquotes!",
+                "tokens": [
+                  {
+                    "type": "text",
+                    "raw": "Just like this example here. By the way, you can\nnest lists inside blockquotes",
+                    "text": "Just like this example here. By the way, you can\nnest lists inside blockquotes"
+                  },
+                  {
+                    "type": "text",
+                    "raw": "!",
+                    "text": "!"
+                  }
+                ]
+              },
+              {
+                "type": "list",
+                "raw": "- Fantastic!\n",
+                "ordered": false,
+                "start": "",
+                "loose": false,
+                "items": [
+                  {
+                    "type": "list_item",
+                    "raw": "- Fantastic!\n",
+                    "task": false,
+                    "loose": false,
+                    "text": "Fantastic!\n",
+                    "tokens": [
+                      {
+                        "type": "text",
+                        "raw": "Fantastic!",
+                        "text": "Fantastic!",
+                        "tokens": [
+                          {
+                            "type": "text",
+                            "raw": "Fantastic",
+                            "text": "Fantastic"
+                          },
+                          {
+                            "type": "text",
+                            "raw": "!",
+                            "text": "!"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "- Lists support preformatted text\n\n      You just need to indent an additional four spaces.\n\n\n",
+        "task": false,
+        "loose": true,
+        "text": "Lists support preformatted text\n\n    You just need to indent an additional four spaces.\n\n\n",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "Lists support preformatted text",
+            "text": "Lists support preformatted text",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "Lists support preformatted text",
+                "text": "Lists support preformatted text"
+              }
+            ]
+          },
+          {
+            "type": "space",
+            "raw": "\n\n"
+          },
+          {
+            "type": "code",
+            "raw": "    You just need to indent an additional four spaces.\n\n\n",
+            "codeBlockStyle": "indented",
+            "text": "You just need to indent an additional four spaces."
           }
         ]
       }
@@ -311,188 +1483,182 @@
   },
   {
     "type": "heading",
-    "raw": "Why Markdown?\\n-------------\\n\\n\\n",
-    "depth": 2,
-    "text": "Why Markdown?",
+    "raw": "Even More\n=========\n\n",
+    "depth": 1,
+    "text": "Even More",
     "tokens": [
       {
         "type": "text",
-        "raw": "Why Markdown?",
-        "text": "Why Markdown?"
+        "raw": "Even More",
+        "text": "Even More"
+      }
+    ]
+  },
+  {
+    "type": "heading",
+    "raw": "Horizontal Rule\n---------------\n\n",
+    "depth": 2,
+    "text": "Horizontal Rule",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Horizontal Rule",
+        "text": "Horizontal Rule"
       }
     ]
   },
   {
     "type": "paragraph",
-    "raw": "*java*",
-    "text": "*java*",
+    "raw": "If you need a horizontal rule you just need to put at least three hyphens, asterisks, or underscores on a line by themselves. You can also even put spaces between the characters.",
+    "text": "If you need a horizontal rule you just need to put at least three hyphens, asterisks, or underscores on a line by themselves. You can also even put spaces between the characters.",
     "tokens": [
+      {
+        "type": "text",
+        "raw": "If you need a horizontal rule you just need to put at least three hyphens, asterisks, or underscores on a line by themselves. You can also even put spaces between the characters.",
+        "text": "If you need a horizontal rule you just need to put at least three hyphens, asterisks, or underscores on a line by themselves. You can also even put spaces between the characters."
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\n\n"
+  },
+  {
+    "type": "hr",
+    "raw": "---\n"
+  },
+  {
+    "type": "hr",
+    "raw": "****************************\n"
+  },
+  {
+    "type": "hr",
+    "raw": "_ _ _ _ _ _ _\n\n"
+  },
+  {
+    "type": "paragraph",
+    "raw": "Those three all produced horizontal lines. Keep in mind that three hyphens under any text turns that text into a heading, so add a blank like if you use hyphens.",
+    "text": "Those three all produced horizontal lines. Keep in mind that three hyphens under any text turns that text into a heading, so add a blank like if you use hyphens.",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Those three all produced horizontal lines. Keep in mind that three hyphens under any text turns that text into a heading, so add a blank like if you use hyphens.",
+        "text": "Those three all produced horizontal lines. Keep in mind that three hyphens under any text turns that text into a heading, so add a blank like if you use hyphens."
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\n\n"
+  },
+  {
+    "type": "heading",
+    "raw": "Images\n------\n\n",
+    "depth": 2,
+    "text": "Images",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Images",
+        "text": "Images"
+      }
+    ]
+  },
+  {
+    "type": "paragraph",
+    "raw": "Images work exactly like links, but they have exclamation points in front. They work with references and titles too.",
+    "text": "Images work exactly like links, but they have exclamation points in front. They work with references and titles too.",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Images work exactly like links, but they have exclamation points in front. They work with references and titles too.",
+        "text": "Images work exactly like links, but they have exclamation points in front. They work with references and titles too."
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\n\n"
+  },
+  {
+    "type": "paragraph",
+    "raw": "![Google Logo](/home/quinn/Pictures/logo_sm.png) and ![Happy].",
+    "text": "![Google Logo](/home/quinn/Pictures/logo_sm.png) and ![Happy].",
+    "tokens": [
+      {
+        "type": "image",
+        "raw": "![Google Logo](/home/quinn/Pictures/logo_sm.png)",
+        "href": "/home/quinn/Pictures/logo_sm.png",
+        "title": null,
+        "text": "Google Logo"
+      },
+      {
+        "type": "text",
+        "raw": " and ",
+        "text": " and "
+      },
+      {
+        "type": "image",
+        "raw": "![Happy]",
+        "href": "/home/quinn/Pictures/mem_tiny_alloc.webp",
+        "title": "",
+        "text": "Happy"
+      },
+      {
+        "type": "text",
+        "raw": ".",
+        "text": "."
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\n\n"
+  },
+  {
+    "type": "heading",
+    "raw": "Inline HTML\n-----------\n\n",
+    "depth": 2,
+    "text": "Inline HTML",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Inline HTML",
+        "text": "Inline HTML"
+      }
+    ]
+  },
+  {
+    "type": "paragraph",
+    "raw": "If markdown is too limiting, you can just insert your own crazy HTML. Span-level HTML can *still* use markdown. Block level elements must be separated from text by a blank line and must not have any spaces before the opening and closing HTML.",
+    "text": "If markdown is too limiting, you can just insert your own crazy HTML. Span-level HTML can *still* use markdown. Block level elements must be separated from text by a blank line and must not have any spaces before the opening and closing HTML.",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "If markdown is too limiting, you can just insert your own crazy HTML. Span-level HTML can ",
+        "text": "If markdown is too limiting, you can just insert your own crazy HTML. Span-level HTML can "
+      },
       {
         "type": "em",
-        "raw": "*java*",
-        "text": "java",
+        "raw": "*still*",
+        "text": "still",
         "tokens": [
           {
             "type": "text",
-            "raw": "java",
-            "text": "java"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "type": "space",
-    "raw": "\\n\\n"
-  },
-  {
-    "type": "paragraph",
-    "raw": "**JDK**",
-    "text": "**JDK**",
-    "tokens": [
-      {
-        "type": "strong",
-        "raw": "**JDK**",
-        "text": "JDK",
-        "tokens": [
-          {
-            "type": "text",
-            "raw": "JDK",
-            "text": "JDK"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "type": "space",
-    "raw": "\\n\\n"
-  },
-  {
-    "type": "paragraph",
-    "raw": "`code`",
-    "text": "`code`",
-    "tokens": [
-      {
-        "type": "codespan",
-        "raw": "`code`",
-        "text": "code"
-      }
-    ]
-  },
-  {
-    "type": "space",
-    "raw": "\\n\\n"
-  },
-  {
-    "type": "code",
-    "raw": "```cgo\\njava\\n```\\n\\n",
-    "lang": "cgo",
-    "text": "java"
-  },
-  {
-    "type": "paragraph",
-    "raw": "```www.qq.com```",
-    "text": "```www.qq.com```",
-    "tokens": [
-      {
-        "type": "codespan",
-        "raw": "```www.qq.com```",
-        "text": "www.qq.com"
-      }
-    ]
-  },
-  {
-    "type": "space",
-    "raw": "\\n\\n\\n\\n\\n"
-  },
-  {
-    "type": "paragraph",
-    "raw": "It is easy.  It is not overly bloated, unlike HTML.  Also, as the creator of [markdown] says,",
-    "text": "It is easy.  It is not overly bloated, unlike HTML.  Also, as the creator of [markdown] says,",
-    "tokens": [
-      {
-        "type": "text",
-        "raw": "It is easy.  It is not overly bloated, unlike HTML.  Also, as the creator of ",
-        "text": "It is easy.  It is not overly bloated, unlike HTML.  Also, as the creator of "
-      },
-      {
-        "type": "link",
-        "raw": "[markdown]",
-        "href": "http://daringfireball.net/projects/markdown/",
-        "title": null,
-        "text": "markdown",
-        "tokens": [
-          {
-            "type": "text",
-            "raw": "markdown",
-            "text": "markdown"
+            "raw": "still",
+            "text": "still"
           }
         ]
       },
       {
         "type": "text",
-        "raw": " says,",
-        "text": " says,"
+        "raw": " use markdown. Block level elements must be separated from text by a blank line and must not have any spaces before the opening and closing HTML.",
+        "text": " use markdown. Block level elements must be separated from text by a blank line and must not have any spaces before the opening and closing HTML."
       }
     ]
   },
   {
     "type": "space",
-    "raw": "\\n\\n"
-  },
-  {
-    "type": "blockquote",
-    "raw": "> The overriding design goal for Markdown is\\n> formatting syntax is to make it as readable\\n> as possible. The idea is that a\\n> Markdown-formatted document should be\\n> publishable as-is, as plain text, without\\n> looking like it is been marked up with tags\\n> or formatting instructions.\\n",
-    "text": "The overriding design goal for Markdown is\\nformatting syntax is to make it as readable\\nas possible. The idea is that a\\nMarkdown-formatted document should be\\npublishable as-is, as plain text, without\\nlooking like it is been marked up with tags\\nor formatting instructions.\\n",
-    "tokens": [
-      {
-        "type": "paragraph",
-        "raw": "The overriding design goal for Markdown is\\nformatting syntax is to make it as readable\\nas possible. The idea is that a\\nMarkdown-formatted document should be\\npublishable as-is, as plain text, without\\nlooking like it is been marked up with tags\\nor formatting instructions.",
-        "text": "The overriding design goal for Markdown is\\nformatting syntax is to make it as readable\\nas possible. The idea is that a\\nMarkdown-formatted document should be\\npublishable as-is, as plain text, without\\nlooking like it is been marked up with tags\\nor formatting instructions.",
-        "tokens": [
-          {
-            "type": "text",
-            "raw": "The overriding design goal for Markdown is\\nformatting syntax is to make it as readable\\nas possible. The idea is that a\\nMarkdown-formatted document should be\\npublishable as-is, as plain text, without\\nlooking like it is been marked up with tags\\nor formatting instructions.",
-            "text": "The overriding design goal for Markdown is\\nformatting syntax is to make it as readable\\nas possible. The idea is that a\\nMarkdown-formatted document should be\\npublishable as-is, as plain text, without\\nlooking like it is been marked up with tags\\nor formatting instructions."
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "type": "paragraph",
-    "raw": "Ready to start writing?  Either start changing stuff on the left or\\n[clear everything](/demo/?text=) with a simple click.",
-    "text": "Ready to start writing?  Either start changing stuff on the left or\\n[clear everything](/demo/?text=) with a simple click.",
-    "tokens": [
-      {
-        "type": "text",
-        "raw": "Ready to start writing?  Either start changing stuff on the left or\\n",
-        "text": "Ready to start writing?  Either start changing stuff on the left or\\n"
-      },
-      {
-        "type": "link",
-        "raw": "[clear everything](/demo/?text=)",
-        "href": "/demo/?text=",
-        "title": null,
-        "text": "clear everything",
-        "tokens": [
-          {
-            "type": "text",
-            "raw": "clear everything",
-            "text": "clear everything"
-          }
-        ]
-      },
-      {
-        "type": "text",
-        "raw": " with a simple click.",
-        "text": " with a simple click."
-      }
-    ]
-  },
-  {
-    "type": "space",
-    "raw": "\\n\\n"
+    "raw": "\n\n"
   }
 ]
