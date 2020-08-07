@@ -1,0 +1,498 @@
+[
+  {
+    "type": "heading",
+    "raw": "Marked - Markdown Parser\\n===============\\n\\n",
+    "depth": 1,
+    "text": "Marked - Markdown Parser",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Marked - Markdown Parser",
+        "text": "Marked - Markdown Parser"
+      }
+    ]
+  },
+  {
+    "type": "paragraph",
+    "raw": "[Marked] lets you convert [Markdown] into HTML.  Markdown is a simple text format whose goal is to be very easy to read and write, even when not converted to HTML.  This demo page will let you type anything you like and see how it gets converted.  Live.  No more waiting around.",
+    "text": "[Marked] lets you convert [Markdown] into HTML.  Markdown is a simple text format whose goal is to be very easy to read and write, even when not converted to HTML.  This demo page will let you type anything you like and see how it gets converted.  Live.  No more waiting around.",
+    "tokens": [
+      {
+        "type": "link",
+        "raw": "[Marked]",
+        "href": "https://github.com/markedjs/marked/",
+        "title": null,
+        "text": "Marked",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "Marked",
+            "text": "Marked"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": " lets you convert ",
+        "text": " lets you convert "
+      },
+      {
+        "type": "link",
+        "raw": "[Markdown]",
+        "href": "http://daringfireball.net/projects/markdown/",
+        "title": null,
+        "text": "Markdown",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "Markdown",
+            "text": "Markdown"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": " into HTML.  Markdown is a simple text format whose goal is to be very easy to read and write, even when not converted to HTML.  This demo page will let you type anything you like and see how it gets converted.  Live.  No more waiting around.",
+        "text": " into HTML.  Markdown is a simple text format whose goal is to be very easy to read and write, even when not converted to HTML.  This demo page will let you type anything you like and see how it gets converted.  Live.  No more waiting around."
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\\n\\n"
+  },
+  {
+    "type": "heading",
+    "raw": "How To Use The Demo\\n-------------------\\n\\n",
+    "depth": 2,
+    "text": "How To Use The Demo",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "How To Use The Demo",
+        "text": "How To Use The Demo"
+      }
+    ]
+  },
+  {
+    "type": "list",
+    "raw": "1. Type in stuff on the left.\\n2. See the live updates on the right.\\n\\n",
+    "ordered": true,
+    "start": 1,
+    "loose": false,
+    "items": [
+      {
+        "type": "list_item",
+        "raw": "1. Type in stuff on the left.",
+        "task": false,
+        "loose": false,
+        "text": "Type in stuff on the left.",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "Type in stuff on the left.",
+            "text": "Type in stuff on the left.",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "Type in stuff on the left.",
+                "text": "Type in stuff on the left."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "2. See the live updates on the right.\\n\\n",
+        "task": false,
+        "loose": false,
+        "text": "See the live updates on the right.\\n\\n",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "See the live updates on the right.",
+            "text": "See the live updates on the right.",
+            "tokens": [
+              {
+                "type": "text",
+                "raw": "See the live updates on the right.",
+                "text": "See the live updates on the right."
+              }
+            ]
+          },
+          {
+            "type": "space",
+            "raw": "\\n\\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "paragraph",
+    "raw": "That is it.  Pretty simple.  There is also a drop-down option in the upper right to switch between various views:",
+    "text": "That is it.  Pretty simple.  There is also a drop-down option in the upper right to switch between various views:",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "That is it.  Pretty simple.  There is also a drop-down option in the upper right to switch between various views:",
+        "text": "That is it.  Pretty simple.  There is also a drop-down option in the upper right to switch between various views:"
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\\n\\n"
+  },
+  {
+    "type": "list",
+    "raw": "- **Preview:**  A live display of the generated HTML as it would render in a browser.\\n- **HTML Source:**  The generated HTML before your browser makes it pretty.\\n- **Lexer Data:**  What [marked] uses internally, in case you like gory stuff like this.\\n- **Quick Reference:**  A brief run-down of how to format things using markdown.\\n\\n",
+    "ordered": false,
+    "start": "",
+    "loose": false,
+    "items": [
+      {
+        "type": "list_item",
+        "raw": "- **Preview:**  A live display of the generated HTML as it would render in a browser.",
+        "task": false,
+        "loose": false,
+        "text": "**Preview:**  A live display of the generated HTML as it would render in a browser.",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "**Preview:**  A live display of the generated HTML as it would render in a browser.",
+            "text": "**Preview:**  A live display of the generated HTML as it would render in a browser.",
+            "tokens": [
+              {
+                "type": "strong",
+                "raw": "**Preview:**",
+                "text": "Preview:",
+                "tokens": [
+                  {
+                    "type": "text",
+                    "raw": "Preview:",
+                    "text": "Preview:"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "raw": "  A live display of the generated HTML as it would render in a browser.",
+                "text": "  A live display of the generated HTML as it would render in a browser."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "- **HTML Source:**  The generated HTML before your browser makes it pretty.",
+        "task": false,
+        "loose": false,
+        "text": "**HTML Source:**  The generated HTML before your browser makes it pretty.",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "**HTML Source:**  The generated HTML before your browser makes it pretty.",
+            "text": "**HTML Source:**  The generated HTML before your browser makes it pretty.",
+            "tokens": [
+              {
+                "type": "strong",
+                "raw": "**HTML Source:**",
+                "text": "HTML Source:",
+                "tokens": [
+                  {
+                    "type": "text",
+                    "raw": "HTML Source:",
+                    "text": "HTML Source:"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "raw": "  The generated HTML before your browser makes it pretty.",
+                "text": "  The generated HTML before your browser makes it pretty."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "- **Lexer Data:**  What [marked] uses internally, in case you like gory stuff like this.",
+        "task": false,
+        "loose": false,
+        "text": "**Lexer Data:**  What [marked] uses internally, in case you like gory stuff like this.",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "**Lexer Data:**  What [marked] uses internally, in case you like gory stuff like this.",
+            "text": "**Lexer Data:**  What [marked] uses internally, in case you like gory stuff like this.",
+            "tokens": [
+              {
+                "type": "strong",
+                "raw": "**Lexer Data:**",
+                "text": "Lexer Data:",
+                "tokens": [
+                  {
+                    "type": "text",
+                    "raw": "Lexer Data:",
+                    "text": "Lexer Data:"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "raw": "  What ",
+                "text": "  What "
+              },
+              {
+                "type": "link",
+                "raw": "[marked]",
+                "href": "https://github.com/markedjs/marked/",
+                "title": null,
+                "text": "marked",
+                "tokens": [
+                  {
+                    "type": "text",
+                    "raw": "marked",
+                    "text": "marked"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "raw": " uses internally, in case you like gory stuff like this.",
+                "text": " uses internally, in case you like gory stuff like this."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "list_item",
+        "raw": "- **Quick Reference:**  A brief run-down of how to format things using markdown.\\n\\n",
+        "task": false,
+        "loose": false,
+        "text": "**Quick Reference:**  A brief run-down of how to format things using markdown.\\n\\n",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "**Quick Reference:**  A brief run-down of how to format things using markdown.",
+            "text": "**Quick Reference:**  A brief run-down of how to format things using markdown.",
+            "tokens": [
+              {
+                "type": "strong",
+                "raw": "**Quick Reference:**",
+                "text": "Quick Reference:",
+                "tokens": [
+                  {
+                    "type": "text",
+                    "raw": "Quick Reference:",
+                    "text": "Quick Reference:"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "raw": "  A brief run-down of how to format things using markdown.",
+                "text": "  A brief run-down of how to format things using markdown."
+              }
+            ]
+          },
+          {
+            "type": "space",
+            "raw": "\\n\\n"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "heading",
+    "raw": "Why Markdown?\\n-------------\\n\\n\\n",
+    "depth": 2,
+    "text": "Why Markdown?",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Why Markdown?",
+        "text": "Why Markdown?"
+      }
+    ]
+  },
+  {
+    "type": "paragraph",
+    "raw": "*java*",
+    "text": "*java*",
+    "tokens": [
+      {
+        "type": "em",
+        "raw": "*java*",
+        "text": "java",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "java",
+            "text": "java"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\\n\\n"
+  },
+  {
+    "type": "paragraph",
+    "raw": "**JDK**",
+    "text": "**JDK**",
+    "tokens": [
+      {
+        "type": "strong",
+        "raw": "**JDK**",
+        "text": "JDK",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "JDK",
+            "text": "JDK"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\\n\\n"
+  },
+  {
+    "type": "paragraph",
+    "raw": "`code`",
+    "text": "`code`",
+    "tokens": [
+      {
+        "type": "codespan",
+        "raw": "`code`",
+        "text": "code"
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\\n\\n"
+  },
+  {
+    "type": "code",
+    "raw": "```cgo\\njava\\n```\\n\\n",
+    "lang": "cgo",
+    "text": "java"
+  },
+  {
+    "type": "paragraph",
+    "raw": "```www.qq.com```",
+    "text": "```www.qq.com```",
+    "tokens": [
+      {
+        "type": "codespan",
+        "raw": "```www.qq.com```",
+        "text": "www.qq.com"
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\\n\\n\\n\\n\\n"
+  },
+  {
+    "type": "paragraph",
+    "raw": "It is easy.  It is not overly bloated, unlike HTML.  Also, as the creator of [markdown] says,",
+    "text": "It is easy.  It is not overly bloated, unlike HTML.  Also, as the creator of [markdown] says,",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "It is easy.  It is not overly bloated, unlike HTML.  Also, as the creator of ",
+        "text": "It is easy.  It is not overly bloated, unlike HTML.  Also, as the creator of "
+      },
+      {
+        "type": "link",
+        "raw": "[markdown]",
+        "href": "http://daringfireball.net/projects/markdown/",
+        "title": null,
+        "text": "markdown",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "markdown",
+            "text": "markdown"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": " says,",
+        "text": " says,"
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\\n\\n"
+  },
+  {
+    "type": "blockquote",
+    "raw": "> The overriding design goal for Markdown is\\n> formatting syntax is to make it as readable\\n> as possible. The idea is that a\\n> Markdown-formatted document should be\\n> publishable as-is, as plain text, without\\n> looking like it is been marked up with tags\\n> or formatting instructions.\\n",
+    "text": "The overriding design goal for Markdown is\\nformatting syntax is to make it as readable\\nas possible. The idea is that a\\nMarkdown-formatted document should be\\npublishable as-is, as plain text, without\\nlooking like it is been marked up with tags\\nor formatting instructions.\\n",
+    "tokens": [
+      {
+        "type": "paragraph",
+        "raw": "The overriding design goal for Markdown is\\nformatting syntax is to make it as readable\\nas possible. The idea is that a\\nMarkdown-formatted document should be\\npublishable as-is, as plain text, without\\nlooking like it is been marked up with tags\\nor formatting instructions.",
+        "text": "The overriding design goal for Markdown is\\nformatting syntax is to make it as readable\\nas possible. The idea is that a\\nMarkdown-formatted document should be\\npublishable as-is, as plain text, without\\nlooking like it is been marked up with tags\\nor formatting instructions.",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "The overriding design goal for Markdown is\\nformatting syntax is to make it as readable\\nas possible. The idea is that a\\nMarkdown-formatted document should be\\npublishable as-is, as plain text, without\\nlooking like it is been marked up with tags\\nor formatting instructions.",
+            "text": "The overriding design goal for Markdown is\\nformatting syntax is to make it as readable\\nas possible. The idea is that a\\nMarkdown-formatted document should be\\npublishable as-is, as plain text, without\\nlooking like it is been marked up with tags\\nor formatting instructions."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "paragraph",
+    "raw": "Ready to start writing?  Either start changing stuff on the left or\\n[clear everything](/demo/?text=) with a simple click.",
+    "text": "Ready to start writing?  Either start changing stuff on the left or\\n[clear everything](/demo/?text=) with a simple click.",
+    "tokens": [
+      {
+        "type": "text",
+        "raw": "Ready to start writing?  Either start changing stuff on the left or\\n",
+        "text": "Ready to start writing?  Either start changing stuff on the left or\\n"
+      },
+      {
+        "type": "link",
+        "raw": "[clear everything](/demo/?text=)",
+        "href": "/demo/?text=",
+        "title": null,
+        "text": "clear everything",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "clear everything",
+            "text": "clear everything"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "raw": " with a simple click.",
+        "text": " with a simple click."
+      }
+    ]
+  },
+  {
+    "type": "space",
+    "raw": "\\n\\n"
+  }
+]
