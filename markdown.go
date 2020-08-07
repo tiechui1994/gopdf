@@ -7,9 +7,9 @@ import (
 	"strings"
 	"bytes"
 	"regexp"
+	"encoding/json"
 
 	"github.com/tiechui1994/gopdf/core"
-	"encoding/json"
 )
 
 const (
@@ -31,38 +31,15 @@ const (
 	TYPE_PARAGRAPH = "paragraph"
 	TYPE_HEADING   = "heading"
 	TYPE_LIST      = "list"
-
-	TYPE_HEADER_ONE = "1"
-	TYPE_HEADER_TWO = "2"
-	TYPE_HEADER_THR = "3"
-	TYPE_HEADER_FOU = "4"
-	TYPE_HEADER_FIV = "5"
-	TYPE_HEADER_SIX = "6"
-
-	TYPE_IMAGE = "image"
-
-	TYPE_DELETE = "delete"
-
-	TYPE_NSORT = "nsort"
-
-	TYPE_REFER = "refer"
 )
 
 const (
-	HEADER_ONE = iota + 1
-	HEADER_TWO
-	HEADER_THR
-	HEADER_FOU
-	HEADER_FIV
-	HEADER_SIX
+	defaultLineHeight       = 18.0
+	defaultFontSize         = 15.0
+	defaultCodeSpanFontSize = 10.0
 )
 
-const (
-	defaultLineHeight   = 18.0
-	defaultFontSize     = 15.0
-	defaultWarpFontSize = 10.0
-)
-
+// Token is parse markdown result element
 type Token struct {
 	Type string `json:"type"`
 	Raw  string `json:"raw"`
@@ -131,10 +108,8 @@ func (c *MdText) SetText(fontFamily string, text ...string) {
 		font = core.Font{Family: fontFamily, Size: defaultFontSize, Style: ""}
 	case TYPE_EM:
 		font = core.Font{Family: fontFamily, Size: defaultFontSize, Style: ""}
-	case TYPE_CODESPAN:
-		font = core.Font{Family: fontFamily, Size: defaultWarpFontSize, Style: ""}
-	case TYPE_CODE:
-		font = core.Font{Family: fontFamily, Size: defaultWarpFontSize, Style: ""}
+	case TYPE_CODESPAN, TYPE_CODE:
+		font = core.Font{Family: fontFamily, Size: defaultCodeSpanFontSize, Style: ""}
 	case TYPE_LINK, TYPE_TEXT:
 		font = core.Font{Family: fontFamily, Size: defaultFontSize, Style: ""}
 	default:
