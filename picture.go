@@ -12,13 +12,14 @@ import (
 
 	"golang.org/x/image/bmp"
 	"golang.org/x/image/webp"
-
+	"golang.org/x/image/tiff"
 )
 
 const (
 	PNG  = "png"
 	BMP  = "bmp"
 	WEBP = "webp"
+	TIFF = "tiff"
 	JPEG = "jpeg"
 )
 
@@ -52,6 +53,8 @@ func Convert2JPEG(srcPath string, dstPath string) error {
 		return ConvertWEBP2JPEG(srcPath, dstPath)
 	case BMP:
 		return ConvertWEBP2JPEG(srcPath, dstPath)
+	case TIFF:
+		return ConvertTIFF2JPEG(srcPath, dstPath)
 	default:
 		return fmt.Errorf("invalid picture type")
 	}
@@ -133,6 +136,30 @@ func ConvertWEBP2JPEG(srcPath, dstPath string) (err error) {
 	defer srcFile.Close()
 
 	srcImage, err := webp.Decode(srcFile)
+	if err != nil {
+		return err
+	}
+
+	dstFile, err := os.Create(dstPath)
+	if err != nil {
+		return
+	}
+	defer dstFile.Close()
+
+	dstImage := image.NewRGBA(srcImage.Bounds())
+	draw.Draw(dstImage, dstImage.Bounds(), srcImage, srcImage.Bounds().Min, draw.Src)
+
+	return jpeg.Encode(dstFile, dstImage, nil)
+}
+
+func ConvertTIFF2JPEG(srcPath, dstPath string) (err error) {
+	srcFile, err := os.Open(srcPath)
+	if err != nil {
+		return
+	}
+	defer srcFile.Close()
+
+	srcImage, err := tiff.Decode(srcFile)
 	if err != nil {
 		return err
 	}
