@@ -1,7 +1,7 @@
 Markdown Quick Reference
 ========================
 
-This guide is a very brief overview, with examples, of the syntax that [Markdown] supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It's shown as *text* and not *rendered HTML*.
+This guide is a very brief overview, with examples, of the syntax that [Markdown] supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It is shown as *text* and not *rendered HTML*.
 
 [Markdown]: http://daringfireball.net/projects/markdown/
 
@@ -49,17 +49,17 @@ This is H2
 ## This is H2
 ### This is H3 with some extra pounds ###
 #### You get the idea ####
-##### I don't need extra pounds at the end
+##### I do not need extra pounds at the end
 ###### H6 is the max
 
 
 Links
 =====
 
-Let's link to a few sites. First, let's use the bare URL, like <https://www.github.com>. Great for text, but ugly for HTML.
+Let us link to a few sites. First, let us use the bare URL, like <https://www.github.com>. Great for text, but ugly for HTML.
 Next is an inline link to [Google](https://www.google.com). A little nicer.
 This is a reference-style link to [Wikipedia] [1].
-Lastly, here's a pretty link to [Yahoo]. The reference-style and pretty links both automatically use the links defined below, but they could be defined *anywhere* in the markdown and are removed from the HTML. The names are also case insensitive, so you can use [YaHoO] and have it link properly.
+Lastly, here is a pretty link to [Yahoo]. The reference-style and pretty links both automatically use the links defined below, but they could be defined *anywhere* in the markdown and are removed from the HTML. The names are also case insensitive, so you can use [YaHoO] and have it link properly.
 
 [1]: https://www.wikipedia.org
 [Yahoo]: https://www.yahoo.com
@@ -73,7 +73,7 @@ You can also go to [W3C] [2] and maybe visit a [friend].
 
 Email addresses in plain text are not linked: test@example.com.
 Email addresses wrapped in angle brackets are linked: <test@example.com>.
-They are also obfuscated so that email harvesting spam robots hopefully won't get them.
+They are also obfuscated so that email harvesting spam robots hopefully won not get them.
 
 
 Lists
@@ -88,7 +88,7 @@ The above is an "unordered" list. Now, on for a bit of order.
 
 1. Numbered lists are also easy
 2. Just start with a number
-3738762. However, the actual number doesn't matter when converted to HTML.
+3738762. However, the actual number does not matter when converted to HTML.
 1. This will still show up as 4.
 
 You might want a few advanced lists:
@@ -115,7 +115,7 @@ them on the next line with no indentation.
 - You can put large blocks of text in your list by just indenting with two spaces.
 
   This is formatted the same as code, but you can inspect the HTML
-  and find that it's just wrapped in a `<p>` tag and *won't* be shown
+  and find that it is just wrapped in a `<p>` tag and *won not* be shown
   as preformatted text.
 
   You can keep adding more and more paragraphs to a single

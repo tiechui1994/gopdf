@@ -14,8 +14,8 @@
   },
   {
     "type": "paragraph",
-    "raw": "This guide is a very brief overview, with examples, of the syntax that [Markdown] supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It iss shown as *text* and not *rendered HTML*.",
-    "text": "This guide is a very brief overview, with examples, of the syntax that [Markdown] supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It iss shown as *text* and not *rendered HTML*.",
+    "raw": "This guide is a very brief overview, with examples, of the syntax that [Markdown] supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It is shown as *text* and not *rendered HTML*.",
+    "text": "This guide is a very brief overview, with examples, of the syntax that [Markdown] supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It is shown as *text* and not *rendered HTML*.",
     "tokens": [
       {
         "type": "text",
@@ -38,8 +38,8 @@
       },
       {
         "type": "text",
-        "raw": " supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It iss shown as ",
-        "text": " supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It&#39;s shown as "
+        "raw": " supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It is shown as ",
+        "text": " supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It is shown as "
       },
       {
         "type": "em",
@@ -297,7 +297,7 @@
       {
         "type": "codespan",
         "raw": "`<h1>`",
-        "text": "&lt;h1&gt;"
+        "text": "<h1>"
       },
       {
         "type": "text",
@@ -322,13 +322,13 @@
   },
   {
     "type": "paragraph",
-    "raw": "If you want to include code and have new lines preserved, indent the line with a tab or at least four spaces:",
-    "text": "If you want to include code and have new lines preserved, indent the line with a tab or at least four spaces:",
+    "raw": "If you want to include code and have new\nlines preserved, indent the line with a tab\nor at least four spaces:",
+    "text": "If you want to include code and have new\nlines preserved, indent the line with a tab\nor at least four spaces:",
     "tokens": [
       {
         "type": "text",
-        "raw": "If you want to include code and have new lines preserved,indent the line with a tab or at least four spaces:",
-        "text": "If you want to include code and have new lines preserved,indent the line with a tab or at least four spaces:"
+        "raw": "If you want to include code and have new\nlines preserved, indent the line with a tab\nor at least four spaces:",
+        "text": "If you want to include code and have new\nlines preserved, indent the line with a tab\nor at least four spaces:"
       }
     ]
   },
@@ -380,7 +380,7 @@
       {
         "type": "text",
         "raw": "There are a couple of ways to make headings. Using three or more equals signs on a line under a heading makes it into an \"h1\" style. Three or more hyphens under a line makes it \"h2\" (slightly smaller). You can also use multiple pound symbols (",
-        "text": "There are a couple of ways to make headings. Using three or more equals signs on a line under a heading makes it into an &quot;h1&quot; style. Three or more hyphens under a line makes it &quot;h2&quot; (slightly smaller). You can also use multiple pound symbols ("
+        "text": "There are a couple of ways to make headings. Using three or more equals signs on a line under a heading makes it into an \"h1\" style. Three or more hyphens under a line makes it \"h2\" (slightly smaller). You can also use multiple pound symbols ("
       },
       {
         "type": "codespan",
@@ -478,14 +478,14 @@
   },
   {
     "type": "heading",
-    "raw": "##### I don ist need extra pounds at the end\n",
+    "raw": "##### I do not need extra pounds at the end\n",
     "depth": 5,
-    "text": "I don ist need extra pounds at the end",
+    "text": "I do not need extra pounds at the end",
     "tokens": [
       {
         "type": "text",
-        "raw": "I don ist need extra pounds at the end",
-        "text": "I don&#39;t need extra pounds at the end"
+        "raw": "I do not need extra pounds at the end",
+        "text": "I do not need extra pounds at the end"
       }
     ]
   },
@@ -517,13 +517,13 @@
   },
   {
     "type": "paragraph",
-    "raw": "Let iss link to a few sites. First, let iss use the bare URL, like <https://www.github.com>. Great for text, but ugly for HTML.\nNext is an inline link to [Google](https://www.google.com). A little nicer.\nThis is a reference-style link to [Wikipedia] [1].\nLastly, here iss a pretty link to [Yahoo]. The reference-style and pretty links both automatically use the links defined below, but they could be defined *anywhere* in the markdown and are removed from the HTML. The names are also case insensitive, so you can use [YaHoO] and have it link properly.",
-    "text": "Let iss link to a few sites. First, let iss use the bare URL, like <https://www.github.com>. Great for text, but ugly for HTML.\nNext is an inline link to [Google](https://www.google.com). A little nicer.\nThis is a reference-style link to [Wikipedia] [1].\nLastly, here iss a pretty link to [Yahoo]. The reference-style and pretty links both automatically use the links defined below, but they could be defined *anywhere* in the markdown and are removed from the HTML. The names are also case insensitive, so you can use [YaHoO] and have it link properly.",
+    "raw": "Let us link to a few sites. First, let us use the bare URL, like <https://www.github.com>. Great for text, but ugly for HTML.\nNext is an inline link to [Google](https://www.google.com). A little nicer.\nThis is a reference-style link to [Wikipedia] [1].\nLastly, here is a pretty link to [Yahoo]. The reference-style and pretty links both automatically use the links defined below, but they could be defined *anywhere* in the markdown and are removed from the HTML. The names are also case insensitive, so you can use [YaHoO] and have it link properly.",
+    "text": "Let us link to a few sites. First, let us use the bare URL, like <https://www.github.com>. Great for text, but ugly for HTML.\nNext is an inline link to [Google](https://www.google.com). A little nicer.\nThis is a reference-style link to [Wikipedia] [1].\nLastly, here is a pretty link to [Yahoo]. The reference-style and pretty links both automatically use the links defined below, but they could be defined *anywhere* in the markdown and are removed from the HTML. The names are also case insensitive, so you can use [YaHoO] and have it link properly.",
     "tokens": [
       {
         "type": "text",
-        "raw": "Let iss link to a few sites. First, let iss use the bare URL, like ",
-        "text": "Let&#39;s link to a few sites. First, let&#39;s use the bare URL, like "
+        "raw": "Let us link to a few sites. First, let us use the bare URL, like ",
+        "text": "Let us link to a few sites. First, let us use the bare URL, like "
       },
       {
         "type": "link",
@@ -540,8 +540,8 @@
       },
       {
         "type": "text",
-        "raw": ". Great for text, but ugly for HTML.Next is an inline link to ",
-        "text": ". Great for text, but ugly for HTML.Next is an inline link to "
+        "raw": ". Great for text, but ugly for HTML.\nNext is an inline link to ",
+        "text": ". Great for text, but ugly for HTML.\nNext is an inline link to "
       },
       {
         "type": "link",
@@ -559,8 +559,8 @@
       },
       {
         "type": "text",
-        "raw": ". A little nicer.This is a reference-style link to ",
-        "text": ". A little nicer.This is a reference-style link to "
+        "raw": ". A little nicer.\nThis is a reference-style link to ",
+        "text": ". A little nicer.\nThis is a reference-style link to "
       },
       {
         "type": "text",
@@ -588,8 +588,8 @@
       },
       {
         "type": "text",
-        "raw": ".Lastly, here iss a pretty link to ",
-        "text": ".Lastly, here&#39;s a pretty link to "
+        "raw": ".\nLastly, here is a pretty link to ",
+        "text": ".\nLastly, here is a pretty link to "
       },
       {
         "type": "link",
@@ -654,8 +654,8 @@
   },
   {
     "type": "paragraph",
-    "raw": "Title attributes may be added to links by adding text after a link.This is the [inline link](https://www.bing.com \"Bing\") with a \"Bing\" title.\nYou can also go to [W3C] [2] and maybe visit a [friend].",
-    "text": "Title attributes may be added to links by adding text after a link.This is the [inline link](https://www.bing.com \"Bing\") with a \"Bing\" title.\nYou can also go to [W3C] [2] and maybe visit a [friend].",
+    "raw": "Title attributes may be added to links by adding text after a link.\nThis is the [inline link](https://www.bing.com \"Bing\") with a \"Bing\" title.\nYou can also go to [W3C] [2] and maybe visit a [friend].",
+    "text": "Title attributes may be added to links by adding text after a link.\nThis is the [inline link](https://www.bing.com \"Bing\") with a \"Bing\" title.\nYou can also go to [W3C] [2] and maybe visit a [friend].",
     "tokens": [
       {
         "type": "text",
@@ -678,8 +678,8 @@
       },
       {
         "type": "text",
-        "raw": " with a \"Bing\" title.You can also go to ",
-        "text": " with a &quot;Bing&quot; title.You can also go to "
+        "raw": " with a \"Bing\" title.\nYou can also go to ",
+        "text": " with a \"Bing\" title.\nYou can also go to "
       },
       {
         "type": "text",
@@ -737,8 +737,8 @@
   },
   {
     "type": "paragraph",
-    "raw": "Email addresses in plain text are not linked: test@example.com.\nEmail addresses wrapped in angle brackets are linked: <test@example.com>.\nThey are also obfuscated so that email harvesting spam robots hopefully won ist get them.",
-    "text": "Email addresses in plain text are not linked: test@example.com.\nEmail addresses wrapped in angle brackets are linked: <test@example.com>.\nThey are also obfuscated so that email harvesting spam robots hopefully won ist get them.",
+    "raw": "Email addresses in plain text are not linked: test@example.com.\nEmail addresses wrapped in angle brackets are linked: <test@example.com>.\nThey are also obfuscated so that email harvesting spam robots hopefully won not get them.",
+    "text": "Email addresses in plain text are not linked: test@example.com.\nEmail addresses wrapped in angle brackets are linked: <test@example.com>.\nThey are also obfuscated so that email harvesting spam robots hopefully won not get them.",
     "tokens": [
       {
         "type": "text",
@@ -749,7 +749,14 @@
         "type": "link",
         "raw": "test@example.com",
         "text": "test@example.com",
-        "href": "test@example.com"
+        "href": "mailto:test@example.com",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "test@example.com",
+            "text": "test@example.com"
+          }
+        ]
       },
       {
         "type": "text",
@@ -759,13 +766,20 @@
       {
         "type": "link",
         "raw": "<test@example.com>",
-        "text": "<test@example.com>",
-        "href": "<test@example.com>"
+        "text": "test@example.com",
+        "href": "mailto:test@example.com",
+        "tokens": [
+          {
+            "type": "text",
+            "raw": "test@example.com",
+            "text": "test@example.com"
+          }
+        ]
       },
       {
         "type": "text",
-        "raw": ".\nThey are also obfuscated so that email harvesting spam robots hopefully won ist get them.",
-        "text": ".\nThey are also obfuscated so that email harvesting spam robots hopefully won&#39;t get them."
+        "raw": ".\nThey are also obfuscated so that email harvesting spam robots hopefully won not get them.",
+        "text": ".\nThey are also obfuscated so that email harvesting spam robots hopefully won not get them."
       }
     ]
   },
@@ -891,7 +905,7 @@
       {
         "type": "text",
         "raw": "The above is an \"unordered\" list. Now, on for a bit of order.",
-        "text": "The above is an &quot;unordered&quot; list. Now, on for a bit of order."
+        "text": "The above is an \"unordered\" list. Now, on for a bit of order."
       }
     ]
   },
@@ -901,7 +915,7 @@
   },
   {
     "type": "list",
-    "raw": "1. Numbered lists are also easy\n2. Just start with a number\n3738762. However, the actual number doesn ist matter when converted to HTML.\n1. This will still show up as 4.\n\n",
+    "raw": "1. Numbered lists are also easy\n2. Just start with a number\n3738762. However, the actual number does not matter when converted to HTML.\n1. This will still show up as 4.\n\n",
     "ordered": true,
     "start": 1,
     "loose": false,
@@ -950,20 +964,20 @@
       },
       {
         "type": "list_item",
-        "raw": "3738762. However, the actual number doesn ist matter when converted to HTML.",
+        "raw": "3738762. However, the actual number does not matter when converted to HTML.",
         "task": false,
         "loose": false,
-        "text": "However, the actual number doesn ist matter when converted to HTML.",
+        "text": "However, the actual number does not matter when converted to HTML.",
         "tokens": [
           {
             "type": "text",
-            "raw": "However, the actual number doesn ist matter when converted to HTML.",
-            "text": "However, the actual number doesn ist matter when converted to HTML.",
+            "raw": "However, the actual number does not matter when converted to HTML.",
+            "text": "However, the actual number does not matter when converted to HTML.",
             "tokens": [
               {
                 "type": "text",
-                "raw": "However, the actual number doesn ist matter when converted to HTML.",
-                "text": "However, the actual number doesn&#39;t matter when converted to HTML."
+                "raw": "However, the actual number does not matter when converted to HTML.",
+                "text": "However, the actual number does not matter when converted to HTML."
               }
             ]
           }
@@ -1014,7 +1028,7 @@
   },
   {
     "type": "list",
-    "raw": "- This top-level list is wrapped in paragraph tags\n- This generates an extra space between each top-level item.\n\n- You do it by adding a blank line\n\n- This nested list also has blank lines between the list items.\n\n- How to create nested lists\n  1. Start your regular list\n  2. Indent nested lists with two spaces\n  3. Further nesting means you should indent with two more spaces\n    * This line is indented with four spaces.\n\n- List items can be quite lengthy. You can keep typing and either continue\nthem on the next line with no indentation.\n\n- Alternately, if that looks ugly, you can also\n  indent the next line a bit for a prettier look.\n\n- You can put large blocks of text in your list by just indenting with two spaces.\n\n  This is formatted the same as code, but you can inspect the HTML\n  and find that it iss just wrapped in a `<p>` tag and *won ist* be shown\n  as preformatted text.\n\n  You can keep adding more and more paragraphs to a single\n  list item by adding the traditional blank line and then keep\n  on indenting the paragraphs with two spaces.\n\n  You really only need to indent the first line,\nbut that looks ugly.\n\n- Lists support blockquotes\n\n  > Just like this example here. By the way, you can\n  > nest lists inside blockquotes!\n  > - Fantastic!\n\n- Lists support preformatted text\n\n      You just need to indent an additional four spaces.\n\n\n",
+    "raw": "- This top-level list is wrapped in paragraph tags\n- This generates an extra space between each top-level item.\n\n- You do it by adding a blank line\n\n- This nested list also has blank lines between the list items.\n\n- How to create nested lists\n  1. Start your regular list\n  2. Indent nested lists with two spaces\n  3. Further nesting means you should indent with two more spaces\n    * This line is indented with four spaces.\n\n- List items can be quite lengthy. You can keep typing and either continue\nthem on the next line with no indentation.\n\n- Alternately, if that looks ugly, you can also\n  indent the next line a bit for a prettier look.\n\n- You can put large blocks of text in your list by just indenting with two spaces.\n\n  This is formatted the same as code, but you can inspect the HTML\n  and find that it is just wrapped in a `<p>` tag and *won not* be shown\n  as preformatted text.\n\n  You can keep adding more and more paragraphs to a single\n  list item by adding the traditional blank line and then keep\n  on indenting the paragraphs with two spaces.\n\n  You really only need to indent the first line,\nbut that looks ugly.\n\n- Lists support blockquotes\n\n  > Just like this example here. By the way, you can\n  > nest lists inside blockquotes!\n  > - Fantastic!\n\n- Lists support preformatted text\n\n      You just need to indent an additional four spaces.\n\n\n",
     "ordered": false,
     "start": "",
     "loose": true,
@@ -1270,10 +1284,10 @@
       },
       {
         "type": "list_item",
-        "raw": "- You can put large blocks of text in your list by just indenting with two spaces.\n\n  This is formatted the same as code, but you can inspect the HTML\n  and find that it iss just wrapped in a `<p>` tag and *won ist* be shown\n  as preformatted text.\n\n  You can keep adding more and more paragraphs to a single\n  list item by adding the traditional blank line and then keep\n  on indenting the paragraphs with two spaces.\n\n  You really only need to indent the first line,\nbut that looks ugly.\n",
+        "raw": "- You can put large blocks of text in your list by just indenting with two spaces.\n\n  This is formatted the same as code, but you can inspect the HTML\n  and find that it is just wrapped in a `<p>` tag and *won not* be shown\n  as preformatted text.\n\n  You can keep adding more and more paragraphs to a single\n  list item by adding the traditional blank line and then keep\n  on indenting the paragraphs with two spaces.\n\n  You really only need to indent the first line,\nbut that looks ugly.\n",
         "task": false,
         "loose": true,
-        "text": "You can put large blocks of text in your list by just indenting with two spaces.\n\nThis is formatted the same as code, but you can inspect the HTML\nand find that it iss just wrapped in a `<p>` tag and *won ist* be shown\nas preformatted text.\n\nYou can keep adding more and more paragraphs to a single\nlist item by adding the traditional blank line and then keep\non indenting the paragraphs with two spaces.\n\nYou really only need to indent the first line,\nbut that looks ugly.\n",
+        "text": "You can put large blocks of text in your list by just indenting with two spaces.\n\nThis is formatted the same as code, but you can inspect the HTML\nand find that it is just wrapped in a `<p>` tag and *won not* be shown\nas preformatted text.\n\nYou can keep adding more and more paragraphs to a single\nlist item by adding the traditional blank line and then keep\non indenting the paragraphs with two spaces.\n\nYou really only need to indent the first line,\nbut that looks ugly.\n",
         "tokens": [
           {
             "type": "text",
@@ -1293,18 +1307,18 @@
           },
           {
             "type": "text",
-            "raw": "This is formatted the same as code, but you can inspect the HTML\nand find that it iss just wrapped in a `<p>` tag and *won ist* be shown\nas preformatted text.",
-            "text": "This is formatted the same as code, but you can inspect the HTML\nand find that it iss just wrapped in a `<p>` tag and *won ist* be shown\nas preformatted text.",
+            "raw": "This is formatted the same as code, but you can inspect the HTML\nand find that it is just wrapped in a `<p>` tag and *won not* be shown\nas preformatted text.",
+            "text": "This is formatted the same as code, but you can inspect the HTML\nand find that it is just wrapped in a `<p>` tag and *won not* be shown\nas preformatted text.",
             "tokens": [
               {
                 "type": "text",
-                "raw": "This is formatted the same as code, but you can inspect the HTML\nand find that it iss just wrapped in a ",
-                "text": "This is formatted the same as code, but you can inspect the HTML\nand find that it&#39;s just wrapped in a "
+                "raw": "This is formatted the same as code, but you can inspect the HTML\nand find that it is just wrapped in a ",
+                "text": "This is formatted the same as code, but you can inspect the HTML\nand find that it is just wrapped in a "
               },
               {
                 "type": "codespan",
                 "raw": "`<p>`",
-                "text": "&lt;p&gt;"
+                "text": "<p>"
               },
               {
                 "type": "text",
@@ -1313,13 +1327,13 @@
               },
               {
                 "type": "em",
-                "raw": "*won ist*",
-                "text": "won ist",
+                "raw": "*won not*",
+                "text": "won not",
                 "tokens": [
                   {
                     "type": "text",
-                    "raw": "won ist",
-                    "text": "won&#39;t"
+                    "raw": "won not",
+                    "text": "won not"
                   }
                 ]
               },
@@ -1582,13 +1596,13 @@
   },
   {
     "type": "paragraph",
-    "raw": "![Google Logo](/home/quinn/Pictures/logo_sm.png) and ![Happy].",
-    "text": "![Google Logo](/home/quinn/Pictures/logo_sm.png) and ![Happy].",
+    "raw": "![Google Logo](https://www.google.com/images/errors/logo_sm.gif) and ![Happy].",
+    "text": "![Google Logo](https://www.google.com/images/errors/logo_sm.gif) and ![Happy].",
     "tokens": [
       {
         "type": "image",
-        "raw": "![Google Logo](/home/quinn/Pictures/logo_sm.png)",
-        "href": "/home/quinn/Pictures/logo_sm.png",
+        "raw": "![Google Logo](https://www.google.com/images/errors/logo_sm.gif)",
+        "href": "https://www.google.com/images/errors/logo_sm.gif",
         "title": null,
         "text": "Google Logo"
       },
@@ -1600,8 +1614,8 @@
       {
         "type": "image",
         "raw": "![Happy]",
-        "href": "/home/quinn/Pictures/mem_tiny_alloc.webp",
-        "title": "",
+        "href": "https://wpclipart.com/smiley/happy/simple_colors/smiley_face_simple_green_small.png",
+        "title": "\"Smiley face\"",
         "text": "Happy"
       },
       {

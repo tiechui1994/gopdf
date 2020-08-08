@@ -33,9 +33,10 @@ const (
 
 	TYPE_SPACE = "space"
 
-	TYPE_PARAGRAPH = "paragraph"
-	TYPE_HEADING   = "heading"
-	TYPE_LIST      = "list"
+	TYPE_PARAGRAPH  = "paragraph"
+	TYPE_HEADING    = "heading"
+	TYPE_LIST       = "list"
+	TYPE_BLOCKQUOTE = "blockquote"
 )
 
 const (
@@ -89,7 +90,7 @@ type MdText struct {
 	pdf        *core.Report
 	font       core.Font
 	lineHeight float64
-	
+
 	stoped    bool    // symbol stoped
 	precision float64 // sigle text char length
 	length    float64
@@ -98,8 +99,10 @@ type MdText struct {
 	link      string // special TYPE_LINK
 	newlines  int
 
-	needpadding bool    // need pading
-	pading      float64 // padding left length
+	padding float64 // padding left length
+
+	offsetx float64
+	offsety float64
 }
 
 func (c *MdText) SetText(font interface{}, text ...string) {
@@ -148,10 +151,17 @@ func (c *MdText) SetText(font interface{}, text ...string) {
 	}
 }
 
+var next bool
+
 func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	pageEndX, pageEndY := c.pdf.GetPageEndXY()
 	x1, y := c.pdf.GetXY()
 	x2 := pageEndX
+
+	if next {
+		next = false
+		log.Println("next", x1, y)
+	}
 
 	c.pdf.Font(c.font.Family, c.font.Size, c.font.Style)
 	c.pdf.SetFontWithStyle(c.font.Family, c.font.Style, c.font.Size)
@@ -189,7 +199,11 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 			c.pdf.LineH(x1, y+c.precision, x1+width)
 			c.pdf.LineColor(1, 1, 1)
 		default:
-			c.pdf.Cell(x1, y-0.45, text)
+			c.pdf.Cell(x1+c.offsetx, y+c.offsety, text)
+		}
+
+		if c.padding > 0 {
+			log.Println("before", x1+c.offsetx, c.text)
 		}
 
 		if newline {
@@ -202,6 +216,11 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 		// need new page, x,y must statisfy condition
 		if (y >= pageEndY || pageEndY-y < c.lineHeight) && (newline || math.Abs(x1-pageEndX) < c.precision) {
 			return true, c.stoped, nil
+		}
+
+		if c.padding > 0 {
+			next = true
+			log.Println("after", x1, y, newline, c.padding, c.text)
 		}
 
 		c.pdf.SetXY(x1, y)
@@ -220,7 +239,8 @@ func (c *MdText) GetSubText(x1, x2 float64) (text string, width float64, newline
 		return "", 0, false
 	}
 
-	needpadding := c.needpadding
+	pageX, _ := c.pdf.GetPageStartXY()
+	needpadding := c.padding > 0 && pageX == x1
 	remainText := c.remain
 	index := strings.Index(c.remain, "\n")
 	if index != -1 {
@@ -234,11 +254,14 @@ func (c *MdText) GetSubText(x1, x2 float64) (text string, width float64, newline
 	length := c.pdf.MeasureTextWidth(remainText)
 
 	if needpadding {
-		width -= c.pading
+		width -= c.padding
 	}
 	defer func() {
 		if needpadding {
-			text = strings.Repeat(" ", int(c.pading/c.precision)) + text
+			space := c.pdf.MeasureTextWidth(" ")
+			log.Println(space, c.padding)
+			text = strings.Repeat(" ", int(c.padding/space)) + text
+			width += c.padding
 		}
 	}()
 
@@ -531,8 +554,8 @@ type MdList struct {
 	children []mardown
 	Type     string
 
-	headerWrited bool
-	Ordered      bool
+	Ordered bool
+	padding float64
 }
 
 func (l *MdList) SetToken(token Token) error {
@@ -543,44 +566,73 @@ func (l *MdList) SetToken(token Token) error {
 		return fmt.Errorf("invalid type")
 	}
 	l.Ordered = token.Ordered
-	if !token.Ordered {
-		for _, item := range token.Items {
-			text := &MdText{pdf: l.pdf, Type: TYPE_TEXT}
-			text.SetText(core.Font{Family: l.fonts[FONT_NORMAL], Size: 28}, " · ")
-			l.children = append(l.children, text)
-			for _, item_token := range item.Tokens {
-				for _, tok := range item_token.Tokens {
-					switch tok.Type {
-					case TYPE_STRONG:
-						strong := &MdText{pdf: l.pdf, Type: tok.Type}
-						strong.SetText(l.fonts[FONT_BOLD], tok.Text)
-						l.children = append(l.children, strong)
-					case TYPE_LINK:
-						link := &MdText{pdf: l.pdf, Type: tok.Type}
-						link.SetText(l.fonts[FONT_NORMAL], tok.Text, tok.Href)
-						l.children = append(l.children, link)
-					case TYPE_TEXT:
-						text := &MdText{pdf: l.pdf, Type: tok.Type}
-						text.SetText(l.fonts[FONT_NORMAL], tok.Text)
-						l.children = append(l.children, text)
-					case TYPE_SPACE:
-						space := &MdSpace{pdf: l.pdf, Type: tok.Type}
-						l.children = append(l.children, space)
-					}
-				}
+
+	for index, item := range token.Items {
+		for _, tok := range item.Tokens {
+			// special handle "list", "space"
+			switch tok.Type {
+			case TYPE_LIST:
+				space := &MdSpace{pdf: l.pdf, Type: TYPE_SPACE}
+				l.children = append(l.children, space)
+
+				list := &MdList{pdf: l.pdf, fonts: l.fonts, Type: TYPE_LIST, padding: l.padding + 17.7}
+				list.SetToken(tok)
+				l.children = append(l.children, list)
+				continue
+
+			case TYPE_SPACE:
+				space := &MdSpace{pdf: l.pdf, Type: tok.Type}
+				l.children = append(l.children, space)
+				continue
+
+			case TYPE_BLOCKQUOTE:
+				continue
+
+			case TYPE_CODE:
+				code := &MdText{pdf: l.pdf, Type: tok.Type}
+				code.SetText(l.fonts[FONT_NORMAL], tok.Text)
+				l.children = append(l.children, code)
+				continue
 			}
-			space := &MdSpace{pdf: l.pdf, Type: TYPE_SPACE}
-			l.children = append(l.children, space)
+
+			if token.Ordered {
+				text := &MdText{pdf: l.pdf, Type: TYPE_TEXT, offsety: -0.45, padding: l.padding}
+				text.SetText(core.Font{Family: l.fonts[FONT_NORMAL], Size: defaultFontSize}, fmt.Sprintf("%v. ", index+1))
+				l.children = append(l.children, text)
+			}
+
+			if !token.Ordered {
+				text := &MdText{pdf: l.pdf, Type: TYPE_TEXT, offsety: -6.3, padding: l.padding}
+				text.SetText(core.Font{Family: l.fonts[FONT_NORMAL], Size: 28}, "· ")
+				l.children = append(l.children, text)
+			}
+
+			switch tok.Type {
+			case TYPE_STRONG:
+				strong := &MdText{pdf: l.pdf, Type: tok.Type, padding: l.padding}
+				strong.SetText(l.fonts[FONT_BOLD], tok.Text)
+				l.children = append(l.children, strong)
+			case TYPE_LINK:
+				link := &MdText{pdf: l.pdf, Type: tok.Type, padding: l.padding}
+				link.SetText(l.fonts[FONT_NORMAL], tok.Text, tok.Href)
+				l.children = append(l.children, link)
+			case TYPE_TEXT:
+				text := &MdText{pdf: l.pdf, Type: tok.Type, padding: l.padding}
+				text.SetText(l.fonts[FONT_NORMAL], tok.Text)
+				l.children = append(l.children, text)
+			}
 		}
+
+		space := &MdSpace{pdf: l.pdf, Type: TYPE_SPACE}
+		l.children = append(l.children, space)
 	}
+
+	log.Println("token.Loose", token.Loose)
 
 	return nil
 }
 
 func (l *MdList) GenerateAtomicCell() (pagebreak, over bool, err error) {
-	if l.Ordered {
-		return false, true, nil
-	}
 	for i, comment := range l.children {
 		pagebreak, over, err = comment.GenerateAtomicCell()
 		if err != nil {
@@ -598,7 +650,7 @@ func (l *MdList) GenerateAtomicCell() (pagebreak, over bool, err error) {
 		}
 	}
 
-	return
+	return false, true, nil
 }
 
 func (l *MdList) String() string {
@@ -676,7 +728,7 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 			codespan.SetText(mt.fonts[FONT_NORMAL], token.Text)
 			mt.contents = append(mt.contents, codespan)
 		case TYPE_CODE:
-			code := &MdText{pdf: mt.pdf, Type: token.Type, needpadding: true, pading: 15}
+			code := &MdText{pdf: mt.pdf, Type: token.Type, padding: 15}
 			code.SetText(mt.fonts[FONT_NORMAL], token.Text+"\n")
 			mt.contents = append(mt.contents, code)
 		case TYPE_STRONG:
@@ -704,7 +756,6 @@ func (mt *MarkdownText) GenerateAtomicCell() (err error) {
 		//log.Println(pagebreak, over, content)
 
 		if pagebreak {
-			log.Println("break", over, content)
 			if over {
 				i++
 			}
