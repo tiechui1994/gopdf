@@ -28,8 +28,8 @@ const (
 	TYPE_EM       = "em"       // *em*
 	TYPE_CODESPAN = "codespan" // `codespan`, ```codespan```
 	TYPE_CODE     = "code"     //
-	TYPE_LINK     = "link"     // [xx](http://ww)
-	TYPE_IMAGE    = "image"
+	TYPE_LINK     = "link"     // [xx](http://www.link)
+	TYPE_IMAGE    = "image"    // ![xxx](https://www.image)
 
 	TYPE_SPACE = "space"
 
@@ -69,13 +69,13 @@ type Token struct {
 }
 
 type mardown interface {
-	SetText(fontFamily string, text ...string)
+	SetText(font interface{}, text ...string)
 	GenerateAtomicCell() (pagebreak, over bool, err error)
 }
 
 type abstractMarkDown struct{}
 
-func (a *abstractMarkDown) SetText(string, ...string) {
+func (a *abstractMarkDown) SetText(interface{}, ...string) {
 }
 func (a *abstractMarkDown) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	return false, true, nil
@@ -89,40 +89,43 @@ type MdText struct {
 	pdf        *core.Report
 	font       core.Font
 	lineHeight float64
-
-	stoped    bool
-	precision float64
+	
+	stoped    bool    // symbol stoped
+	precision float64 // sigle text char length
 	length    float64
-	text      string
-	remain    string
+	text      string // text content
+	remain    string // renain texy
 	link      string // special TYPE_LINK
 	newlines  int
 
-	// when type is code can use
-	needpadding bool
-	padinglen   float64
+	needpadding bool    // need pading
+	pading      float64 // padding left length
 }
 
-func (c *MdText) SetText(fontFamily string, text ...string) {
+func (c *MdText) SetText(font interface{}, text ...string) {
 	if len(text) == 0 {
 		panic("text is invalid")
 	}
 
-	var font core.Font
-	switch c.Type {
-	case TYPE_STRONG:
-		font = core.Font{Family: fontFamily, Size: defaultFontSize, Style: ""}
-	case TYPE_EM:
-		font = core.Font{Family: fontFamily, Size: defaultFontSize, Style: "U"}
-	case TYPE_CODESPAN, TYPE_CODE:
-		font = core.Font{Family: fontFamily, Size: defaultCodeSpanFontSize, Style: ""}
-	case TYPE_LINK, TYPE_TEXT:
-		font = core.Font{Family: fontFamily, Size: defaultFontSize, Style: ""}
+	switch font.(type) {
+	case string:
+		family := font.(string)
+		switch c.Type {
+		case TYPE_STRONG:
+			c.font = core.Font{Family: family, Size: defaultFontSize, Style: ""}
+		case TYPE_EM:
+			c.font = core.Font{Family: family, Size: defaultFontSize, Style: "U"}
+		case TYPE_CODESPAN, TYPE_CODE:
+			c.font = core.Font{Family: family, Size: defaultCodeSpanFontSize, Style: ""}
+		case TYPE_LINK, TYPE_TEXT:
+			c.font = core.Font{Family: family, Size: defaultFontSize, Style: ""}
+		}
+	case core.Font:
+		c.font = font.(core.Font)
 	default:
 		panic(fmt.Sprintf("invalid type: %v", c.Type))
 	}
 
-	c.font = font
 	text[0] = strings.Replace(text[0], "\t", "    ", -1)
 	c.text = text[0]
 	c.remain = text[0]
@@ -130,8 +133,8 @@ func (c *MdText) SetText(fontFamily string, text ...string) {
 		c.link = text[1]
 	}
 	c.lineHeight = defaultLineHeight
-	c.pdf.Font(font.Family, font.Size, font.Style)
-	c.pdf.SetFontWithStyle(font.Family, font.Style, font.Size)
+	c.pdf.Font(c.font.Family, c.font.Size, c.font.Style)
+	c.pdf.SetFontWithStyle(c.font.Family, c.font.Style, c.font.Size)
 	re := regexp.MustCompile(`[\n \t=#%@&"':<>,(){}_;/\?\.\+\-\=\^\$\[\]\!]`)
 
 	subs := re.FindAllString(c.text, -1)
@@ -155,8 +158,8 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 
 	text, width, newline := c.GetSubText(x1, x2)
 	for !c.stoped {
-		if c.Type == TYPE_CODESPAN {
-			// other padding is testing data
+		switch c.Type {
+		case TYPE_CODESPAN:
 			// bg: 248,248,255 text:1,1,1 line:	245,245,245,     Typora
 			// bg: 249,242,244 text:199,37,78 line:	245,245,245  GitLab
 			c.pdf.BackgroundColor(x1, y, width, 15.0, "249,242,244",
@@ -165,7 +168,7 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 			c.pdf.TextColor(199, 37, 78)
 			c.pdf.Cell(x1, y+3.15, text)
 			c.pdf.TextColor(1, 1, 1)
-		} else if c.Type == TYPE_CODE {
+		case TYPE_CODE:
 			// bg: 248,248,255, text: 1,1,1    Typora
 			// bg: 40,42,54, text: 248,248,242  CSDN
 			c.pdf.BackgroundColor(x1, y, x2-x1, 18.0, "40,42,54",
@@ -173,7 +176,8 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 			c.pdf.TextColor(248, 248, 242)
 			c.pdf.Cell(x1, y+3.15, text)
 			c.pdf.TextColor(1, 1, 1)
-		} else if c.Type == TYPE_LINK {
+
+		case TYPE_LINK:
 			// text, blue
 			c.pdf.TextColor(0, 0, 255)
 			c.pdf.ExternalLink(x1, y+12.0, 15, text, c.link)
@@ -184,7 +188,7 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 			c.pdf.LineType("solid", 0.4)
 			c.pdf.LineH(x1, y+c.precision, x1+width)
 			c.pdf.LineColor(1, 1, 1)
-		} else {
+		default:
 			c.pdf.Cell(x1, y-0.45, text)
 		}
 
@@ -216,7 +220,7 @@ func (c *MdText) GetSubText(x1, x2 float64) (text string, width float64, newline
 		return "", 0, false
 	}
 
-	needpadding := c.Type == TYPE_CODE && c.needpadding
+	needpadding := c.needpadding
 	remainText := c.remain
 	index := strings.Index(c.remain, "\n")
 	if index != -1 {
@@ -230,18 +234,17 @@ func (c *MdText) GetSubText(x1, x2 float64) (text string, width float64, newline
 	length := c.pdf.MeasureTextWidth(remainText)
 
 	if needpadding {
-		width -= c.pdf.MeasureTextWidth("  ")
+		width -= c.pading
 	}
 	defer func() {
 		if needpadding {
-			text = "  " + text
+			text = strings.Repeat(" ", int(c.pading/c.precision)) + text
 		}
 	}()
 
 	if length <= width {
 		if newline {
 			c.remain = c.remain[index+1:]
-			c.needpadding = c.Type == TYPE_CODE
 		} else {
 			c.remain = ""
 		}
@@ -327,7 +330,7 @@ type MdImage struct {
 	height float64
 }
 
-func (mi *MdImage) SetText(fontFamily string, filename ...string) {
+func (i *MdImage) SetText(_ interface{}, filename ...string) {
 	var filepath string
 	if strings.HasPrefix(filename[0], "http") {
 		response, err := http.DefaultClient.Get(filename[0])
@@ -352,33 +355,76 @@ func (mi *MdImage) SetText(fontFamily string, filename ...string) {
 		filepath = filename[0]
 	}
 
-	if mi.height == 0 {
-		mi.height = defaultLineHeight
+	if i.height == 0 {
+		i.height = defaultLineHeight
 	}
 
-	mi.image = NewImageWithWidthAndHeight(filepath, 0, mi.height, mi.pdf)
+	i.image = NewImageWithWidthAndHeight(filepath, 0, i.height, i.pdf)
 }
 
-func (mi *MdImage) GenerateAtomicCell() (pagebreak, over bool, err error) {
-	if mi.image == nil {
+func (i *MdImage) GenerateAtomicCell() (pagebreak, over bool, err error) {
+	if i.image == nil {
 		return false, true, nil
 	}
-	err = mi.image.GenerateAtomicCell()
+	err = i.image.GenerateAtomicCell()
 	return
 }
 
 // Combination components
 
 type MdHeader struct {
-	Size       int
-	pdf        *core.Report
-	fonts      map[string]string
-	children   []mardown
-	lineHeight float64
+	abstractMarkDown
+	pdf      *core.Report
+	fonts    map[string]string
+	children []mardown
+	Type     string
+}
 
-	text          string
-	remain        string
-	needBreakLine bool
+func (h *MdHeader) CalFontSizeAndLineHeight(size int) (fontsize int, lineheight float64) {
+	switch size {
+	case 1:
+		return 20, 24
+	case 2:
+		return 18, 21
+	case 3:
+		return 16, 19
+	case 4:
+		return defaultFontSize, defaultLineHeight
+	case 5:
+		return 12, 15
+	case 6:
+		return defaultCodeSpanFontSize, defaultLineHeight
+	}
+
+	return defaultFontSize, defaultLineHeight
+}
+
+func (h *MdHeader) SetToken(token Token) (err error) {
+	if h.fonts == nil || len(h.fonts) == 0 {
+		return fmt.Errorf("no fonts")
+	}
+	if token.Type != TYPE_HEADING {
+		return fmt.Errorf("invalid type")
+	}
+
+	fontsize, lineheight := h.CalFontSizeAndLineHeight(token.Depth)
+	font := core.Font{Family: h.fonts[FONT_BOLD], Size: fontsize}
+	for _, v := range token.Tokens {
+		switch v.Type {
+		case TYPE_TEXT:
+			text := &MdText{pdf: h.pdf, Type: v.Type, lineHeight: lineheight}
+			text.SetText(font, v.Text)
+			h.children = append(h.children, text)
+		case TYPE_IMAGE:
+			image := &MdImage{pdf: h.pdf, Type: v.Type, height: lineheight}
+			h.children = append(h.children, image)
+		}
+	}
+
+	space := &MdSpace{pdf: h.pdf, Type: TYPE_SPACE}
+	h.children = append(h.children, space)
+
+	return nil
 }
 
 func (h *MdHeader) GenerateAtomicCell() (pagebreak, over bool, err error) {
@@ -398,12 +444,7 @@ func (h *MdHeader) GenerateAtomicCell() (pagebreak, over bool, err error) {
 			return pagebreak, len(h.children) == 0, nil
 		}
 	}
-	return
-}
-
-func (h *MdHeader) String() string {
-	text := strings.Replace(h.remain, "\n", "|", -1)
-	return fmt.Sprintf("[size=%v,text=%v]", h.Size, text)
+	return false, true, nil
 }
 
 type MdParagraph struct {
@@ -483,8 +524,6 @@ func (p *MdParagraph) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	return
 }
 
-///////////////////////////////////////////////////////
-
 type MdList struct {
 	abstractMarkDown
 	pdf      *core.Report
@@ -507,7 +546,7 @@ func (l *MdList) SetToken(token Token) error {
 	if !token.Ordered {
 		for _, item := range token.Items {
 			text := &MdText{pdf: l.pdf, Type: TYPE_TEXT}
-			text.SetText(l.fonts[FONT_NORMAL], " · ")
+			text.SetText(core.Font{Family: l.fonts[FONT_NORMAL], Size: 28}, " · ")
 			l.children = append(l.children, text)
 			for _, item_token := range item.Tokens {
 				for _, tok := range item_token.Tokens {
@@ -573,8 +612,6 @@ func (l *MdList) String() string {
 	return buf.String()
 }
 
-//
-
 type MarkdownText struct {
 	quote       bool
 	pdf         *core.Report
@@ -615,6 +652,10 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 			list := &MdList{pdf: mt.pdf, fonts: mt.fonts, Type: token.Type}
 			list.SetToken(token)
 			mt.contents = append(mt.contents, list)
+		case TYPE_HEADING:
+			header := &MdHeader{pdf: mt.pdf, fonts: mt.fonts, Type: token.Type}
+			header.SetToken(token)
+			mt.contents = append(mt.contents, header)
 		case TYPE_SPACE:
 			space := &MdSpace{pdf: mt.pdf, Type: token.Type}
 			mt.contents = append(mt.contents, space)
@@ -635,13 +676,14 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 			codespan.SetText(mt.fonts[FONT_NORMAL], token.Text)
 			mt.contents = append(mt.contents, codespan)
 		case TYPE_CODE:
-			code := &MdText{pdf: mt.pdf, Type: token.Type}
+			code := &MdText{pdf: mt.pdf, Type: token.Type, needpadding: true, pading: 15}
 			code.SetText(mt.fonts[FONT_NORMAL], token.Text+"\n")
 			mt.contents = append(mt.contents, code)
 		case TYPE_STRONG:
 			strong := &MdText{pdf: mt.pdf, Type: token.Type}
 			strong.SetText(mt.fonts[FONT_BOLD], token.Text)
 			mt.contents = append(mt.contents, strong)
+
 		}
 	}
 }

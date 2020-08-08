@@ -322,13 +322,13 @@
   },
   {
     "type": "paragraph",
-    "raw": "If you want to include code and have new\nlines preserved, indent the line with a tab\nor at least four spaces:",
-    "text": "If you want to include code and have new\nlines preserved, indent the line with a tab\nor at least four spaces:",
+    "raw": "If you want to include code and have new lines preserved, indent the line with a tab or at least four spaces:",
+    "text": "If you want to include code and have new lines preserved, indent the line with a tab or at least four spaces:",
     "tokens": [
       {
         "type": "text",
-        "raw": "If you want to include code and have new\nlines preserved, indent the line with a tab\nor at least four spaces:",
-        "text": "If you want to include code and have new\nlines preserved, indent the line with a tab\nor at least four spaces:"
+        "raw": "If you want to include code and have new lines preserved,indent the line with a tab or at least four spaces:",
+        "text": "If you want to include code and have new lines preserved,indent the line with a tab or at least four spaces:"
       }
     ]
   },
@@ -540,8 +540,8 @@
       },
       {
         "type": "text",
-        "raw": ". Great for text, but ugly for HTML.\nNext is an inline link to ",
-        "text": ". Great for text, but ugly for HTML.\nNext is an inline link to "
+        "raw": ". Great for text, but ugly for HTML.Next is an inline link to ",
+        "text": ". Great for text, but ugly for HTML.Next is an inline link to "
       },
       {
         "type": "link",
@@ -559,8 +559,8 @@
       },
       {
         "type": "text",
-        "raw": ". A little nicer.\nThis is a reference-style link to ",
-        "text": ". A little nicer.\nThis is a reference-style link to "
+        "raw": ". A little nicer.This is a reference-style link to ",
+        "text": ". A little nicer.This is a reference-style link to "
       },
       {
         "type": "text",
@@ -588,8 +588,8 @@
       },
       {
         "type": "text",
-        "raw": ".\nLastly, here iss a pretty link to ",
-        "text": ".\nLastly, here&#39;s a pretty link to "
+        "raw": ".Lastly, here iss a pretty link to ",
+        "text": ".Lastly, here&#39;s a pretty link to "
       },
       {
         "type": "link",
@@ -654,8 +654,8 @@
   },
   {
     "type": "paragraph",
-    "raw": "Title attributes may be added to links by adding text after a link.\nThis is the [inline link](https://www.bing.com \"Bing\") with a \"Bing\" title.\nYou can also go to [W3C] [2] and maybe visit a [friend].",
-    "text": "Title attributes may be added to links by adding text after a link.\nThis is the [inline link](https://www.bing.com \"Bing\") with a \"Bing\" title.\nYou can also go to [W3C] [2] and maybe visit a [friend].",
+    "raw": "Title attributes may be added to links by adding text after a link.This is the [inline link](https://www.bing.com \"Bing\") with a \"Bing\" title.\nYou can also go to [W3C] [2] and maybe visit a [friend].",
+    "text": "Title attributes may be added to links by adding text after a link.This is the [inline link](https://www.bing.com \"Bing\") with a \"Bing\" title.\nYou can also go to [W3C] [2] and maybe visit a [friend].",
     "tokens": [
       {
         "type": "text",
@@ -678,8 +678,8 @@
       },
       {
         "type": "text",
-        "raw": " with a \"Bing\" title.\nYou can also go to ",
-        "text": " with a &quot;Bing&quot; title.\nYou can also go to "
+        "raw": " with a \"Bing\" title.You can also go to ",
+        "text": " with a &quot;Bing&quot; title.You can also go to "
       },
       {
         "type": "text",

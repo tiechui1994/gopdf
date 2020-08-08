@@ -21,7 +21,7 @@ const (
 	MD_MB = "Microsoft Bold"
 )
 
-func MdReport() {
+func MarkdownReport() {
 	r := core.CreateReport()
 	font1 := core.FontMap{
 		FontName: MD_IG,
@@ -38,13 +38,13 @@ func MdReport() {
 	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
 	r.SetPage("A4", "P")
 
-	r.RegisterExecutor(core.Executor(MdReportExecutor), core.Detail)
+	r.RegisterExecutor(core.Executor(MarkdownReportExecutor), core.Detail)
 
 	r.Execute("markdown_test.pdf")
 	r.SaveAtomicCellText("markdown_test.txt")
 }
 
-func MdReportExecutor(report *core.Report) {
+func MarkdownReportExecutor(report *core.Report) {
 	data, _ := ioutil.ReadFile("./lex.json")
 	var list []Token
 	err := json.Unmarshal(data, &list)
@@ -61,8 +61,8 @@ func MdReportExecutor(report *core.Report) {
 	md.GenerateAtomicCell()
 }
 
-func TestMd(t *testing.T) {
-	MdReport()
+func TestMarkdown(t *testing.T) {
+	MarkdownReport()
 }
 
 func TestTokens(t *testing.T) {
