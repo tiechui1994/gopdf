@@ -13,16 +13,13 @@ First thing is first. You can use *stars* or _underscores_ for italics. **Double
 
 Paragraphs are pretty easy too. Just have a blank line between chunks of text.
 
-> This chunk of text is in a block quote. Its multiple lines will all be
-> indented a bit from the rest of the text.
+> This chunk of text is in a block quote. Its multiple lines will all be indented a bit from the rest of the text.
 >
 > > Multiple levels of block quotes also work.
 
 Sometimes you want to include code, such as when you are explaining how `<h1>` HTML tags work, or maybe you are a programmer and you are discussing `someMethod()`.
 
-If you want to include code and have new
-lines preserved, indent the line with a tab
-or at least four spaces:
+If you want to include code and have new lines preserved, indent the line with a tab or at least four spaces:
 
     Extra spaces work here too.
     This is also called preformatted text and it is useful for showing examples.
@@ -106,21 +103,16 @@ You might want a few advanced lists:
   3. Further nesting means you should indent with two more spaces
     * This line is indented with four spaces.
 
-- List items can be quite lengthy. You can keep typing and either continue
-them on the next line with no indentation.
+- List items can be quite lengthy. You can keep typing and either continue them on the next line with no indentation.
 
 - Alternately, if that looks ugly, you can also
   indent the next line a bit for a prettier look.
 
 - You can put large blocks of text in your list by just indenting with two spaces.
 
-  This is formatted the same as code, but you can inspect the HTML
-  and find that it is just wrapped in a `<p>` tag and *won not* be shown
-  as preformatted text.
+  This is formatted the same as code, but you can inspect the HTML and find that it is just wrapped in a `<p>` tag and *won not* be shown as preformatted text.
 
-  You can keep adding more and more paragraphs to a single
-  list item by adding the traditional blank line and then keep
-  on indenting the paragraphs with two spaces.
+  You can keep adding more and more paragraphs to a single list item by adding the traditional blank line and then keep on indenting the paragraphs with two spaces.
 
   You really only need to indent the first line,
 but that looks ugly.
@@ -155,7 +147,7 @@ Images
 
 Images work exactly like links, but they have exclamation points in front. They work with references and titles too.
 
-![Google Logo](https://www.google.com/images/errors/logo_sm.gif) and ![Happy].
+![Google Logo](/home/quinn/Pictures/logo_sm.png) and ![Happy].
 
 [Happy]: https://wpclipart.com/smiley/happy/simple_colors/smiley_face_simple_green_small.png ("Smiley face")
 

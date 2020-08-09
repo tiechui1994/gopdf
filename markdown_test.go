@@ -45,7 +45,7 @@ func MarkdownReport() {
 }
 
 func MarkdownReportExecutor(report *core.Report) {
-	data, _ := ioutil.ReadFile("./lex.json")
+	data, _ := ioutil.ReadFile("./markdown/src/mark.json")
 	var list []Token
 	err := json.Unmarshal(data, &list)
 	if err != nil {
@@ -66,7 +66,7 @@ func TestMarkdown(t *testing.T) {
 }
 
 func TestTokens(t *testing.T) {
-	data, _ := ioutil.ReadFile("./lex.json")
+	data, _ := ioutil.ReadFile("./markdown/src/mark.json")
 	var list []Token
 	err := json.Unmarshal(data, &list)
 	if err != nil {

@@ -71,6 +71,7 @@ type Token struct {
 
 type mardown interface {
 	SetText(font interface{}, text ...string)
+	GetType() string
 	GenerateAtomicCell() (pagebreak, over bool, err error)
 }
 
@@ -80,6 +81,9 @@ func (a *abstractMarkDown) SetText(interface{}, ...string) {
 }
 func (a *abstractMarkDown) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	return false, true, nil
+}
+func (a *abstractMarkDown) GetType() string {
+	return ""
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -173,8 +177,8 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 		case TYPE_CODE:
 			// bg: 248,248,255, text: 1,1,1    Typora
 			// bg: 40,42,54, text: 248,248,242  CSDN
-			c.pdf.BackgroundColor(x1, y, x2-x1, 18.0, "40,42,54",
-				"1111", "40,42,54")
+			bg := "128,255,128"
+			c.pdf.BackgroundColor(x1, y, x2-x1, 18.0, bg, "0000")
 			c.pdf.TextColor(248, 248, 242)
 			c.pdf.Cell(x1, y+3.15, text)
 			c.pdf.TextColor(1, 1, 1)
@@ -213,6 +217,10 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	return false, c.stoped, nil
 }
 
+func (c *MdText) GetType() string {
+	return c.Type
+}
+
 // GetSubText, Returns the content of a string of length x2-x1.
 // This string is a substring of text.
 // After return, the remain and length will change
@@ -242,7 +250,6 @@ func (c *MdText) GetSubText(x1, x2 float64) (text string, width float64, newline
 	defer func() {
 		if needpadding {
 			space := c.pdf.MeasureTextWidth(" ")
-			log.Println(space, c.padding)
 			text = strings.Repeat(" ", int(c.padding/space)) + text
 			width += c.padding
 		}
@@ -329,6 +336,18 @@ func (c *MdSpace) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	return false, true, nil
 }
 
+func (c *MdSpace) GetType() string {
+	return c.Type
+}
+
+func (c *MdSpace) LineHeight() float64 {
+	return c.lineHeight / 2
+}
+
+func (c *MdSpace) String() string {
+	return fmt.Sprint("[type=space]")
+}
+
 type MdImage struct {
 	abstractMarkDown
 	pdf     *core.Report
@@ -378,6 +397,12 @@ func (i *MdImage) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	err = i.image.GenerateAtomicCell()
 	return
 }
+
+func (i *MdImage) GetType() string {
+	return i.Type
+}
+
+///////////////////////////////////////////////////////////////////
 
 // Combination components
 
@@ -478,29 +503,29 @@ func (p *MdParagraph) SetToken(token Token) error {
 		var child mardown
 		switch tok.Type {
 		case TYPE_LINK:
-			child = &MdText{pdf: p.pdf, Type: TYPE_LINK}
+			child = &MdText{pdf: p.pdf, Type: tok.Type, padding: p.padding}
 			child.SetText(p.fonts[FONT_NORMAL], tok.Text, tok.Href)
 		case TYPE_TEXT:
-			child = &MdText{pdf: p.pdf, Type: TYPE_TEXT}
+			child = &MdText{pdf: p.pdf, Type: tok.Type, padding: p.padding}
 			child.SetText(p.fonts[FONT_NORMAL], tok.Text)
 		case TYPE_EM:
-			child = &MdText{pdf: p.pdf, Type: TYPE_EM}
+			child = &MdText{pdf: p.pdf, Type: tok.Type, padding: p.padding}
 			child.SetText(p.fonts[FONT_IALIC], tok.Text)
 		case TYPE_CODESPAN:
-			child = &MdText{pdf: p.pdf, Type: TYPE_CODESPAN}
+			child = &MdText{pdf: p.pdf, Type: tok.Type, padding: p.padding}
 			child.SetText(p.fonts[FONT_NORMAL], tok.Text)
 		case TYPE_CODE:
-			child = &MdText{pdf: p.pdf, Type: TYPE_CODE}
+			child = &MdText{pdf: p.pdf, Type: tok.Type, padding: p.padding}
 			child.SetText(p.fonts[FONT_NORMAL], tok.Text)
 		case TYPE_STRONG:
-			child = &MdText{pdf: p.pdf, Type: TYPE_STRONG}
+			child = &MdText{pdf: p.pdf, Type: tok.Type, padding: p.padding}
 			text := tok.Text
 			if len(tok.Tokens) > 0 && tok.Tokens[0].Type == TYPE_EM {
 				text = tok.Tokens[0].Text
 			}
 			child.SetText(p.fonts[FONT_BOLD], text)
 		case TYPE_IMAGE:
-			child = &MdImage{pdf: p.pdf, Type: TYPE_IMAGE}
+			child = &MdImage{pdf: p.pdf, Type: tok.Type, padding: p.padding}
 			child.SetText("", tok.Href)
 		}
 
@@ -615,8 +640,6 @@ func (l *MdList) SetToken(token Token) error {
 		l.children = append(l.children, space)
 	}
 
-	log.Println("token.Loose", token.Loose)
-
 	return nil
 }
 
@@ -669,25 +692,27 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 		return fmt.Errorf("invalid type")
 	}
 
+	b.padding = 17.10
+
 	for _, token := range t.Tokens {
 		switch token.Type {
 		case TYPE_PARAGRAPH:
-			paragraph := &MdParagraph{pdf: b.pdf, fonts: b.fonts, Type: token.Type}
+			paragraph := &MdParagraph{pdf: b.pdf, fonts: b.fonts, Type: token.Type, padding: b.padding}
 			paragraph.SetToken(token)
-			b.children = append(b.children, paragraph)
+			b.children = append(b.children, paragraph.children...)
 		case TYPE_LIST:
-			list := &MdList{pdf: b.pdf, fonts: b.fonts, Type: token.Type}
+			list := &MdList{pdf: b.pdf, fonts: b.fonts, Type: token.Type, padding: b.padding}
 			list.SetToken(token)
-			b.children = append(b.children, list)
+			b.children = append(b.children, list.children...)
 		case TYPE_HEADING:
-			header := &MdHeader{pdf: b.pdf, fonts: b.fonts, Type: token.Type,}
+			header := &MdHeader{pdf: b.pdf, fonts: b.fonts, Type: token.Type, padding: b.padding}
 			header.SetToken(token)
-			b.children = append(b.children, header)
+			b.children = append(b.children, header.children...)
 		case TYPE_SPACE:
-			space := &MdSpace{pdf: b.pdf, Type: token.Type}
+			space := &MdSpace{pdf: b.pdf, Type: token.Type, padding: b.padding}
 			b.children = append(b.children, space)
 		case TYPE_LINK:
-			link := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding}
+			link := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding,}
 			link.SetText(b.fonts[FONT_NORMAL], token.Text, token.Href, )
 			b.children = append(b.children, link)
 		case TYPE_TEXT:
@@ -695,6 +720,7 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 			text.SetText(b.fonts[FONT_NORMAL], token.Text)
 			b.children = append(b.children, text)
 		case TYPE_EM:
+			log.Println(token.Text)
 			em := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding}
 			em.SetText(b.fonts[FONT_IALIC], token.Text)
 			b.children = append(b.children, em)
@@ -717,8 +743,18 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 }
 
 func (b *MdBlockQuote) GenerateAtomicCell() (pagebreak, over bool, err error) {
-	pageStartX, _ := b.pdf.GetPageStartXY()
-	_, y1 := b.pdf.GetXY()
+	var ignore bool
+	if len(b.children) > 0 && b.children[len(b.children)-1].GetType() == TYPE_SPACE {
+		ignore = true
+	}
+
+	var (
+		x      float64
+		y1, y2 float64
+	)
+
+	x, _ = b.pdf.GetPageStartXY()
+	_, y1 = b.pdf.GetXY()
 	color := "175,238,238"
 	for i, comment := range b.children {
 		pagebreak, over, err = comment.GenerateAtomicCell()
@@ -726,9 +762,15 @@ func (b *MdBlockQuote) GenerateAtomicCell() (pagebreak, over bool, err error) {
 			return
 		}
 
+		if over && i == len(b.children)-1 && ignore {
+			_, y2 = b.pdf.GetXY()
+			ignoreHeight := comment.(*MdSpace).LineHeight()
+			y2 -= ignoreHeight + 5
+		}
+
 		if pagebreak {
-			_, y2 := b.pdf.GetPageEndXY()
-			b.pdf.BackgroundColor(pageStartX, y1, 5.0, y2-y1, color,
+			_, y2 = b.pdf.GetXY()
+			b.pdf.BackgroundColor(x, y1, 5.0, y2-y1, color,
 				"0000", color)
 			if over && i != len(b.children)-1 {
 				b.children = b.children[i+1:]
@@ -739,8 +781,12 @@ func (b *MdBlockQuote) GenerateAtomicCell() (pagebreak, over bool, err error) {
 			return pagebreak, len(b.children) == 0, nil
 		}
 	}
-	_, y2 := b.pdf.GetXY()
-	b.pdf.BackgroundColor(pageStartX, y1, 5.0, y2-y1, color,
+
+	if y2 == 0 {
+		_, y2 = b.pdf.GetXY()
+	}
+
+	b.pdf.BackgroundColor(x, y1, 5.0, y2-y1, color,
 		"0000", color)
 
 	return false, true, nil
