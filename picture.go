@@ -13,6 +13,7 @@ import (
 	"golang.org/x/image/bmp"
 	"golang.org/x/image/webp"
 	"golang.org/x/image/tiff"
+	"math"
 )
 
 const (
@@ -178,8 +179,8 @@ func ConvertTIFF2JPEG(srcPath, dstPath string) (err error) {
 
 func DrawPNG(srcPath string) {
 	const (
-		width  = 300
-		height = 500
+		width  = 200
+		height = 200
 	)
 
 	// 文件
@@ -188,13 +189,21 @@ func DrawPNG(srcPath string) {
 
 	// Image, 进行绘图操作
 	pngImage := image.NewRGBA(image.Rect(0, 0, width, height))
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
+	draw.Draw(pngImage, pngImage.Bounds(), image.White, image.ZP, draw.Src)
 
-			pngImage.Set(x, y, color.RGBA{uint8(256 % (x + 1)), uint8(y % 256), uint8((x ^ y) % 256), uint8((x ^ y) % 256)})
-		}
+	a, b, c := 5.70, 7.0, 2.2
+	for p := 0.0; p <= 720.0; p += 0.03125 {
+		x := int(20*((a-b)*math.Cos(p)+c*math.Cos((a/b-1)*p))) + 100
+		y := int(20*((a-b)*math.Sin(p)-c*math.Sin((a/b-1)*p))) + 100
+
+		pngImage.Set(x, y, color.RGBA{
+			R: uint8(250),
+			G: uint8(4),
+			B: uint8(4),
+			A: uint8(255),
+		})
 	}
 
-	// 以png的格式写入文件
+	// 以 png 的格式写入文件
 	png.Encode(pngFile, pngImage)
 }

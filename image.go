@@ -19,7 +19,8 @@ type Image struct {
 
 func NewImage(path string, pdf *core.Report) *Image {
 	if _, err := os.Stat(path); err != nil {
-		panic(fmt.Sprintf("the path error, %v", path))
+		path = fmt.Sprintf("/tmp/%v.png", time.Now().Unix())
+		DrawPNG(path)
 	}
 
 	dstPath := fmt.Sprintf("/tmp/%v.jpeg", time.Now().UnixNano())
@@ -55,7 +56,8 @@ func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Re
 	}
 
 	if _, err := os.Stat(path); err != nil {
-		panic("the path error")
+		path = fmt.Sprintf("/tmp/%v.png", time.Now().Unix())
+		DrawPNG(path)
 	}
 
 	dstPath := fmt.Sprintf("/tmp/%v.jpeg", time.Now().UnixNano())

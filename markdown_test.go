@@ -4,11 +4,11 @@ import (
 	"testing"
 	"io/ioutil"
 	"encoding/json"
-	"bytes"
-	"fmt"
 	"log"
 
 	"github.com/tiechui1994/gopdf/core"
+	"bytes"
+	"fmt"
 )
 
 func init() {
@@ -84,4 +84,8 @@ func TestTokens(t *testing.T) {
 		fmt.Printf("%v\n", buf.String())
 		fmt.Printf("\n")
 	}
+}
+
+func TestDrawJPEG(t *testing.T) {
+	DrawPNG("./test.png")
 }
