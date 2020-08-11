@@ -86,6 +86,8 @@ func TestTokens(t *testing.T) {
 	}
 }
 
-func TestDrawJPEG(t *testing.T) {
+func TestDrawPNG(t *testing.T) {
 	DrawPNG("./test.png")
+	DrawSunLine("./sunline.png")
+	DrawFiveCycle("./fivecycle.png")
 }

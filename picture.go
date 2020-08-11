@@ -179,8 +179,8 @@ func ConvertTIFF2JPEG(srcPath, dstPath string) (err error) {
 
 func DrawPNG(srcPath string) {
 	const (
-		width  = 200
-		height = 200
+		width  = 300
+		height = 300
 	)
 
 	// 文件
@@ -191,10 +191,11 @@ func DrawPNG(srcPath string) {
 	pngImage := image.NewRGBA(image.Rect(0, 0, width, height))
 	draw.Draw(pngImage, pngImage.Bounds(), image.White, image.ZP, draw.Src)
 
-	a, b, c := 5.70, 7.0, 2.2
-	for p := 0.0; p <= 720.0; p += 0.03125 {
-		x := int(20*((a-b)*math.Cos(p)+c*math.Cos((a/b-1)*p))) + 100
-		y := int(20*((a-b)*math.Sin(p)-c*math.Sin((a/b-1)*p))) + 100
+	// 圆内旋转线
+	a, b, c := 5.0, 7.0, 2.2
+	for p := 0.0; p <= 1800.0; p += 0.03125 {
+		x := int(35*((a-b)*math.Cos(p)+c*math.Cos((a/b-1)*p))) + 150
+		y := int(35*((a-b)*math.Sin(p)-c*math.Sin((a/b-1)*p))) + 150
 
 		pngImage.Set(x, y, color.RGBA{
 			R: uint8(250),
@@ -207,3 +208,164 @@ func DrawPNG(srcPath string) {
 	// 以 png 的格式写入文件
 	png.Encode(pngFile, pngImage)
 }
+
+func DrawRotationOutCircle(srcPath string) {
+	const (
+		width  = 300
+		height = 300
+	)
+
+	// 文件
+	pngFile, _ := os.Create(srcPath)
+	defer pngFile.Close()
+
+	// Image, 进行绘图操作
+	pngImage := image.NewRGBA(image.Rect(0, 0, width, height))
+	draw.Draw(pngImage, pngImage.Bounds(), image.White, image.ZP, draw.Src)
+
+	// 圆外旋转线
+	a, b, c := 5.20, 3.0, 5.0
+	for p := 0.0; p <= 1800.0; p += 0.03125 {
+		x := int(10*((a+b)*math.Cos(p)-c*math.Cos((a/b+1)*p))) + 150
+		y := int(10*((a+b)*math.Sin(p)-c*math.Sin((a/b+1)*p))) + 150
+
+		pngImage.Set(x, y, color.RGBA{
+			R: uint8(250),
+			G: uint8(4),
+			B: uint8(4),
+			A: uint8(255),
+		})
+	}
+
+	// 以 png 的格式写入文件
+	png.Encode(pngFile, pngImage)
+}
+
+func DrawSunLine(srcPath string) {
+	const (
+		width  = 300
+		height = 300
+	)
+
+	// 文件
+	pngFile, _ := os.Create(srcPath)
+	defer pngFile.Close()
+
+	// Image, 进行绘图操作
+	pngImage := image.NewRGBA(image.Rect(0, 0, width, height))
+	draw.Draw(pngImage, pngImage.Bounds(), image.White, image.ZP, draw.Src)
+
+	// 旋转曲线
+
+	for p := 0.0; p <= 720.0; p += 0.03125 {
+		r := 1.5*math.Cos(50*p*360) + 1
+		x := int(55*r*math.Cos(p)) + 150
+		y := int(55*r*math.Sin(p)) + 150
+		pngImage.Set(x, y, color.RGBA{
+			R: uint8(250),
+			G: uint8(4),
+			B: uint8(4),
+			A: uint8(255),
+		})
+	}
+
+	// 以 png 的格式写入文件
+	png.Encode(pngFile, pngImage)
+}
+
+func DrawFiveCycle(srcPath string) {
+	const (
+		width  = 300
+		height = 300
+	)
+
+	// 文件
+	pngFile, _ := os.Create(srcPath)
+	defer pngFile.Close()
+
+	// Image, 进行绘图操作
+	pngImage := image.NewRGBA(image.Rect(0, 0, width, height))
+	draw.Draw(pngImage, pngImage.Bounds(), image.White, image.ZP, draw.Src)
+
+	// 五环
+	for p := 0.0; p <= 7200.0; p += 0.03125 {
+		a := p * 360 * 4
+		r := math.Cos(p*360*5) + 1
+		x := int(70*r*math.Cos(a)) + 150
+		y := int(70*r*math.Sin(a)) + 150
+		pngImage.Set(x, y, color.RGBA{
+			R: uint8(250),
+			G: uint8(4),
+			B: uint8(4),
+			A: uint8(255),
+		})
+	}
+
+	// 以 png 的格式写入文件
+	png.Encode(pngFile, pngImage)
+}
+
+func DrawInnerFiveCycle(srcPath string) {
+	const (
+		width  = 300
+		height = 300
+	)
+
+	// 文件
+	pngFile, _ := os.Create(srcPath)
+	defer pngFile.Close()
+
+	// Image, 进行绘图操作
+	pngImage := image.NewRGBA(image.Rect(0, 0, width, height))
+	draw.Draw(pngImage, pngImage.Bounds(), image.White, image.ZP, draw.Src)
+
+	// 内五环
+	a, b, c, d := 2.0, 10.0, 5.0, 6.0
+	for p := 0.0; p <= 7200.0; p += 0.03125 {
+		t := p * 360 * 4
+		x := int(11*(a+(b-c)*math.Cos(t)+d*math.Cos((b/d-1)*t))) + 130
+		y := int(11*(a+(b-c)*math.Sin(t)-d*math.Sin((b/d-1)*t))) + 130
+		pngImage.Set(x, y, color.RGBA{
+			R: uint8(250),
+			G: uint8(4),
+			B: uint8(4),
+			A: uint8(255),
+		})
+	}
+
+	// 以 png 的格式写入文件
+	png.Encode(pngFile, pngImage)
+}
+
+func DrawPlumCurve(srcPath string) {
+	const (
+		width  = 300
+		height = 300
+	)
+
+	// 文件
+	pngFile, _ := os.Create(srcPath)
+	defer pngFile.Close()
+
+	// Image, 进行绘图操作
+	pngImage := image.NewRGBA(image.Rect(0, 0, width, height))
+	draw.Draw(pngImage, pngImage.Bounds(), image.White, image.ZP, draw.Src)
+
+	// 梅花曲线
+	for p := 0.0; p <= 7200.0; p += 0.03125 {
+		t := p * 360
+		r := 10 + math.Pow(3*math.Sin(t*2.5), 2)
+		x := int(7.5*(r*math.Cos(t))) + 150
+		y := int(7.5*(r*math.Sin(t))) + 150
+		pngImage.Set(x, y, color.RGBA{
+			R: uint8(250),
+			G: uint8(4),
+			B: uint8(4),
+			A: uint8(255),
+		})
+	}
+
+	// 以 png 的格式写入文件
+	png.Encode(pngFile, pngImage)
+}
+
