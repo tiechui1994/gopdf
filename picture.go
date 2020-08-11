@@ -9,11 +9,11 @@ import (
 	"os"
 	"fmt"
 	"io"
+	"math"
 
 	"golang.org/x/image/bmp"
 	"golang.org/x/image/webp"
 	"golang.org/x/image/tiff"
-	"math"
 )
 
 const (
@@ -368,4 +368,3 @@ func DrawPlumCurve(srcPath string) {
 	// 以 png 的格式写入文件
 	png.Encode(pngFile, pngImage)
 }
-

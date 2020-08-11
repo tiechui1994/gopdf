@@ -3,14 +3,16 @@ package gopdf
 import (
 	"os"
 	"path/filepath"
-	"github.com/tiechui1994/gopdf/core"
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/tiechui1994/gopdf/core"
 )
 
 type Image struct {
 	pdf           *core.Report
+	autobreak     bool
 	path          string
 	width, height float64
 	margin        core.Scope
@@ -108,8 +110,12 @@ func (image *Image) GetWidth() float64 {
 	return image.width
 }
 
+func (image *Image) SetAutoBreak() {
+	image.autobreak = true
+}
 
-func (image *Image) GenerateAtomicCell() error {
+// 自动换行
+func (image *Image) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	var (
 		sx, sy = image.pdf.GetXY()
 	)
@@ -117,9 +123,15 @@ func (image *Image) GenerateAtomicCell() error {
 	x, y := sx+image.margin.Left, sy+image.margin.Top
 	pageEndX, pageEndY := image.pdf.GetPageEndXY()
 	if y < pageEndY && y+float64(image.height) > pageEndY {
-		image.pdf.AddNewPage(false)
+		if image.autobreak {
+			image.pdf.AddNewPage(false)
+			goto draw
+		}
+
+		return true, false, nil
 	}
 
+draw:
 	image.pdf.Image(image.path, x, y, x+float64(image.width), y+float64(image.height))
 	if x+float64(image.width) >= pageEndX {
 		sx, _ = image.pdf.GetPageStartXY()
@@ -128,7 +140,7 @@ func (image *Image) GenerateAtomicCell() error {
 		image.pdf.SetXY(x+float64(image.width), y)
 	}
 
-	return nil
+	return false, true, nil
 }
 
 func (image *Image) delTempImage(report *core.Report) {

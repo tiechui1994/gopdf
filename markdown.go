@@ -394,8 +394,7 @@ func (i *MdImage) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	if i.image == nil {
 		return false, true, nil
 	}
-	err = i.image.GenerateAtomicCell()
-	return
+	return i.image.GenerateAtomicCell()
 }
 
 func (i *MdImage) GetType() string {
@@ -403,6 +402,26 @@ func (i *MdImage) GetType() string {
 }
 
 ///////////////////////////////////////////////////////////////////
+
+func CommonGenerateAtomicCell(children *[]mardown) (pagebreak, over bool, err error) {
+	for i, comment := range *children {
+		pagebreak, over, err = comment.GenerateAtomicCell()
+		if err != nil {
+			return
+		}
+
+		if pagebreak {
+			if over && i != len(*children)-1 {
+				*children = (*children)[i+1:]
+				return pagebreak, len(*children) == 0, nil
+			}
+
+			*children = (*children)[i:]
+			return pagebreak, len(*children) == 0, nil
+		}
+	}
+	return false, true, nil
+}
 
 // Combination components
 
@@ -463,23 +482,7 @@ func (h *MdHeader) SetToken(token Token) (err error) {
 }
 
 func (h *MdHeader) GenerateAtomicCell() (pagebreak, over bool, err error) {
-	for i, comment := range h.children {
-		pagebreak, over, err = comment.GenerateAtomicCell()
-		if err != nil {
-			return
-		}
-
-		if pagebreak {
-			if over && i != len(h.children)-1 {
-				h.children = h.children[i+1:]
-				return pagebreak, len(h.children) == 0, nil
-			}
-
-			h.children = h.children[i:]
-			return pagebreak, len(h.children) == 0, nil
-		}
-	}
-	return false, true, nil
+	return CommonGenerateAtomicCell(&h.children)
 }
 
 type MdParagraph struct {
@@ -541,23 +544,7 @@ func (p *MdParagraph) SetToken(token Token) error {
 }
 
 func (p *MdParagraph) GenerateAtomicCell() (pagebreak, over bool, err error) {
-	for i, comment := range p.children {
-		pagebreak, over, err = comment.GenerateAtomicCell()
-		if err != nil {
-			return
-		}
-
-		if pagebreak {
-			if over && i != len(p.children)-1 {
-				p.children = p.children[i+1:]
-				return pagebreak, len(p.children) == 0, nil
-			}
-
-			p.children = p.children[i:]
-			return pagebreak, len(p.children) == 0, nil
-		}
-	}
-	return
+	return CommonGenerateAtomicCell(&p.children)
 }
 
 type MdList struct {
@@ -587,7 +574,7 @@ func (l *MdList) SetToken(token Token) error {
 
 				list := &MdList{pdf: l.pdf, fonts: l.fonts, Type: TYPE_LIST, padding: l.padding + 17.7}
 				list.SetToken(tok)
-				l.children = append(l.children, list)
+				l.children = append(l.children, list.children...)
 				continue
 
 			case TYPE_SPACE:
@@ -598,7 +585,7 @@ func (l *MdList) SetToken(token Token) error {
 			case TYPE_BLOCKQUOTE:
 				blockquote := &MdBlockQuote{pdf: l.pdf, fonts: l.fonts, Type: token.Type}
 				blockquote.SetToken(token)
-				l.children = append(l.children, blockquote)
+				l.children = append(l.children, blockquote.children...)
 				continue
 
 			case TYPE_CODE:
@@ -644,24 +631,7 @@ func (l *MdList) SetToken(token Token) error {
 }
 
 func (l *MdList) GenerateAtomicCell() (pagebreak, over bool, err error) {
-	for i, comment := range l.children {
-		pagebreak, over, err = comment.GenerateAtomicCell()
-		if err != nil {
-			return
-		}
-
-		if pagebreak {
-			if over && i != len(l.children)-1 {
-				l.children = l.children[i+1:]
-				return pagebreak, len(l.children) == 0, nil
-			}
-
-			l.children = l.children[i:]
-			return pagebreak, len(l.children) == 0, nil
-		}
-	}
-
-	return false, true, nil
+	return CommonGenerateAtomicCell(&l.children)
 }
 
 func (l *MdList) String() string {
@@ -827,19 +797,19 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 		case TYPE_PARAGRAPH:
 			paragraph := &MdParagraph{pdf: mt.pdf, fonts: mt.fonts, Type: token.Type}
 			paragraph.SetToken(token)
-			mt.children = append(mt.children, paragraph)
+			mt.children = append(mt.children, paragraph.children...)
 		case TYPE_LIST:
 			list := &MdList{pdf: mt.pdf, fonts: mt.fonts, Type: token.Type}
 			list.SetToken(token)
-			mt.children = append(mt.children, list)
+			mt.children = append(mt.children, list.children...)
 		case TYPE_HEADING:
 			header := &MdHeader{pdf: mt.pdf, fonts: mt.fonts, Type: token.Type}
 			header.SetToken(token)
-			mt.children = append(mt.children, header)
+			mt.children = append(mt.children, header.children...)
 		case TYPE_BLOCKQUOTE:
 			blockquote := &MdBlockQuote{pdf: mt.pdf, fonts: mt.fonts, Type: token.Type}
 			blockquote.SetToken(token)
-			mt.children = append(mt.children, blockquote)
+			mt.children = append(mt.children, blockquote.children...)
 		case TYPE_SPACE:
 			space := &MdSpace{pdf: mt.pdf, Type: token.Type}
 			mt.children = append(mt.children, space)
@@ -878,6 +848,7 @@ func (mt *MarkdownText) GenerateAtomicCell() (err error) {
 
 	for i := 0; i < len(mt.children); {
 		child := mt.children[i]
+
 		pagebreak, over, err := child.GenerateAtomicCell()
 		if err != nil {
 			i++
