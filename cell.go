@@ -215,7 +215,7 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 
 		// 字体颜色控制
 		if !util.IsEmpty(cell.fontColor) {
-			cell.pdf.TextColor(util.GetColorRGB(cell.fontColor))
+			cell.pdf.TextColor(util.RGB(cell.fontColor))
 		}
 
 		cell.pdf.Cell(x, y, cell.contents[i])

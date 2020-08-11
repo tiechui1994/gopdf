@@ -283,7 +283,7 @@ func (span *Span) GenerateAtomicCell() error {
 	border = span.border
 
 	if !util.IsEmpty(span.fontColor) {
-		span.pdf.TextColor(util.GetColorRGB(span.fontColor))
+		span.pdf.TextColor(util.RGB(span.fontColor))
 	}
 
 	for i := 0; i < len(span.contents); i++ {

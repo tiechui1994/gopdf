@@ -336,7 +336,7 @@ func (div *Div) GenerateAtomicCell() error {
 		}
 
 		if !util.IsEmpty(div.fontColor) {
-			div.pdf.TextColor(util.GetColorRGB(div.fontColor))
+			div.pdf.TextColor(util.RGB(div.fontColor))
 		}
 		div.pdf.Font(div.font.Family, div.font.Size, div.font.Style) // 添加设置
 		div.pdf.Cell(x, y, div.contents[i])

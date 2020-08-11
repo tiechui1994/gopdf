@@ -488,10 +488,10 @@ func (report *Report) BackgroundColor(x, y, w, h float64, bgcolor string, lines 
 		lines += "0"
 	}
 
-	bgred, bggreen, bgblue := util.GetColorRGB(bgcolor)
+	bgred, bggreen, bgblue := util.RGB(bgcolor)
 	var lred, lgreen, lblue = 1, 1, 1
 	if lcolor != nil {
-		lred, lgreen, lblue = util.GetColorRGB(lcolor[0])
+		lred, lgreen, lblue = util.RGB(lcolor[0])
 	}
 
 	report.addAtomicCell("BC|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + util.Ftoa(w) + "|" +

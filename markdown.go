@@ -8,12 +8,13 @@ import (
 	"bytes"
 	"regexp"
 	"encoding/json"
-
-	"github.com/tiechui1994/gopdf/core"
 	"net/http"
 	"os"
 	"time"
 	"io"
+
+	"github.com/tiechui1994/gopdf/core"
+	"github.com/tiechui1994/gopdf/util"
 )
 
 const (
@@ -44,6 +45,21 @@ const (
 	defaultSpaceLineHeight  = 36.0
 	defaultFontSize         = 15.0
 	defaultCodeSpanFontSize = 10.0
+)
+
+const (
+	spaceLen = 4.425
+)
+
+const (
+	color_black = "1,1,1"
+	color_gray  = "128,128,128"
+	color_white = "255,255,255"
+
+	color_pink       = "199,37,78"
+	color_lightgray  = "220,220,220"
+	color_whitesmoke = "245,245,245"
+	color_blue       = "0,0,255"
 )
 
 // Token is parse markdown result element
@@ -96,13 +112,13 @@ type MdText struct {
 	padding    float64 // padding left length
 	lineHeight float64 // line height
 
-	stoped    bool    // symbol stoped
-	precision float64 // sigle text char length
-	length    float64
-	text      string // text content
-	remain    string // renain texy
-	link      string // special TYPE_LINK
-	newlines  int
+	blockquote bool    // the cuurent ele is blockquote
+	stoped     bool    // symbol stoped
+	precision  float64 // sigle text char length
+	text       string  // text content
+	remain     string  // renain texy
+	link       string  // special TYPE_LINK
+	newlines   int
 
 	offsetx float64
 	offsety float64
@@ -146,11 +162,11 @@ func (c *MdText) SetText(font interface{}, text ...string) {
 	subs := re.FindAllString(c.text, -1)
 	if len(subs) > 0 {
 		str := re.ReplaceAllString(c.text, "")
-		c.length = c.pdf.MeasureTextWidth(str)
-		c.precision = c.length / float64(len([]rune(str)))
+		length := c.pdf.MeasureTextWidth(str)
+		c.precision = length / float64(len([]rune(str)))
 	} else {
-		c.length = c.pdf.MeasureTextWidth(c.text)
-		c.precision = c.length / float64(len([]rune(c.text)))
+		length := c.pdf.MeasureTextWidth(c.text)
+		c.precision = length / float64(len([]rune(c.text)))
 	}
 }
 
@@ -166,34 +182,28 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	for !c.stoped {
 		switch c.Type {
 		case TYPE_CODESPAN:
-			// bg: 248,248,255 text:1,1,1 line:	245,245,245,     Typora
-			// bg: 249,242,244 text:199,37,78 line:	245,245,245  GitLab
-			c.pdf.BackgroundColor(x1, y, width, 15.0, "249,242,244",
-				"1111", "245,245,245")
-
-			c.pdf.TextColor(199, 37, 78)
+			c.pdf.BackgroundColor(x1, y, width, 15.0, color_lightgray, "1111", color_whitesmoke)
+			//
+			c.pdf.TextColor(util.RGB(color_pink))
 			c.pdf.Cell(x1, y+3.15, text)
-			c.pdf.TextColor(1, 1, 1)
+			c.pdf.TextColor(util.RGB(color_black))
 		case TYPE_CODE:
-			// bg: 248,248,255, text: 1,1,1    Typora
-			// bg: 40,42,54, text: 248,248,242  CSDN
-			bg := "128,255,128"
-			c.pdf.BackgroundColor(x1, y, x2-x1, 18.0, bg, "0000")
-			c.pdf.TextColor(248, 248, 242)
+			c.pdf.BackgroundColor(x1, y, x2-x1, 18.0, color_whitesmoke, "0000")
+			c.pdf.TextColor(util.RGB(color_black))
 			c.pdf.Cell(x1, y+3.15, text)
-			c.pdf.TextColor(1, 1, 1)
+			c.pdf.TextColor(util.RGB(color_black))
 
 		case TYPE_LINK:
 			// text, blue
-			c.pdf.TextColor(0, 0, 255)
+			c.pdf.TextColor(util.RGB(color_blue))
 			c.pdf.ExternalLink(x1, y+12.0, 15, text, c.link)
-			c.pdf.TextColor(1, 1, 1)
+			c.pdf.TextColor(util.RGB(color_black))
 
 			// line
-			c.pdf.LineColor(0, 0, 255)
+			c.pdf.LineColor(util.RGB(color_blue))
 			c.pdf.LineType("solid", 0.4)
 			c.pdf.LineH(x1, y+c.precision, x1+width)
-			c.pdf.LineColor(1, 1, 1)
+			c.pdf.LineColor(util.RGB(color_black))
 		default:
 			c.pdf.Cell(x1+c.offsetx, y+c.offsety, text)
 		}
@@ -350,9 +360,10 @@ func (c *MdSpace) String() string {
 
 type MdImage struct {
 	abstractMarkDown
-	pdf     *core.Report
-	padding float64
-	Type    string
+	pdf        *core.Report
+	padding    float64
+	blockquote bool
+	Type       string
 
 	image  *Image
 	height float64
@@ -427,11 +438,12 @@ func CommonGenerateAtomicCell(children *[]mardown) (pagebreak, over bool, err er
 
 type MdHeader struct {
 	abstractMarkDown
-	pdf      *core.Report
-	fonts    map[string]string
-	children []mardown
-	padding  float64
-	Type     string
+	pdf        *core.Report
+	fonts      map[string]string
+	children   []mardown
+	padding    float64
+	blockquote bool
+	Type       string
 }
 
 func (h *MdHeader) CalFontSizeAndLineHeight(size int) (fontsize int, lineheight float64) {
@@ -466,11 +478,11 @@ func (h *MdHeader) SetToken(token Token) (err error) {
 	for _, v := range token.Tokens {
 		switch v.Type {
 		case TYPE_TEXT:
-			text := &MdText{pdf: h.pdf, Type: v.Type, lineHeight: lineheight}
+			text := &MdText{pdf: h.pdf, Type: v.Type, padding: h.padding, blockquote: h.blockquote, lineHeight: lineheight}
 			text.SetText(font, v.Text)
 			h.children = append(h.children, text)
 		case TYPE_IMAGE:
-			image := &MdImage{pdf: h.pdf, Type: v.Type, height: lineheight}
+			image := &MdImage{pdf: h.pdf, Type: v.Type, padding: h.padding, blockquote: h.blockquote, height: lineheight}
 			h.children = append(h.children, image)
 		}
 	}
@@ -487,11 +499,12 @@ func (h *MdHeader) GenerateAtomicCell() (pagebreak, over bool, err error) {
 
 type MdParagraph struct {
 	abstractMarkDown
-	pdf      *core.Report
-	fonts    map[string]string
-	children []mardown
-	padding  float64
-	Type     string
+	pdf        *core.Report
+	fonts      map[string]string
+	children   []mardown
+	padding    float64
+	blockquote bool
+	Type       string
 }
 
 func (p *MdParagraph) SetToken(token Token) error {
@@ -549,11 +562,12 @@ func (p *MdParagraph) GenerateAtomicCell() (pagebreak, over bool, err error) {
 
 type MdList struct {
 	abstractMarkDown
-	pdf      *core.Report
-	fonts    map[string]string
-	children []mardown
-	padding  float64
-	Type     string
+	pdf        *core.Report
+	fonts      map[string]string
+	children   []mardown
+	padding    float64
+	blockquote bool
+	Type       string
 }
 
 func (l *MdList) SetToken(token Token) error {
@@ -572,7 +586,7 @@ func (l *MdList) SetToken(token Token) error {
 				space := &MdSpace{pdf: l.pdf, Type: TYPE_SPACE}
 				l.children = append(l.children, space)
 
-				list := &MdList{pdf: l.pdf, fonts: l.fonts, Type: TYPE_LIST, padding: l.padding + 17.7}
+				list := &MdList{pdf: l.pdf, fonts: l.fonts, Type: TYPE_LIST, padding: l.padding + 4*spaceLen, blockquote: l.blockquote}
 				list.SetToken(tok)
 				l.children = append(l.children, list.children...)
 				continue
@@ -589,35 +603,35 @@ func (l *MdList) SetToken(token Token) error {
 				continue
 
 			case TYPE_CODE:
-				code := &MdText{pdf: l.pdf, Type: tok.Type}
+				code := &MdText{pdf: l.pdf, Type: tok.Type, blockquote: l.blockquote}
 				code.SetText(l.fonts[FONT_NORMAL], tok.Text)
 				l.children = append(l.children, code)
 				continue
 			}
 
 			if token.Ordered {
-				text := &MdText{pdf: l.pdf, Type: TYPE_TEXT, offsety: -0.45, padding: l.padding}
+				text := &MdText{pdf: l.pdf, Type: TYPE_TEXT, padding: l.padding, blockquote: l.blockquote, offsety: -0.45}
 				text.SetText(core.Font{Family: l.fonts[FONT_NORMAL], Size: defaultFontSize}, fmt.Sprintf("%v. ", index+1))
 				l.children = append(l.children, text)
 			}
 
 			if !token.Ordered {
-				text := &MdText{pdf: l.pdf, Type: TYPE_TEXT, offsety: -6.3, padding: l.padding}
+				text := &MdText{pdf: l.pdf, Type: TYPE_TEXT, padding: l.padding, blockquote: l.blockquote, offsety: -6.3}
 				text.SetText(core.Font{Family: l.fonts[FONT_NORMAL], Size: 28}, "· ")
 				l.children = append(l.children, text)
 			}
 
 			switch tok.Type {
 			case TYPE_STRONG:
-				strong := &MdText{pdf: l.pdf, Type: tok.Type, padding: l.padding}
+				strong := &MdText{pdf: l.pdf, Type: tok.Type, padding: l.padding, blockquote: l.blockquote}
 				strong.SetText(l.fonts[FONT_BOLD], tok.Text)
 				l.children = append(l.children, strong)
 			case TYPE_LINK:
-				link := &MdText{pdf: l.pdf, Type: tok.Type, padding: l.padding}
+				link := &MdText{pdf: l.pdf, Type: tok.Type, padding: l.padding, blockquote: l.blockquote}
 				link.SetText(l.fonts[FONT_NORMAL], tok.Text, tok.Href)
 				l.children = append(l.children, link)
 			case TYPE_TEXT:
-				text := &MdText{pdf: l.pdf, Type: tok.Type, padding: l.padding}
+				text := &MdText{pdf: l.pdf, Type: tok.Type, padding: l.padding, blockquote: l.blockquote}
 				text.SetText(l.fonts[FONT_NORMAL], tok.Text)
 				l.children = append(l.children, text)
 			}
@@ -662,48 +676,47 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 		return fmt.Errorf("invalid type")
 	}
 
-	b.padding = 17.10
-
+	b.padding = 4 * spaceLen
 	for _, token := range t.Tokens {
 		switch token.Type {
 		case TYPE_PARAGRAPH:
-			paragraph := &MdParagraph{pdf: b.pdf, fonts: b.fonts, Type: token.Type, padding: b.padding}
+			paragraph := &MdParagraph{pdf: b.pdf, fonts: b.fonts, Type: token.Type, padding: b.padding, blockquote: true}
 			paragraph.SetToken(token)
 			b.children = append(b.children, paragraph.children...)
 		case TYPE_LIST:
-			list := &MdList{pdf: b.pdf, fonts: b.fonts, Type: token.Type, padding: b.padding}
+			list := &MdList{pdf: b.pdf, fonts: b.fonts, Type: token.Type, padding: b.padding, blockquote: true}
 			list.SetToken(token)
 			b.children = append(b.children, list.children...)
 		case TYPE_HEADING:
-			header := &MdHeader{pdf: b.pdf, fonts: b.fonts, Type: token.Type, padding: b.padding}
+			header := &MdHeader{pdf: b.pdf, fonts: b.fonts, Type: token.Type, padding: b.padding, blockquote: true}
 			header.SetToken(token)
 			b.children = append(b.children, header.children...)
 		case TYPE_SPACE:
 			space := &MdSpace{pdf: b.pdf, Type: token.Type, padding: b.padding}
 			b.children = append(b.children, space)
 		case TYPE_LINK:
-			link := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding,}
-			link.SetText(b.fonts[FONT_NORMAL], token.Text, token.Href, )
+			link := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding, blockquote: true}
+			link.SetText(b.fonts[FONT_NORMAL], token.Text, token.Href)
 			b.children = append(b.children, link)
 		case TYPE_TEXT:
-			text := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding}
+			text := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding, blockquote: true}
 			text.SetText(b.fonts[FONT_NORMAL], token.Text)
 			b.children = append(b.children, text)
 		case TYPE_EM:
 			log.Println(token.Text)
-			em := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding}
+			em := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding, blockquote: true}
 			em.SetText(b.fonts[FONT_IALIC], token.Text)
 			b.children = append(b.children, em)
 		case TYPE_CODESPAN:
-			codespan := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding}
+			codespan := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding, blockquote: true}
 			codespan.SetText(b.fonts[FONT_NORMAL], token.Text)
 			b.children = append(b.children, codespan)
 		case TYPE_CODE:
-			code := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding}
+			code := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding, blockquote: true}
 			code.SetText(b.fonts[FONT_NORMAL], token.Text+"\n")
 			b.children = append(b.children, code)
 		case TYPE_STRONG:
-			strong := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding}
+			strong := &MdText{pdf: b.pdf, Type: token.Type, padding: b.padding, blockquote: true}
 			strong.SetText(b.fonts[FONT_BOLD], token.Text)
 			b.children = append(b.children, strong)
 		}
@@ -791,7 +804,6 @@ func NewMarkdownText(pdf *core.Report, x float64, fonts map[string]string) (*Mar
 }
 
 func (mt *MarkdownText) SetTokens(tokens []Token) {
-	log.Println("len", len(tokens))
 	for _, token := range tokens {
 		switch token.Type {
 		case TYPE_PARAGRAPH:
@@ -842,6 +854,7 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 }
 
 func (mt *MarkdownText) GenerateAtomicCell() (err error) {
+	log.Println("children", len(mt.children))
 	if len(mt.children) == 0 {
 		return fmt.Errorf("not set text")
 	}

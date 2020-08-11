@@ -149,7 +149,7 @@ Images work exactly like links, but they have exclamation points in front. They 
 
 ![Google Logo](/home/quinn/Pictures/logo_sm.png) and ![Happy].
 
-[Happy]: https://wpclipart.com/smiley/happy/simple_colors/smiley_face_simple_green_small.png ("Smiley face")
+[Happy]: /home/quinn/Pictures/logo_sm.png ("Smiley face")
 
 
 Inline HTML

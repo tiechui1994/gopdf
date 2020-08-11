@@ -7,34 +7,6 @@ import (
 	"strings"
 )
 
-func AddComma(s string) string {
-	if strings.Index(s, ".") == -1 {
-		return addCommaSub(s)
-	}
-	ss := strings.Split(s, ".")
-	ss[0] = addCommaSub(ss[0])
-	return ss[0] + "." + ss[1]
-}
-
-func addCommaSub(s string) string {
-	res := ""
-	if len(s) < 4 {
-		return s
-	}
-	pos := len(s) % 3
-	if pos > 0 {
-		res += s[0:pos] + ","
-	}
-	for i := pos; i < len(s); i += 3 {
-		res += s[i : i+3]
-		//fmt.Printf("pos %v \n", i)
-		if i < len(s)-3 {
-			res += ","
-		}
-	}
-	return res
-}
-
 func ReadTextFile(filename string, colno int) []interface{} {
 	res, _ := ioutil.ReadFile(filename)
 	lines := strings.Split(string(res), "\n")
@@ -102,7 +74,7 @@ func CheckColor(color string) string {
 	return color
 }
 
-func GetColorRGB(color string) (r, g, b int) {
+func RGB(color string) (r, g, b int) {
 	color = CheckColor(color)
 	rgb := strings.Split(color, ",")
 	return Atoi(rgb[0]), Atoi(rgb[1]), Atoi(rgb[2])
