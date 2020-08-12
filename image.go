@@ -16,12 +16,14 @@ type Image struct {
 	path          string
 	width, height float64
 	margin        core.Scope
-	tempFilePath  string
+	temppath      []string
 }
 
 func NewImage(path string, pdf *core.Report) *Image {
+	var temppath []string
 	if _, err := os.Stat(path); err != nil {
 		path = fmt.Sprintf("/tmp/%v.png", time.Now().Unix())
+		temppath = append(temppath, path)
 		DrawPNG(path)
 	}
 
@@ -33,13 +35,15 @@ func NewImage(path string, pdf *core.Report) *Image {
 		return nil
 	}
 
+	temppath = append(temppath, dstPath)
+
 	w, h := GetImageWidthAndHeight(dstPath)
 	image := &Image{
-		pdf:          pdf,
-		path:         dstPath,
-		width:        float64(w),
-		height:       float64(h),
-		tempFilePath: dstPath,
+		pdf:      pdf,
+		path:     dstPath,
+		width:    float64(w),
+		height:   float64(h),
+		temppath: temppath,
 	}
 	if dstPath != "" {
 		pdf.AddCallBack(image.delTempImage)
@@ -57,8 +61,10 @@ func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Re
 		height = contentHeight
 	}
 
+	var temppath []string
 	if _, err := os.Stat(path); err != nil {
 		path = fmt.Sprintf("/tmp/%v.png", time.Now().Unix())
+		temppath = append(temppath, path)
 		DrawPNG(path)
 	}
 
@@ -82,12 +88,14 @@ func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Re
 		width = float64(w) * height / float64(h)
 	}
 
+	temppath = append(temppath, dstPath)
+
 	image := &Image{
-		pdf:          pdf,
-		path:         dstPath,
-		width:        width,
-		height:       height,
-		tempFilePath: dstPath,
+		pdf:      pdf,
+		path:     dstPath,
+		width:    width,
+		height:   height,
+		temppath: temppath,
 	}
 
 	if dstPath != "" {
@@ -144,13 +152,13 @@ draw:
 }
 
 func (image *Image) delTempImage(report *core.Report) {
-	if image.tempFilePath == "" {
+	if image.temppath == nil {
 		return
 	}
 
-	if _, err := os.Stat(image.tempFilePath); err != nil {
-		return
+	for _, path := range image.temppath {
+		if _, err := os.Stat(path); err == nil || os.IsExist(err) {
+			os.Remove(path)
+		}
 	}
-
-	os.Remove(image.tempFilePath)
 }
