@@ -685,7 +685,9 @@ func (l *MdList) SetToken(t Token) error {
 			}
 		}
 
-		space := &MdSpace{abstract: l.getabstract(TYPE_SPACE)}
+		abs := l.getabstract(TYPE_SPACE)
+		abs.blockquote -= 1
+		space := &MdSpace{abstract: abs}
 		l.children = append(l.children, space)
 	}
 
