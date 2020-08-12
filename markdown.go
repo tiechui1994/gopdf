@@ -48,6 +48,7 @@ const (
 
 const (
 	spaceLen = 4.425
+	blockLen = 0.6 * spaceLen
 )
 
 const (
@@ -190,14 +191,10 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 
 	text, width, newline := c.GetSubText(x1, x2)
 	for !c.stoped {
-		var offsetx float64
 		if c.padding > 0 && x1 == pageStartX && c.blockquote > 0 {
-			c.pdf.BackgroundColor(x1, y, pageEndX-x1, c.lineHeight, color_lightgray, "0000")
 			for i := 0; i < c.blockquote; i++ {
-				c.pdf.BackgroundColor(x1+float64(i*4)*spaceLen, y, spaceLen, c.lineHeight, color_gray, "0000")
+				c.pdf.BackgroundColor(x1+float64(i*4)*spaceLen, y, blockLen, c.lineHeight, color_gray, "0000")
 			}
-
-			offsetx = spaceLen
 		}
 
 		switch c.Type {
@@ -207,7 +204,12 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 			c.pdf.Cell(x1, y+3.15, text)
 			c.pdf.TextColor(util.RGB(color_black))
 		case TYPE_CODE:
-			c.pdf.BackgroundColor(x1+offsetx, y, x2-x1, c.lineHeight, color_whitesmoke, "0000")
+			if c.blockquote > 0 {
+				offsetx := float64(c.blockquote-1)*4*spaceLen + (4*spaceLen - blockLen)
+				c.pdf.BackgroundColor(x1+offsetx, y, x2-x1-offsetx, c.lineHeight, color_whitesmoke, "0000")
+			} else {
+				c.pdf.BackgroundColor(x1, y, x2-x1, c.lineHeight, color_whitesmoke, "0000")
+			}
 			c.pdf.TextColor(util.RGB(color_black))
 			c.pdf.Cell(x1, y+3.15, text)
 			c.pdf.TextColor(util.RGB(color_black))
@@ -217,12 +219,6 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 			c.pdf.TextColor(util.RGB(color_blue))
 			c.pdf.ExternalLink(x1, y+12.0, 15, text, c.link)
 			c.pdf.TextColor(util.RGB(color_black))
-
-			// line
-			c.pdf.LineColor(util.RGB(color_blue))
-			c.pdf.LineType("solid", 0.4)
-			c.pdf.LineH(x1, y+c.precision, x1+width)
-			c.pdf.LineColor(util.RGB(color_black))
 		default:
 			c.pdf.Cell(x1+c.offsetx, y+c.offsety, text)
 		}
@@ -367,9 +363,8 @@ func (c *MdSpace) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	y += offsety
 
 	if c.blockquote > 0 {
-		c.pdf.BackgroundColor(x, blockquotey, pageEndX-x, c.lineHeight, color_lightgray, "0000")
 		for i := 0; i < c.blockquote; i++ {
-			c.pdf.BackgroundColor(x+float64(i*4)*spaceLen, blockquotey, spaceLen, c.lineHeight, color_gray, "0000")
+			c.pdf.BackgroundColor(x+float64(i*4)*spaceLen, blockquotey, blockLen, c.lineHeight, color_gray, "0000")
 		}
 	}
 
@@ -647,7 +642,7 @@ func (l *MdList) SetToken(t Token) error {
 			case TYPE_BLOCKQUOTE:
 				abs.blockquote += 1
 				abs.padding += 4 * spaceLen
-				blockquote := &MdBlockQuote{abstract: abs}
+				blockquote := &MdBlockQuote{abstract: abs, fonts: l.fonts}
 				blockquote.SetToken(token)
 				l.children = append(l.children, blockquote.children...)
 				continue
@@ -758,7 +753,7 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 			b.children = append(b.children, blockquote.children...)
 		case TYPE_SPACE:
 			if i == len(t.Tokens)-1 {
-				abs.blockquote = 0
+				abs.blockquote -= 1
 			}
 			space := &MdSpace{abstract: abs}
 			b.children = append(b.children, space)
@@ -786,7 +781,7 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 			// code new line
 			abs := b.getabstract(TYPE_SPACE)
 			if i == len(t.Tokens)-1 {
-				abs.blockquote = 0
+				abs.blockquote -= 1
 			}
 			space := &MdSpace{abstract: abs}
 			b.children = append(b.children, space)
@@ -938,8 +933,12 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 		case TYPE_CODE:
 			abs.padding = 15.0
 			code := &MdText{abstract: abs}
-			code.SetText(mt.fonts[FONT_NORMAL], token.Text+"\n")
+			code.SetText(mt.fonts[FONT_NORMAL], token.Text)
 			mt.children = append(mt.children, code)
+
+			abs := mt.getabstract(TYPE_SPACE)
+			space := &MdSpace{abstract: abs}
+			mt.children = append(mt.children, space)
 		case TYPE_STRONG:
 			strong := &MdText{abstract: abs}
 			strong.SetText(mt.fonts[FONT_BOLD], token.Text)
