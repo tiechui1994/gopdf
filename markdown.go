@@ -41,10 +41,9 @@ const (
 )
 
 const (
-	defaultLineHeight       = 18.0
-	defaultSpaceLineHeight  = 36.0
-	defaultFontSize         = 15.0
-	defaultCodeSpanFontSize = 10.0
+	mimLineHeight   = 18.0
+	mimFontSize     = 10.0
+	defaultFontSize = 15.0
 )
 
 const (
@@ -140,7 +139,7 @@ func (c *MdText) SetText(font interface{}, text ...string) {
 		case TYPE_EM:
 			c.font = core.Font{Family: family, Size: defaultFontSize, Style: "U"}
 		case TYPE_CODESPAN, TYPE_CODE:
-			c.font = core.Font{Family: family, Size: defaultCodeSpanFontSize, Style: ""}
+			c.font = core.Font{Family: family, Size: mimFontSize, Style: ""}
 		case TYPE_LINK, TYPE_TEXT:
 			c.font = core.Font{Family: family, Size: defaultFontSize, Style: ""}
 		}
@@ -194,7 +193,10 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 		var offsetx float64
 		if c.padding > 0 && x1 == pageStartX && c.blockquote > 0 {
 			c.pdf.BackgroundColor(x1, y, pageEndX-x1, c.lineHeight, color_lightgray, "0000")
-			c.pdf.BackgroundColor(x1, y, spaceLen, c.lineHeight, color_gray, "0000")
+			for i := 0; i < c.blockquote; i++ {
+				c.pdf.BackgroundColor(x1+float64(i*4)*spaceLen, y, spaceLen, c.lineHeight, color_gray, "0000")
+			}
+
 			offsetx = spaceLen
 		}
 
@@ -339,18 +341,42 @@ type MdSpace struct {
 }
 
 func (c *MdSpace) GenerateAtomicCell() (pagebreak, over bool, err error) {
-	_, pageEndY := c.pdf.GetPageEndXY()
-	_, y := c.pdf.GetXY()
+	var blockquotey float64
+
+	offsety := c.lineHeight
+	pageEndX, pageEndY := c.pdf.GetPageEndXY()
+	x, y := c.pdf.GetXY()
+	if x <= pageEndX {
+		if c.lineHeight == 0 {
+			c.lineHeight = mimLineHeight
+			offsety = 2 * c.lineHeight
+			blockquotey = y + mimLineHeight
+		} else {
+			offsety = 2 * c.lineHeight
+			blockquotey = y + c.lineHeight
+		}
+	}
 
 	if c.lineHeight == 0 {
-		c.lineHeight = defaultSpaceLineHeight
+		c.lineHeight = mimLineHeight
+		offsety = c.lineHeight
+		blockquotey = y
 	}
 
-	x, _ := c.pdf.GetPageStartXY()
-	y += c.lineHeight
-	if pageEndY-y < c.lineHeight {
+	x, _ = c.pdf.GetPageStartXY()
+	y += offsety
+
+	if c.blockquote > 0 {
+		c.pdf.BackgroundColor(x, blockquotey, pageEndX-x, c.lineHeight, color_lightgray, "0000")
+		for i := 0; i < c.blockquote; i++ {
+			c.pdf.BackgroundColor(x+float64(i*4)*spaceLen, blockquotey, spaceLen, c.lineHeight, color_gray, "0000")
+		}
+	}
+
+	if pageEndY-y < mimLineHeight {
 		return true, true, nil
 	}
+
 	c.pdf.SetXY(x, y)
 	return false, true, nil
 }
@@ -395,7 +421,7 @@ func (i *MdImage) SetText(_ interface{}, filename ...string) {
 	}
 
 	if i.height == 0 {
-		i.height = defaultLineHeight
+		i.height = mimLineHeight
 	}
 
 	i.image = NewImageWithWidthAndHeight(filepath, 0, i.height, i.pdf)
@@ -451,14 +477,14 @@ func (h *MdHeader) CalFontSizeAndLineHeight(size int) (fontsize int, lineheight 
 	case 3:
 		return 16, 19
 	case 4:
-		return defaultFontSize, defaultLineHeight
+		return defaultFontSize, mimLineHeight
 	case 5:
 		return 12, 15
 	case 6:
-		return defaultCodeSpanFontSize, defaultLineHeight
+		return mimFontSize, mimLineHeight
 	}
 
-	return defaultFontSize, defaultLineHeight
+	return defaultFontSize, mimLineHeight
 }
 
 func (h *MdHeader) getabstract(typ string) abstract {
@@ -495,7 +521,9 @@ func (h *MdHeader) SetToken(t Token) (err error) {
 		}
 	}
 
-	space := &MdSpace{abstract: h.getabstract(TYPE_SPACE)}
+	abs := h.getabstract(TYPE_SPACE)
+	abs.lineHeight = lineheight
+	space := &MdSpace{abstract: abs}
 	h.children = append(h.children, space)
 
 	return nil
@@ -587,6 +615,7 @@ func (l *MdList) getabstract(typ string) abstract {
 		Type:       typ,
 	}
 }
+
 func (l *MdList) SetToken(t Token) error {
 	if l.fonts == nil || len(l.fonts) == 0 {
 		return fmt.Errorf("no fonts")
@@ -617,6 +646,7 @@ func (l *MdList) SetToken(t Token) error {
 
 			case TYPE_BLOCKQUOTE:
 				abs.blockquote += 1
+				abs.padding += 4 * spaceLen
 				blockquote := &MdBlockQuote{abstract: abs}
 				blockquote.SetToken(token)
 				l.children = append(l.children, blockquote.children...)
@@ -705,8 +735,7 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 		return fmt.Errorf("invalid type")
 	}
 
-	b.padding = 4 * spaceLen
-	for _, token := range t.Tokens {
+	for i, token := range t.Tokens {
 		abs := b.getabstract(token.Type)
 		switch token.Type {
 		case TYPE_PARAGRAPH:
@@ -723,10 +752,14 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 			b.children = append(b.children, header.children...)
 		case TYPE_BLOCKQUOTE:
 			abs.blockquote += 1
+			abs.padding += 4 * spaceLen
 			blockquote := &MdBlockQuote{abstract: abs, fonts: b.fonts}
 			blockquote.SetToken(token)
 			b.children = append(b.children, blockquote.children...)
 		case TYPE_SPACE:
+			if i == len(t.Tokens)-1 {
+				abs.blockquote = 0
+			}
 			space := &MdSpace{abstract: abs}
 			b.children = append(b.children, space)
 		case TYPE_LINK:
@@ -738,7 +771,6 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 			text.SetText(b.fonts[FONT_NORMAL], token.Text)
 			b.children = append(b.children, text)
 		case TYPE_EM:
-			log.Println(token.Text)
 			em := &MdText{abstract: abs}
 			em.SetText(b.fonts[FONT_IALIC], token.Text)
 			b.children = append(b.children, em)
@@ -750,7 +782,13 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 			code := &MdText{abstract: abs}
 			code.SetText(b.fonts[FONT_NORMAL], token.Text)
 			b.children = append(b.children, code)
-			space := &MdSpace{abstract: b.getabstract(TYPE_SPACE)}
+
+			// code new line
+			abs := b.getabstract(TYPE_SPACE)
+			if i == len(t.Tokens)-1 {
+				abs.blockquote = 0
+			}
+			space := &MdSpace{abstract: abs}
 			b.children = append(b.children, space)
 		case TYPE_STRONG:
 			strong := &MdText{abstract: abs}
@@ -759,9 +797,13 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 		}
 	}
 
-	if len(b.children) > 0 && b.children[len(b.children)-1].GetType() != TYPE_SPACE {
-		space := &MdSpace{abstract: b.getabstract(TYPE_SPACE)}
-		b.children = append(b.children, space)
+	if len(b.children) > 0 {
+		if b.children[len(b.children)-1].GetType() != TYPE_SPACE {
+			abs := b.getabstract(TYPE_SPACE)
+			abs.blockquote = 0
+			space := &MdSpace{abstract: abs}
+			b.children = append(b.children, space)
+		}
 	}
 
 	return nil
@@ -844,6 +886,7 @@ func NewMarkdownText(pdf *core.Report, x float64, fonts map[string]string) (*Mar
 
 	return &mt, nil
 }
+
 func (mt *MarkdownText) getabstract(typ string) abstract {
 	return abstract{
 		pdf:  mt.pdf,
@@ -869,6 +912,7 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 			mt.children = append(mt.children, header.children...)
 		case TYPE_BLOCKQUOTE:
 			abs.blockquote = 1
+			abs.padding += 4 * spaceLen
 			blockquote := &MdBlockQuote{abstract: abs, fonts: mt.fonts}
 			blockquote.SetToken(token)
 			mt.children = append(mt.children, blockquote.children...)
