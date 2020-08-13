@@ -62,6 +62,16 @@ const (
 	color_blue       = "0,0,255"
 )
 
+var re struct {
+	notwords  *regexp.Regexp
+	breakline *regexp.Regexp
+}
+
+func init() {
+	re.notwords = regexp.MustCompile(`[\n \t=#%@&"':<>,(){}_;/\?\.\+\-\=\^\$\[\]\!]`)
+	re.breakline = regexp.MustCompile(`\n{2,}$`)
+}
+
 // Token is parse markdown result element
 type Token struct {
 	Type string `json:"type"`
@@ -109,12 +119,34 @@ func (a *abstract) GetType() string {
 }
 
 func hasBreakLine(token Token) bool {
-	re := regexp.MustCompile(`\n{2,}$`)
 	switch token.Type {
 	case TYPE_CODE:
-		return re.MatchString(token.Raw)
+		return re.breakline.MatchString(token.Raw)
 	default:
 		return strings.HasSuffix(token.Raw, "\n")
+	}
+}
+
+func repairText(TYPE, text string) string {
+	switch TYPE {
+	case TYPE_TEXT, TYPE_STRONG, TYPE_EM, TYPE_CODESPAN, TYPE_LINK:
+		count := strings.Count(text, "\n")
+		if count == 0 {
+			return text
+		}
+
+		suffix := strings.HasSuffix(text, "\n")
+		if suffix {
+			return strings.Replace(text, "\n", " ", count-1)
+		} else {
+			return strings.ReplaceAll(text, "\n", " ")
+		}
+
+	case TYPE_CODE:
+		return text
+
+	default:
+		return text
 	}
 }
 
@@ -136,8 +168,8 @@ type MdText struct {
 	offsety float64
 }
 
-func (c *MdText) SetText(font interface{}, text ...string) {
-	if len(text) == 0 {
+func (c *MdText) SetText(font interface{}, texts ...string) {
+	if len(texts) == 0 {
 		panic("text is invalid")
 	}
 
@@ -169,19 +201,18 @@ func (c *MdText) SetText(font interface{}, text ...string) {
 		}
 	}
 
-	text[0] = strings.Replace(text[0], "\t", "    ", -1)
-	c.text = text[0]
-	c.remain = text[0]
+	text := strings.Replace(texts[0], "\t", "    ", -1)
+	c.text = repairText(c.Type, text)
+	c.remain = c.text
 	if c.Type == TYPE_LINK {
-		c.link = text[1]
+		c.link = texts[1]
 	}
 	c.pdf.Font(c.font.Family, c.font.Size, c.font.Style)
 	c.pdf.SetFontWithStyle(c.font.Family, c.font.Style, c.font.Size)
-	re := regexp.MustCompile(`[\n \t=#%@&"':<>,(){}_;/\?\.\+\-\=\^\$\[\]\!]`)
 
-	subs := re.FindAllString(c.text, -1)
+	subs := re.notwords.FindAllString(c.text, -1)
 	if len(subs) > 0 {
-		str := re.ReplaceAllString(c.text, "")
+		str := re.notwords.ReplaceAllString(c.text, "")
 		length := c.pdf.MeasureTextWidth(str)
 		c.precision = length / float64(len([]rune(str)))
 	} else {
@@ -754,6 +785,14 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 			paragraph := &MdParagraph{abstract: abs, fonts: b.fonts,}
 			paragraph.SetToken(token)
 			b.children = append(b.children, paragraph.children...)
+
+			n := len(t.Tokens)
+			if i == n-1 || i != n-1 && t.Tokens[i+1].Type != TYPE_SPACE {
+				abs := b.getabstract(TYPE_SPACE)
+				space := &MdSpace{abstract: abs}
+				b.children = append(b.children, space)
+			}
+
 		case TYPE_LIST:
 			list := &MdList{abstract: abs, fonts: b.fonts}
 			list.SetToken(token)
@@ -820,56 +859,6 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 	}
 
 	return nil
-}
-
-func (b *MdBlockQuote) GenerateAtomicCell() (pagebreak, over bool, err error) {
-	var ignore bool
-	if len(b.children) > 0 && b.children[len(b.children)-1].GetType() == TYPE_SPACE {
-		ignore = true
-	}
-
-	var (
-		x      float64
-		y1, y2 float64
-	)
-
-	x, _ = b.pdf.GetPageStartXY()
-	_, y1 = b.pdf.GetXY()
-	color := "175,238,238"
-	for i, comment := range b.children {
-		pagebreak, over, err = comment.GenerateAtomicCell()
-		if err != nil {
-			return
-		}
-
-		if over && i == len(b.children)-1 && ignore {
-			_, y2 = b.pdf.GetXY()
-			ignoreHeight := comment.(*MdSpace).LineHeight()
-			y2 -= ignoreHeight + 5
-		}
-
-		if pagebreak {
-			_, y2 = b.pdf.GetXY()
-			b.pdf.BackgroundColor(x, y1, 5.0, y2-y1, color,
-				"0000", color)
-			if over && i != len(b.children)-1 {
-				b.children = b.children[i+1:]
-				return pagebreak, len(b.children) == 0, nil
-			}
-
-			b.children = b.children[i:]
-			return pagebreak, len(b.children) == 0, nil
-		}
-	}
-
-	if y2 == 0 {
-		_, y2 = b.pdf.GetXY()
-	}
-
-	b.pdf.BackgroundColor(x, y1, 5.0, y2-y1, color,
-		"0000", color)
-
-	return false, true, nil
 }
 
 type MarkdownText struct {
