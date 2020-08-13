@@ -41,9 +41,9 @@ const (
 )
 
 const (
-	mimLineHeight   = 18.0
-	mimFontSize     = 10.0
-	defaultFontSize = 15.0
+	lineHeight  = 16.0
+	mimFontSize = 12.0
+	fontSize    = 14.0
 )
 
 const (
@@ -108,6 +108,16 @@ func (a *abstract) GetType() string {
 	return a.Type
 }
 
+func hasBreakLine(token Token) bool {
+	re := regexp.MustCompile(`\n{2,}$`)
+	switch token.Type {
+	case TYPE_CODE:
+		return re.MatchString(token.Raw)
+	default:
+		return strings.HasSuffix(token.Raw, "\n")
+	}
+}
+
 ///////////////////////////////////////////////////////////////////
 
 // Atomic component
@@ -136,13 +146,13 @@ func (c *MdText) SetText(font interface{}, text ...string) {
 		family := font.(string)
 		switch c.Type {
 		case TYPE_STRONG:
-			c.font = core.Font{Family: family, Size: defaultFontSize, Style: ""}
+			c.font = core.Font{Family: family, Size: fontSize, Style: ""}
 		case TYPE_EM:
-			c.font = core.Font{Family: family, Size: defaultFontSize, Style: "U"}
+			c.font = core.Font{Family: family, Size: fontSize, Style: "U"}
 		case TYPE_CODESPAN, TYPE_CODE:
 			c.font = core.Font{Family: family, Size: mimFontSize, Style: ""}
 		case TYPE_LINK, TYPE_TEXT:
-			c.font = core.Font{Family: family, Size: defaultFontSize, Style: ""}
+			c.font = core.Font{Family: family, Size: fontSize, Style: ""}
 		}
 	case core.Font:
 		c.font = font.(core.Font)
@@ -153,9 +163,9 @@ func (c *MdText) SetText(font interface{}, text ...string) {
 	if c.lineHeight == 0 {
 		switch c.Type {
 		case TYPE_CODE, TYPE_CODESPAN:
-			c.lineHeight = 15.0
-		case TYPE_TEXT, TYPE_LINK, TYPE_STRONG, TYPE_EM:
 			c.lineHeight = 18.0
+		case TYPE_TEXT, TYPE_LINK, TYPE_STRONG, TYPE_EM:
+			c.lineHeight = 20.0
 		}
 	}
 
@@ -344,9 +354,9 @@ func (c *MdSpace) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	x, y := c.pdf.GetXY()
 	if x <= pageEndX {
 		if c.lineHeight == 0 {
-			c.lineHeight = mimLineHeight
+			c.lineHeight = lineHeight
 			offsety = 2 * c.lineHeight
-			blockquotey = y + mimLineHeight
+			blockquotey = y + lineHeight
 		} else {
 			offsety = 2 * c.lineHeight
 			blockquotey = y + c.lineHeight
@@ -354,7 +364,7 @@ func (c *MdSpace) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	}
 
 	if c.lineHeight == 0 {
-		c.lineHeight = mimLineHeight
+		c.lineHeight = lineHeight
 		offsety = c.lineHeight
 		blockquotey = y
 	}
@@ -368,7 +378,7 @@ func (c *MdSpace) GenerateAtomicCell() (pagebreak, over bool, err error) {
 		}
 	}
 
-	if pageEndY-y < mimLineHeight {
+	if pageEndY-y < lineHeight {
 		return true, true, nil
 	}
 
@@ -416,7 +426,7 @@ func (i *MdImage) SetText(_ interface{}, filename ...string) {
 	}
 
 	if i.height == 0 {
-		i.height = mimLineHeight
+		i.height = lineHeight
 	}
 
 	i.image = NewImageWithWidthAndHeight(filepath, 0, i.height, i.pdf)
@@ -466,20 +476,20 @@ type MdHeader struct {
 func (h *MdHeader) CalFontSizeAndLineHeight(size int) (fontsize int, lineheight float64) {
 	switch size {
 	case 1:
-		return 20, 24
+		return 26, 26
 	case 2:
-		return 18, 21
+		return 22, 22
 	case 3:
-		return 16, 19
+		return 20, 18
 	case 4:
-		return defaultFontSize, mimLineHeight
+		return 16, 16
 	case 5:
-		return 12, 15
+		return 14, 14
 	case 6:
-		return mimFontSize, mimLineHeight
+		return 12, 12
 	}
 
-	return defaultFontSize, mimLineHeight
+	return 14, 16
 }
 
 func (h *MdHeader) getabstract(typ string) abstract {
@@ -516,8 +526,16 @@ func (h *MdHeader) SetToken(t Token) (err error) {
 		}
 	}
 
-	abs := h.getabstract(TYPE_SPACE)
+	// break
+	abs := h.getabstract(TYPE_TEXT)
 	abs.lineHeight = lineheight
+	br := &MdText{abstract: abs}
+	br.SetText(font, "\n")
+	h.children = append(h.children, br)
+
+	// newline
+	abs = h.getabstract(TYPE_SPACE)
+	abs.lineHeight = 5
 	space := &MdSpace{abstract: abs}
 	h.children = append(h.children, space)
 
@@ -649,17 +667,14 @@ func (l *MdList) SetToken(t Token) error {
 
 			case TYPE_CODE:
 				code := &MdText{abstract: abs}
-				code.SetText(l.fonts[FONT_NORMAL], token.Text)
+				code.SetText(l.fonts[FONT_NORMAL], token.Text+"\n")
 				l.children = append(l.children, code)
-
-				space := &MdSpace{abstract: l.getabstract(TYPE_SPACE)}
-				l.children = append(l.children, space)
 				continue
 			}
 
 			if token.Ordered {
 				text := &MdText{abstract: abs, offsety: -0.45}
-				text.SetText(core.Font{Family: l.fonts[FONT_NORMAL], Size: defaultFontSize}, fmt.Sprintf("%v. ", index+1))
+				text.SetText(core.Font{Family: l.fonts[FONT_NORMAL], Size: fontSize}, fmt.Sprintf("%v. ", index+1))
 				l.children = append(l.children, text)
 			}
 
@@ -777,16 +792,15 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 			b.children = append(b.children, codespan)
 		case TYPE_CODE:
 			code := &MdText{abstract: abs}
-			code.SetText(b.fonts[FONT_NORMAL], token.Text)
+			code.SetText(b.fonts[FONT_NORMAL], token.Text+"\n")
 			b.children = append(b.children, code)
 
-			// code new line
-			abs := b.getabstract(TYPE_SPACE)
-			if i == len(t.Tokens)-1 {
-				abs.blockquote -= 1
+			if hasBreakLine(token) {
+				abs := b.getabstract(TYPE_TEXT)
+				br := &MdText{abstract: abs}
+				br.SetText(b.fonts[FONT_NORMAL], "\n")
+				b.children = append(b.children, br)
 			}
-			space := &MdSpace{abstract: abs}
-			b.children = append(b.children, space)
 		case TYPE_STRONG:
 			strong := &MdText{abstract: abs}
 			strong.SetText(b.fonts[FONT_BOLD], token.Text)
@@ -795,11 +809,13 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 	}
 
 	if len(b.children) > 0 {
-		if b.children[len(b.children)-1].GetType() != TYPE_SPACE {
-			abs := b.getabstract(TYPE_SPACE)
-			abs.blockquote = 0
-			space := &MdSpace{abstract: abs}
-			b.children = append(b.children, space)
+		lastType := b.children[len(b.children)-1].GetType()
+		if lastType != TYPE_SPACE {
+			abs := b.getabstract(TYPE_TEXT)
+			abs.blockquote -= 1
+			br := &MdText{abstract: abs}
+			br.SetText(b.fonts[FONT_NORMAL], "\n")
+			b.children = append(b.children, br)
 		}
 	}
 
@@ -935,12 +951,8 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 		case TYPE_CODE:
 			abs.padding = 15.0
 			code := &MdText{abstract: abs}
-			code.SetText(mt.fonts[FONT_NORMAL], token.Text)
+			code.SetText(mt.fonts[FONT_NORMAL], token.Text+"\n")
 			mt.children = append(mt.children, code)
-
-			abs := mt.getabstract(TYPE_SPACE)
-			space := &MdSpace{abstract: abs}
-			mt.children = append(mt.children, space)
 		case TYPE_STRONG:
 			strong := &MdText{abstract: abs}
 			strong.SetText(mt.fonts[FONT_BOLD], token.Text)
