@@ -136,16 +136,16 @@ func (convert *Converter) AddFont() {
 	}
 }
 
-// PDF文件页面的开始
+// Page
 // [P, mm|pt|in, A4, P|L]
-// mm|pt|in 表示的尺寸单位, 毫米,像素,英尺
-// P|L 表示Portait, Landscape, 表示布局
+// mm|pt|in, Indicates the unit of size, respectively representing millimeters, pixels, and feet
+// P|L, Page layout, namely Portait, Landscape
 func (convert *Converter) Page(line string, elements []string) {
 	convert.pdf = new(gopdf.GoPdf)
 
 	checkLength(line, elements, 4)
 	switch elements[2] {
-	/* A0 ~ A5 纸张像素表示
+	/* A0 ~ A5 Paper pixel representation:
 	'A0': [2383.94, 3370.39],
 	'A1': [1683.78, 2383.94],
 	'A2': [1190.55, 1683.78],
@@ -157,7 +157,7 @@ func (convert *Converter) Page(line string, elements []string) {
 		config := defaultConfigs["A3"]
 		convert.setunit(elements[1])
 		if elements[3] == "P" {
-			convert.start(config.width, config.height) // 像素
+			convert.start(config.width, config.height)
 		} else if elements[3] == "L" {
 			convert.start(config.height, config.width)
 		} else {
@@ -167,7 +167,7 @@ func (convert *Converter) Page(line string, elements []string) {
 		config := defaultConfigs["A4"]
 		convert.setunit(elements[1])
 		if elements[3] == "P" {
-			convert.start(config.width, config.height) // 像素
+			convert.start(config.width, config.height)
 		} else if elements[3] == "L" {
 			convert.start(config.height, config.width)
 		} else {
@@ -177,7 +177,7 @@ func (convert *Converter) Page(line string, elements []string) {
 		config := defaultConfigs["LTR"]
 		convert.setunit(elements[1])
 		if elements[3] == "P" {
-			convert.start(config.width, config.height) // 像素
+			convert.start(config.width, config.height)
 		} else if elements[3] == "L" {
 			convert.start(config.height, config.width)
 		} else {
@@ -210,7 +210,7 @@ func (convert *Converter) NewPage(line string, elements []string) {
 	convert.pdf.AddPage()
 }
 
-// 设置PDF文件基本信息(单位,页面大小)
+// Set PDF file configuration information (unit, page size)
 func (convert *Converter) start(w float64, h float64) {
 	convert.pdf.Start(gopdf.Config{
 		Unit:     gopdf.Unit_PT,
@@ -218,9 +218,9 @@ func (convert *Converter) start(w float64, h float64) {
 	}) // 595.28, 841.89 = A4
 }
 
-// 设置当前文本使用的字体
+// Set Font used for the current text
 // ["", "family", "style", "size"]
-// style: "" or "U", ("B", "I")(需要字体本身支持)
+// style: "" or "U", ("B", "I")("B" means "Bold", "I" means "Italic", these font self support)
 func (convert *Converter) Font(line string, elements []string) {
 	checkLength(line, elements, 4)
 	err := convert.pdf.SetFont(elements[1], elements[2], parseIntPanic(elements[3], line))
@@ -229,7 +229,7 @@ func (convert *Converter) Font(line string, elements []string) {
 	}
 }
 
-// 设置笔画的灰度 | 设置填充的灰度
+// Set the gray scale of the stroke Or Set the gray scale of the fill
 // ["GF|GS", grayScale]
 // grayScale: 0.0 到 1.0
 func (convert *Converter) Grey(line string, elements []string) {
@@ -242,8 +242,8 @@ func (convert *Converter) Grey(line string, elements []string) {
 	}
 }
 
-// 文本颜色
-// ["", R, G, B] // RGB文本颜色
+// text color
+// ["", R, G, B]
 func (convert *Converter) TextColor(line string, elements []string) {
 	checkLength(line, elements, 4)
 	convert.pdf.SetTextColor(uint8(parseIntPanic(elements[1], line)),
@@ -251,7 +251,7 @@ func (convert *Converter) TextColor(line string, elements []string) {
 		uint8(parseIntPanic(elements[3], line)))
 }
 
-// 画笔颜色
+// line color
 // ["", R, G, B]
 func (convert *Converter) LineColor(line string, elements []string) {
 	checkLength(line, elements, 4)
@@ -260,22 +260,25 @@ func (convert *Converter) LineColor(line string, elements []string) {
 		uint8(parseIntPanic(elements[3], line)))
 }
 
+// backgroup color
 func (convert *Converter) BackgroundColor(line string, elements []string) {
 	checkLength(line, elements, 9)
 
-	//convert.pdf.SetLineWidth(0)               // 宽带最小
-	convert.pdf.SetStrokeColor(255, 255, 255) // 白色线条
+	// white line
+	convert.pdf.SetStrokeColor(255, 255, 255)
 
+	// set fill backgroup color
 	convert.pdf.SetFillColor(uint8(parseIntPanic(elements[5], line)),
 		uint8(parseIntPanic(elements[6], line)),
-		uint8(parseIntPanic(elements[7], line))) // 设置填充颜色
+		uint8(parseIntPanic(elements[7], line)))
 
 	convert.pdf.RectFromUpperLeftWithStyle(parseFloatPanic(elements[1], line)*convert.unit,
 		parseFloatPanic(elements[2], line)*convert.unit,
 		parseFloatPanic(elements[3], line)*convert.unit,
 		parseFloatPanic(elements[4], line)*convert.unit, "F")
 
-	convert.pdf.SetFillColor(0, 0, 0) // 颜色恢复
+	// recover origin backgroup color and line color
+	convert.pdf.SetFillColor(0, 0, 0)
 	convert.pdf.SetStrokeColor(0, 0, 0)
 
 	convert.pdf.SetLineType("solid")
@@ -285,7 +288,8 @@ func (convert *Converter) BackgroundColor(line string, elements []string) {
 	w := parseFloatPanic(elements[3], line) * convert.unit
 	h := parseFloatPanic(elements[4], line) * convert.unit
 
-	lines := elements[8] //  LEFT,TOP,RIGHT,BOTTOM
+	// Add lines, contains LEFT, TOP, RIGHT, BOTTOM
+	lines := elements[8]
 	if lines[0] == '1' {
 		convert.pdf.Line(x, y, x, y+h)
 	}
@@ -300,7 +304,7 @@ func (convert *Converter) BackgroundColor(line string, elements []string) {
 	}
 }
 
-// 椭圆
+// oval
 // ["", x1, y1, x2, y2]
 func (convert *Converter) Oval(line string, elements []string) {
 	checkLength(line, elements, 5)
@@ -310,7 +314,7 @@ func (convert *Converter) Oval(line string, elements []string) {
 		parseFloatPanic(elements[4], line)*convert.unit)
 }
 
-// 长方形
+// rectangle
 // ["R", x1, y1, x2, y2]
 func (convert *Converter) Rect(line string, eles []string) {
 	checkLength(line, eles, 5)
@@ -340,7 +344,7 @@ func (convert *Converter) Rect(line string, eles []string) {
 		parseFloatPanic(eles[4], line)*convert.unit+adj*2)
 }
 
-// 图片
+// image
 // ["I", path, x, y, x1, y2]
 func (convert *Converter) Image(line string, elements []string) {
 	checkLength(line, elements, 6)
@@ -356,11 +360,15 @@ func (convert *Converter) Image(line string, elements []string) {
 	)
 }
 
-// 线
-// ["L", x1, y1, x2, y2] 两点之间的线
-// ["LH", x1, y1, x2] 水平线
-// ["LV", x1, y2, y2] 垂直线
-// ["LT", "dashed|dotted|straight", w] 虚线,点,直线
+// line
+// ["L", x1, y1, x2, y2], Line between any two points
+// ["LH", x1, y1, x2], Horizontal line
+// ["LV", x1, y2, y2], Vertical line
+//
+// ["LT", "dashed|dotted|straight", w] Lines with a specific style(dashed,dotted,straight)
+// dashed: ----
+// dotted: ....
+// straight: ___
 func (convert *Converter) Line(line string, elements []string) {
 	switch elements[0] {
 	case "L":
@@ -399,10 +407,10 @@ func (convert *Converter) Line(line string, elements []string) {
 	}
 }
 
-// 单元格
-// ["C", family, size, x, y, content] // 从(x,y) 位置开始写入content
-// ["CL", x, y, content] // 从(x,y) 位置开始写入content
-// ["CR", x, y, w, content] // 从右往左写入w长度的内容
+// Clell
+// ["C", family, size, x, y, content] // Start writing text from position (x,y)
+// ["CL", x, y, content] // Start writing text from position (x,y)
+// ["CR", x, y, w, content] // Write text of w length from right to left
 func (convert *Converter) Cell(line string, elements []string) {
 	switch elements[0] {
 	case "C":
@@ -438,8 +446,8 @@ func (convert *Converter) setPosition(x string, y string, line string) {
 	convert.pdf.SetY(parseFloatPanic(y, line) * convert.unit)
 }
 
-// 外部链接
-// ["EL", x, y, w, h, content, link] // 从(x,y)开始写入content,并添加外链接
+// external link
+// ["EL", x, y, w, h, content, link] // Start writing text from (x,y) and add external links
 func (convert *Converter) ExternalLink(line string, elements []string) {
 	checkLength(line, elements, 7)
 
@@ -460,7 +468,7 @@ func (convert *Converter) ExternalLink(line string, elements []string) {
 	convert.pdf.SetY(y)
 }
 
-// 内部链接, 锚点
+// Internal link, anchor
 // ["ILA", x, y, w, h, content, anchor]
 func (convert *Converter) InternalLinkAnchor(line string, elements []string) {
 	checkLength(line, elements, 7)
@@ -481,7 +489,7 @@ func (convert *Converter) InternalLinkAnchor(line string, elements []string) {
 	convert.pdf.SetY(y)
 }
 
-// 内部链接, 链接
+// Internal link, link
 // ["ILL", x, y, w  content, anchor]
 func (convert *Converter) InternalLinkLink(line string, elements []string) {
 	checkLength(line, elements, 6)
@@ -496,7 +504,7 @@ func (convert *Converter) InternalLinkLink(line string, elements []string) {
 	convert.pdf.SetY(parseFloatPanic(elements[2], line))
 }
 
-// 辅助方法
+
 func (convert *Converter) Margin(line string, eles []string) {
 	checkLength(line, eles, 3)
 	top := parseFloatPanic(eles[1], line)

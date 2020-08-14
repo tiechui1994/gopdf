@@ -110,7 +110,7 @@ func (image *Image) GetWidth() float64 {
 	return image.width
 }
 
-// 自动换行
+
 func (image *Image) GenerateAtomicCell() error {
 	var (
 		sx, sy = image.pdf.GetXY()

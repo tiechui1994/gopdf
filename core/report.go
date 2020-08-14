@@ -10,9 +10,12 @@ import (
 	"github.com/tiechui1994/gopdf/util"
 )
 
-// 需要解决的问题: currY的控制权, 用户 -> 程序 -> 自动化操作
-// 页面的三部分: Header Page Footer
 const (
+	// A PDF page is divided into three parts, the header(Header), the footer(Footer) and
+	// the main body(Detail).
+	//
+	// Each part has its own executor. The main actuator is necessary because it is the most
+	// important content that constitutes the PDF page.
 	Header = "Header"
 	Footer = "Footer"
 	Detail = "Detail"
@@ -39,25 +42,26 @@ type Executor func(report *Report)
 type CallBack func(report *Report)
 
 type Report struct {
-	FisrtPageNeedHeader bool // 首页需要执行页眉
-	FisrtPageNeedFooter bool // 首页需要执行页脚
+	FisrtPageNeedHeader bool // Wheather the first page need to execute the header
+	FisrtPageNeedFooter bool // Wheather the first page need to execute the header
 	Vars                map[string]string
 
-	converter    *Converter           // 转换引擎(对接第三方库)
-	config       *Config              // 当前PDF的页面配置
-	currX, currY float64              // 当前位置
-	executors    map[string]*Executor // 执行器
-	flags        map[string]bool      // 标记(自动分页和重置页号码)
-	pageNo       int                  // 记录当前的 Page 的页数
-	linew        float64              // 线宽
+	converter    *Converter           // converter engine (connect with third-party libraries)
+	config       *Config              // PDF page config
+	currX, currY float64              // position
+	executors    map[string]*Executor // executors, include Header, Detail, and Footer
+	flags        map[string]bool      // Mark (automatic paging and reset page number)
+	pageNo       int                  // Record the number of pages of the current Page
+	linew        float64              // line width
 
-	// 下面是页面的信息
+	// page info
 	pageWidth, pageHeight       float64
 	contentWidth, contentHeight float64
 	pageStartX, pageStartY      float64
 	pageEndX, pageEndY          float64
 
-	callbacks []CallBack // 回调函数,在PDF生成之后执行
+	// Callback function, executed after PDF generation
+	callbacks []CallBack
 }
 
 func CreateReport() *Report {
@@ -80,18 +84,18 @@ func (report *Report) NoCompression() {
 }
 
 /****************************************************************
-压缩级别:
-	-2 只使用哈夫曼压缩,
-	-1 默认值, 压缩级别的6
-	0  不进行压缩,
-	1  最快的压缩, 但是压缩比率不是最好的
-	9  最大限度的压缩, 但是执行效率也是最慢的
+Compression level:
+	-2: Only Huffman compression is used,
+	-1: Default value, compression level 6
+	0:  Not compress,
+	1:  The fastest compression, but the compression ratio is not the best
+	9:  Maximum compression, but the execution efficiency is also the slowest
 ****************************************************************/
 func (report *Report) CompressLevel(level int) {
 	report.converter.CompressLevel(level)
 }
 
-// 写入PDF文件
+// Execute, execute Executors and generate PDF file
 func (report *Report) Execute(filepath string) {
 	if report.config == nil {
 		panic("please set page config")
@@ -105,7 +109,7 @@ func (report *Report) Execute(filepath string) {
 	}
 }
 
-// 获取PDF内容
+// GetBytesPdf, get PDF file content
 func (report *Report) GetBytesPdf() (ret []byte) {
 	if report.config == nil {
 		panic("please set page config")
@@ -116,22 +120,25 @@ func (report *Report) GetBytesPdf() (ret []byte) {
 	return
 }
 
+// LoadCellsFromText, generate PDF file from cells file
 func (report *Report) LoadCellsFromText(filepath string) error {
 	return report.converter.ReadFile(filepath)
 }
 
-// 转换, 内容 -> PDF文件
 func (report *Report) execute(exec bool) {
 	if exec {
-		report.executePageHeader() // 首页的页眉
+		// execute the first page header
+		report.executePageHeader()
 
 		report.pageNo = 1
 		report.currX, report.currY = report.GetPageStartXY()
 		report.addAtomicCell("v|PAGE|" + strconv.Itoa(report.pageNo))
 		report.executeDetail()
-		report.executePageFooter() // 最后一页的页脚
+		// execute the last page footer
+		report.executePageFooter()
 
-		report.pagination() // 分页, 执行总页数脚本
+		// pagination
+		report.pagination()
 	}
 
 	report.converter.Execute()
