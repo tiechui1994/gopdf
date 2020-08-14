@@ -417,9 +417,6 @@ func (c *MdSpace) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	return false, true, nil
 }
 
-func (c *MdSpace) LineHeight() float64 {
-	return c.lineHeight / 2
-}
 
 func (c *MdSpace) String() string {
 	return fmt.Sprint("[type=space]")
@@ -497,6 +494,67 @@ func CommonGenerateAtomicCell(children *[]mardown) (pagebreak, over bool, err er
 }
 
 // Combination components
+
+type MdMutiText struct {
+	abstract
+	fonts    map[string]string
+	children []mardown
+}
+
+func (m *MdMutiText) getabstract(typ string) abstract {
+	return abstract{
+		pdf:        m.pdf,
+		padding:    m.padding,
+		blockquote: m.blockquote,
+		Type:       typ,
+	}
+}
+
+func (m *MdMutiText) SetToken(t Token) error {
+	if m.fonts == nil || len(m.fonts) == 0 {
+		return fmt.Errorf("no fonts")
+	}
+	if t.Type != TYPE_TEXT {
+		return fmt.Errorf("invalid type")
+	}
+
+	n := len(t.Tokens)
+	for i := 0; i < n; i++ {
+		token := t.Tokens[i]
+		abs := m.getabstract(token.Type)
+		switch token.Type {
+		case TYPE_TEXT:
+			if len(token.Tokens) <= 1 {
+				text := &MdText{abstract: abs}
+				text.SetText(m.fonts[FONT_NORMAL], token.Text)
+				m.children = append(m.children, text)
+			} else {
+				mutiltext := &MdMutiText{abstract: abs, fonts: m.fonts}
+				mutiltext.SetToken(token)
+				m.children = append(m.children, mutiltext.children...)
+			}
+
+		case TYPE_LINK:
+			link := &MdText{abstract: abs}
+			link.SetText(m.fonts[FONT_NORMAL], token.Text, token.Href)
+			m.children = append(m.children, link)
+		case TYPE_EM:
+			em := &MdText{abstract: abs}
+			em.SetText(m.fonts[FONT_IALIC], token.Text)
+			m.children = append(m.children, em)
+		case TYPE_CODESPAN:
+			codespan := &MdText{abstract: abs}
+			codespan.SetText(m.fonts[FONT_NORMAL], token.Text)
+			m.children = append(m.children, codespan)
+		case TYPE_STRONG:
+			strong := &MdText{abstract: abs}
+			strong.SetText(m.fonts[FONT_BOLD], token.Text)
+			m.children = append(m.children, strong)
+		}
+	}
+
+	return nil
+}
 
 type MdHeader struct {
 	abstract
@@ -669,11 +727,13 @@ func (l *MdList) SetToken(t Token) error {
 	}
 
 	for index, item := range t.Items {
-		for _, token := range item.Tokens {
+		n := len(item.Tokens)
+		for i, token := range item.Tokens {
 			abs := l.getabstract(token.Type)
 			// special handle "list", "space"
 			switch token.Type {
 			case TYPE_LIST:
+				// if execute here, it symbols the previos is newline
 				space := &MdSpace{abstract: l.getabstract(TYPE_SPACE)}
 				l.children = append(l.children, space)
 
@@ -694,6 +754,11 @@ func (l *MdList) SetToken(t Token) error {
 				blockquote := &MdBlockQuote{abstract: abs, fonts: l.fonts}
 				blockquote.SetToken(token)
 				l.children = append(l.children, blockquote.children...)
+
+				if n > 0 && i == n-1 {
+					ln := len(l.children)
+					l.children[ln-1].(*MdSpace).blockquote -= 1
+				}
 				continue
 
 			case TYPE_CODE:
@@ -716,6 +781,10 @@ func (l *MdList) SetToken(t Token) error {
 			}
 
 			switch token.Type {
+			case TYPE_TEXT:
+				mutiltext := &MdMutiText{abstract: abs, fonts: l.fonts}
+				mutiltext.SetToken(token)
+				l.children = append(l.children, mutiltext.children...)
 			case TYPE_STRONG:
 				strong := &MdText{abstract: abs}
 				strong.SetText(l.fonts[FONT_BOLD], token.Text)
@@ -724,10 +793,6 @@ func (l *MdList) SetToken(t Token) error {
 				link := &MdText{abstract: abs}
 				link.SetText(l.fonts[FONT_NORMAL], token.Text, token.Href)
 				l.children = append(l.children, link)
-			case TYPE_TEXT:
-				text := &MdText{abstract: abs}
-				text.SetText(l.fonts[FONT_NORMAL], token.Text)
-				l.children = append(l.children, text)
 			}
 		}
 
@@ -778,7 +843,9 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 		return fmt.Errorf("invalid type")
 	}
 
-	for i, token := range t.Tokens {
+	n := len(t.Tokens)
+	for i := 0; i < n; i++ {
+		token := t.Tokens[i]
 		abs := b.getabstract(token.Type)
 		switch token.Type {
 		case TYPE_PARAGRAPH:
@@ -786,10 +853,20 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 			paragraph.SetToken(token)
 			b.children = append(b.children, paragraph.children...)
 
-			n := len(t.Tokens)
-			if i == n-1 || i != n-1 && t.Tokens[i+1].Type != TYPE_SPACE {
+			// last
+			if i == n-1 {
 				abs := b.getabstract(TYPE_SPACE)
 				space := &MdSpace{abstract: abs}
+				space.blockquote -= 1
+				b.children = append(b.children, space)
+			}
+
+			if i < n-1 {
+				abs := b.getabstract(TYPE_SPACE)
+				space := &MdSpace{abstract: abs}
+				if t.Tokens[i+1].Type == TYPE_SPACE {
+					i++
+				}
 				b.children = append(b.children, space)
 			}
 
@@ -807,6 +884,15 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 			blockquote := &MdBlockQuote{abstract: abs, fonts: b.fonts}
 			blockquote.SetToken(token)
 			b.children = append(b.children, blockquote.children...)
+
+			if n > 0 && i == n-1 {
+				l := len(b.children)
+				b.children[l-1].(*MdSpace).blockquote -= 1
+			}
+		case TYPE_TEXT:
+			mutiltext := &MdMutiText{abstract: abs, fonts: b.fonts}
+			mutiltext.SetToken(token)
+			b.children = append(b.children, mutiltext.children...)
 		case TYPE_SPACE:
 			if i == len(t.Tokens)-1 {
 				abs.blockquote -= 1
@@ -817,18 +903,6 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 			link := &MdText{abstract: abs}
 			link.SetText(b.fonts[FONT_NORMAL], token.Text, token.Href)
 			b.children = append(b.children, link)
-		case TYPE_TEXT:
-			text := &MdText{abstract: abs}
-			text.SetText(b.fonts[FONT_NORMAL], token.Text)
-			b.children = append(b.children, text)
-		case TYPE_EM:
-			em := &MdText{abstract: abs}
-			em.SetText(b.fonts[FONT_IALIC], token.Text)
-			b.children = append(b.children, em)
-		case TYPE_CODESPAN:
-			codespan := &MdText{abstract: abs}
-			codespan.SetText(b.fonts[FONT_NORMAL], token.Text)
-			b.children = append(b.children, codespan)
 		case TYPE_CODE:
 			code := &MdText{abstract: abs}
 			code.SetText(b.fonts[FONT_NORMAL], token.Text+"\n")
@@ -840,6 +914,14 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 				br.SetText(b.fonts[FONT_NORMAL], "\n")
 				b.children = append(b.children, br)
 			}
+		case TYPE_EM:
+			em := &MdText{abstract: abs}
+			em.SetText(b.fonts[FONT_IALIC], token.Text)
+			b.children = append(b.children, em)
+		case TYPE_CODESPAN:
+			codespan := &MdText{abstract: abs}
+			codespan.SetText(b.fonts[FONT_NORMAL], token.Text)
+			b.children = append(b.children, codespan)
 		case TYPE_STRONG:
 			strong := &MdText{abstract: abs}
 			strong.SetText(b.fonts[FONT_BOLD], token.Text)
@@ -847,8 +929,9 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 		}
 	}
 
-	if len(b.children) > 0 {
-		lastType := b.children[len(b.children)-1].GetType()
+	l := len(b.children)
+	if l > 0 {
+		lastType := b.children[l-1].GetType()
 		if lastType != TYPE_SPACE {
 			abs := b.getabstract(TYPE_TEXT)
 			abs.blockquote -= 1
@@ -918,6 +1001,10 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 			blockquote := &MdBlockQuote{abstract: abs, fonts: mt.fonts}
 			blockquote.SetToken(token)
 			mt.children = append(mt.children, blockquote.children...)
+		case TYPE_TEXT:
+			mutiltext := &MdMutiText{abstract: abs, fonts: mt.fonts}
+			mutiltext.SetToken(token)
+			mt.children = append(mt.children, mutiltext.children...)
 		case TYPE_SPACE:
 			space := &MdSpace{abstract: abs}
 			mt.children = append(mt.children, space)
@@ -925,10 +1012,15 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 			link := &MdText{abstract: abs}
 			link.SetText(mt.fonts[FONT_NORMAL], token.Text, token.Href)
 			mt.children = append(mt.children, link)
-		case TYPE_TEXT:
-			text := &MdText{abstract: abs}
-			text.SetText(mt.fonts[FONT_NORMAL], token.Text)
-			mt.children = append(mt.children, text)
+		case TYPE_CODE:
+			abs.padding = 15.0
+			code := &MdText{abstract: abs}
+			code.SetText(mt.fonts[FONT_NORMAL], token.Text+"\n")
+			mt.children = append(mt.children, code)
+
+			abs.lineHeight = 8
+			space := &MdSpace{abstract:abs}
+			mt.children = append(mt.children, space)
 		case TYPE_EM:
 			em := &MdText{abstract: abs}
 			em.SetText(mt.fonts[FONT_IALIC], token.Text)
@@ -937,11 +1029,6 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 			codespan := &MdText{abstract: abs}
 			codespan.SetText(mt.fonts[FONT_NORMAL], token.Text)
 			mt.children = append(mt.children, codespan)
-		case TYPE_CODE:
-			abs.padding = 15.0
-			code := &MdText{abstract: abs}
-			code.SetText(mt.fonts[FONT_NORMAL], token.Text+"\n")
-			mt.children = append(mt.children, code)
 		case TYPE_STRONG:
 			strong := &MdText{abstract: abs}
 			strong.SetText(mt.fonts[FONT_BOLD], token.Text)
