@@ -9,6 +9,7 @@ import (
 	"github.com/tiechui1994/gopdf/core"
 	"bytes"
 	"fmt"
+	"github.com/robertkrimen/otto"
 )
 
 func init() {
@@ -62,7 +63,11 @@ func MarkdownReportExecutor(report *core.Report) {
 }
 
 func TestMarkdown(t *testing.T) {
-	MarkdownReport()
+	data, _ := ioutil.ReadFile("/home/quinn/workspace/marked/lib/marked.js")
+	vm := otto.New()
+	_, err := vm.Run(string(data))
+	t.Log(err)
+	//MarkdownReport()
 }
 
 func TestTokens(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"log"
 	"encoding/json"
 	"bytes"
+	"github.com/dlclark/regexp2"
 )
 
 var (
@@ -49,4 +50,10 @@ func TestBlockquote(t *testing.T) {
 	encode.Encode(tokens)
 
 	log.Printf("\n%v", buf.String())
+}
+
+func TestRe(t *testing.T) {
+	re := regexp2.MustCompile(`^<([\s\S]*)>$`, regexp2.RE2)
+	res, err := re.Replace("<Java,Vivo>", "$1", 0, -1)
+	t.Log(res, err)
 }
