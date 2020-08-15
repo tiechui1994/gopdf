@@ -9,6 +9,56 @@ import (
 	"encoding/json"
 )
 
+func findClosingBracket(str []rune, b []rune) int {
+	if strings.Index(string(str), string(b)) == -1 {
+		return -1
+	}
+
+	l := len(str)
+	level := 0
+	for i := 0; i < l; i++ {
+		if str[i] == '\\' {
+			i++
+		} else if str[i] == b[0] {
+			level++
+		} else if str[i] == b[1] {
+			level--
+			if level < 0 {
+				return i
+			}
+		}
+	}
+
+	return -1
+}
+
+func outputLink(match *regexp2.Match, link Token, raw string) Token {
+	href := link.Href
+	title := link.Title
+
+	re := regexp2.MustCompile(`\\([\[\]])`, regexp2.RE2)
+	text, _ := re.Replace(match.GroupByNumber(1).String(), "$1", 0, -1)
+
+	zero := match.GroupByNumber(0).Runes()
+	if zero[0] != '!' {
+		return Token{
+			Type:  "link",
+			Raw:   raw,
+			Href:  href,
+			Title: title,
+			Text:  text,
+		}
+	}
+
+	return Token{
+		Type:  "image",
+		Raw:   raw,
+		Href:  href,
+		Title: title,
+		Text:  text,
+	}
+}
+
 func matchAll(re *regexp2.Regexp, src []rune) ([]*regexp2.Match, error) {
 	matches := make([]*regexp2.Match, 0)
 	matched, err := re.FindRunesMatch(src)
@@ -41,35 +91,35 @@ var (
 	block__label = `(?!\s*\])(?:\\[\[\]]|[^\[\]])+`
 	block__title = `(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))`
 
-	block_bullet  = `(?:[*+-]|\d{1,9}[.)])`
-	block_item    = `^( *)(bull) ?[^\n]*(?:\n(?!\1bull ?)[^\n]*)*`
-	block_comment = `<!--(?!-?>)[\s\S]*?-->`
+	block_bullet   = `(?:[*+-]|\d{1,9}[.)])`
+	block_item     = `^( *)(bull) ?[^\n]*(?:\n(?!\1bull ?)[^\n]*)*`
+	block__comment = `<!--(?!-?>)[\s\S]*?-->`
 
 	// inline
 	// ^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])
 	inline_escape   = `^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_$1{|}~])`
 	inline_autolink = `^<(scheme:[^\s\x00-\x1f<>]*|email)>`
 	inline_tag      = `^comment` +
-		`|^</[a-zA-Z][\\w:-]*\\s*>` +
-		`|^<[a-zA-Z][\\w-]*(?:attribute)*?\\s*/?>` +
-		`|^<\\?[\\s\\S]*?\\?>` +
-		`|^<![a-zA-Z]+\\s[\\s\\S]*?>` +
-		`|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>`
+		`|^</[a-zA-Z][\w:-]*\s*>` +
+		`|^<[a-zA-Z][\w-]*(?:attribute)*?\s*/?>` +
+		`|^<\?[\s\S]*?\?>` +
+		`|^<![a-zA-Z]+\s[\s\S]*?>` +
+		`|^<!\[CDATA\[[\s\S]*?\]\]>`
 
 	inline_link          = `^!?\[(label)\]\(\s*(href)(?:\s+(title))?\s*\)`
 	inline_reflink       = `^!?\[(label)\]\[(?!\s*\])((?:\\[\[\]]?|[^\[\]\\])+)\]`
 	inline_nolink        = `^!?\[(?!\s*\])((?:\[[^\[\]]*\]|\\[\[\]]|[^\[\]])*)\](?:\[\])?`
-	inline_reflinkSearch = `reflink|nolink(?!\\()`
+	inline_reflinkSearch = `reflink|nolink(?!\()`
 
 	inline_strong_start  = `^(?:(\*\*(?=[*punctuation]))|\*\*)(?![\s])|__`
 	inline_strong_middle = `^\*\*(?:(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)|\*(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)*?\*)+?\*\*$|^__(?![\s])((?:(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)|_(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)*?_)+?)__$`
-	inline_strong_endast = `[^punctuation\s]\*\*(?!\*)|[punctuation]\*\*(?!\*)(?:(?=[punctuation\s]|$))`
-	inline_strong_endund = `[^\s]__(?!_)(?:(?=[punctuation\s])|$)`
+	inline_strong_endAst = `[^punctuation\s]\*\*(?!\*)|[punctuation]\*\*(?!\*)(?:(?=[punctuation\s]|$))`
+	inline_strong_endUnd = `[^\s]__(?!_)(?:(?=[punctuation\s])|$)`
 
 	inline_em_start  = `^(?:(\*(?=[punctuation]))|\*)(?![*\s])|_`
 	inline_em_middle = `^\*(?:(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)|\*(?:(?!overlapSkip)(?:[^*]|\\\*)|overlapSkip)*?\*)+?\*$|^_(?![_\s])(?:(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)|_(?:(?!overlapSkip)(?:[^_]|\\_)|overlapSkip)*?_)+?_$`
-	inline_em_endast = `[^punctuation\s]\*(?!\*)|[punctuation]\*(?!\*)(?:(?=[punctuation\s]|$))`
-	inline_em_endund = `[^\s]_(?!_)(?:(?=[punctuation\s])|$)`
+	inline_em_endAst = `[^punctuation\s]\*(?!\*)|[punctuation]\*(?!\*)(?:(?=[punctuation\s]|$))`
+	inline_em_endUnd = `[^\s]_(?!_)(?:(?=[punctuation\s])|$)`
 
 	// ^(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)
 	inline_code = `^($1+)([^$1]|[^$1][\s\S]*?[^$1])\1(?!$1)`
@@ -79,26 +129,27 @@ var (
 	inline_text        = `^($1+|[^$1])(?:[\s\S]*?(?:(?=[\\<!\[$1*]|\b_|$)|[^ ](?= {2,}\n))|(?= {2,}\n))`
 	inline_punctuation = `^([\s*punctuation])`
 
-	// !"#$%&\'()+\\-.,/:;<=>?@\\[\\]`^{|}~
-	inline__punctuation = `!"#$%&\'()+\\-.,/:;<=>?@\\[\\]$1^{|}~`
+	// !"#$%&\'()+\-.,/:;<=>?@\[\]`^{|}~
+	inline__punctuation = `!"#$%&'()+\-.,/:;<=>?@\[\]$1^{|}~`
 
 	// \\[[^\\]]*?\\]\\([^\\)]*?\\)|`[^`]*?`|<[^>]*?>
-	inline_blockSkip   = `\\[[^\\]]*?\\]\\([^\\)]*?\\)|$1[^$1]*?$1|<[^>]*?>`
-	inline_overlapSkip = `__[^_]*?__|\\*\\*\\[^\\*\\]*?\\*\\*`
+	inline__blockSkip   = `\[[^\]]*?\]\([^\)]*?\)|$1[^$1]*?$1|<[^>]*?>`
+	inline__overlapSkip = `__[^_]*?__|\*\*\[^\*\]*?\*\*`
 
 	// \\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])
-	inline__escape = `\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_$1{|}~])`
-	inline_scheme  = `[a-zA-Z][a-zA-Z0-9+.-]{1,31}`
+	inline__escapes = `\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_$1{|}~])`
+	inline__scheme  = `[a-zA-Z][a-zA-Z0-9+.-]{1,31}`
 
 	// [a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])
-	inline_email = `[a-zA-Z0-9.!#$%&'*+/=?^_$1{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])`
+	inline__email = `[a-zA-Z0-9.!#$%&'*+/=?^_$1{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])`
 
-	inline_attribute = `\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>$1]+)?`
+	// \s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>`]+)?
+	inline__attribute = `\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>$1]+)?`
 
 	// (?:\[(?:\\.|[^\[\]\\])*\]|\\.|`[^`]*`|[^\[\]\\`])*?
-	inline_label = `(?:\[(?:\\.|[^\[\]\\])*\]|\\.|$1[^$1]*$1|[^\[\]\\$1])*?`
-	inline_href  = `<(?:\\[<>]?|[^\s<>\\])*>|[^\s\x00-\x1f]*`
-	inline_title = `"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)`
+	inline__label = `(?:\[(?:\\.|[^\[\]\\])*\]|\\.|$1[^$1]*$1|[^\[\]\\$1])*?`
+	inline__href  = `<(?:\\[<>]?|[^\s<>\\])*>|[^\s\x00-\x1f]*`
+	inline__title = `"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)`
 )
 
 //gfm: true,
@@ -120,7 +171,7 @@ func edit(re interface{}, options ...regexp2.RegexOptions) *editor {
 		regex = re.(string)
 	}
 
-	var opt = regexp2.None
+	var opt = regexp2.RegexOptions(regexp2.RE2)
 	if len(options) > 0 {
 		opt = options[0]
 	}
@@ -130,11 +181,9 @@ func edit(re interface{}, options ...regexp2.RegexOptions) *editor {
 	}
 
 	e.replace = func(name, value string) *editor {
-		caret := regexp.MustCompile(`(^|[^\[])\^`)
-		if caret.MatchString(value) {
-			value = caret.ReplaceAllString(value, "$1")
-		}
-		regex = strings.Replace(regex, name, value, -1)
+		caret := regexp2.MustCompile(`(^|[^\[])\^`, regexp2.RE2)
+		value, _ = caret.Replace(value, "$1", 0, -1)
+		regex = strings.ReplaceAll(regex, name, value)
 		return e
 	}
 
@@ -146,12 +195,11 @@ var (
 	inline map[string]*regexp2.Regexp
 )
 
-func InitFunc() {
+func initBlock() {
 	block_fences = strings.Replace(block_fences, "$1", "`", -1)
 	block = make(map[string]*regexp2.Regexp)
-	inline = make(map[string]*regexp2.Regexp)
 
-	option := regexp2.None
+	option := regexp2.RegexOptions(regexp2.RE2)
 	block["newline"] = regexp2.MustCompile(block_newline, option)
 	block["code"] = regexp2.MustCompile(block_code, option)
 	block["fences"] = regexp2.MustCompile(block_fences, option)
@@ -169,6 +217,7 @@ func InitFunc() {
 		replace("title", block["_title"].String()).
 		getRegex()
 
+	// TODO: item(gm)
 	block["item"] = regexp2.MustCompile(block_item, option)
 	block["bullet"] = regexp2.MustCompile(block_bullet, option|regexp2.ECMAScript)
 	block["item"] = edit(block["item"], regexp2.Multiline|regexp2.RE2).
@@ -181,6 +230,8 @@ func InitFunc() {
 		replace("hr", "\\n+(?=\\1?(?:(?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$))").
 		replace("def", "\\n+(?="+block["def"].String()+")").
 		getRegex()
+
+	block["_comment"] = regexp2.MustCompile(block__comment, option)
 
 	block["_paragraph"] = regexp2.MustCompile(block__paragraph, option)
 	block["paragraph"] = edit(block["_paragraph"]).
@@ -196,7 +247,123 @@ func InitFunc() {
 	block["blockquote"] = edit(block["blockquote"]).
 		replace("paragraph", block["paragraph"].String()).
 		getRegex()
+}
 
+func initLine() {
+	inline_escape = strings.ReplaceAll(inline_escape, "$1", "`")
+	inline_code = strings.ReplaceAll(inline_code, "$1", "`")
+	inline_text = strings.ReplaceAll(inline_text, "$1", "`")
+	inline__punctuation = strings.ReplaceAll(inline__punctuation, "$1", "`")
+	inline__blockSkip = strings.ReplaceAll(inline__blockSkip, "$1", "`")
+	inline__escapes = strings.ReplaceAll(inline__escapes, "$1", "`")
+	inline__email = strings.ReplaceAll(inline__email, "$1", "`")
+	inline__attribute = strings.ReplaceAll(inline__attribute, "$1", "`")
+	inline__label = strings.ReplaceAll(inline__label, "$1", "`")
+	inline = make(map[string]*regexp2.Regexp)
+
+	option := regexp2.RegexOptions(regexp2.RE2)
+	inline["escape"] = regexp2.MustCompile(inline_escape, option)
+	inline["autolink"] = regexp2.MustCompile(inline_autolink, option)
+	inline["tag"] = regexp2.MustCompile(inline_tag, option)
+	inline["link"] = regexp2.MustCompile(inline_link, option)
+	inline["reflink"] = regexp2.MustCompile(inline_reflink, option)
+	inline["nolink"] = regexp2.MustCompile(inline_nolink, option)
+
+	inline["strong_start"] = regexp2.MustCompile(inline_strong_start, option)
+	inline["strong_middle"] = regexp2.MustCompile(inline_strong_middle, option)
+	inline["strong_endAst"] = regexp2.MustCompile(inline_strong_endAst, option)
+	inline["strong_endUnd"] = regexp2.MustCompile(inline_strong_endUnd, option)
+
+	inline["em_start"] = regexp2.MustCompile(inline_em_start, option)
+	inline["em_middle"] = regexp2.MustCompile(inline_em_middle, option)
+	inline["em_endAst"] = regexp2.MustCompile(inline_em_endAst, option)
+	inline["em_endUnd"] = regexp2.MustCompile(inline_em_endUnd, option)
+
+	inline["code"] = regexp2.MustCompile(inline_code, option)
+	inline["br"] = regexp2.MustCompile(inline_br, option)
+	inline["text"] = regexp2.MustCompile(inline_text, option)
+	inline["punctuation"] = regexp2.MustCompile(inline_punctuation, option)
+
+	inline["_punctuation"] = regexp2.MustCompile(inline__punctuation, option)
+	inline["punctuation"] = edit(inline["punctuation"]).
+		replace("punctuation", inline__punctuation).
+		getRegex()
+
+	inline["_blockSkip"] = regexp2.MustCompile(inline__blockSkip, option)
+	inline["_overlapSkip"] = regexp2.MustCompile(inline__overlapSkip, option)
+
+	inline["em_start"] = edit(inline["em_start"]).
+		replace("punctuation", inline["_punctuation"].String()).
+		getRegex()
+	inline["em_middle"] = edit(inline["em_middle"]).
+		replace("punctuation", inline["_punctuation"].String()).
+		replace("overlapSkip", inline["_overlapSkip"].String()).
+		getRegex()
+	inline["em_endAst"] = edit(inline["em_endAst"]).
+		replace("punctuation", inline["_punctuation"].String()).
+		getRegex()
+	inline["em_endUnd"] = edit(inline["em_start"]).
+		replace("punctuation", inline["_punctuation"].String()).
+		getRegex()
+
+	inline["strong_start"] = edit(inline["strong_start"]).
+		replace("punctuation", inline["_punctuation"].String()).
+		getRegex()
+	inline["strong_middle"] = edit(inline["strong_middle"]).
+		replace("punctuation", inline["_punctuation"].String()).
+		replace("blockSkip", inline["_blockSkip"].String()).
+		getRegex()
+	inline["strong_endAst"] = edit(inline["strong_endAst"]).
+		replace("punctuation", inline["_punctuation"].String()).
+		getRegex()
+	inline["strong_endUnd"] = edit(inline["strong_start"]).
+		replace("punctuation", inline["_punctuation"].String()).
+		getRegex()
+
+	// TODO: g
+	inline["blockSkip"] = edit(inline["_blockSkip"]).
+		getRegex()
+	inline["overlapSkip"] = edit(inline["_overlapSkip"]).
+		getRegex()
+
+	// TODO: g
+	inline["_escapes"] = regexp2.MustCompile(inline__escapes, option)
+	inline["_scheme"] = regexp2.MustCompile(inline__scheme, option)
+	inline["_email"] = regexp2.MustCompile(inline__email, option)
+	inline["autolink"] = edit(inline["autolink"]).
+		replace("scheme", inline["_scheme"].String()).
+		replace("email", inline["_email"].String()).
+		getRegex()
+
+	inline["_attribute"] = regexp2.MustCompile(inline__attribute, option)
+	inline["tag"] = edit(inline["tag"]).
+		replace("comment", block["_comment"].String()).
+		replace("attribute", inline["_attribute"].String()).
+		getRegex()
+
+	inline["_label"] = regexp2.MustCompile(inline__label, option)
+	inline["_href"] = regexp2.MustCompile(inline__href, option)
+	inline["_title"] = regexp2.MustCompile(inline__title, option)
+	inline["link"] = edit(inline["link"]).
+		replace("label", inline["_label"].String()).
+		replace("href", inline["_href"].String()).
+		replace("title", inline["_title"].String()).
+		getRegex()
+
+	inline["reflink"] = edit(inline_reflink).
+		replace("label", inline["_label"].String()).
+		getRegex()
+
+	// TODO: g
+	inline["reflinkSearch"] = edit(inline_reflinkSearch).
+		replace("reflink", inline["reflink"].String()).
+		replace("nolink", inline["nolink"].String()).
+		getRegex()
+}
+
+func InitFunc() {
+	initBlock()
+	initLine()
 }
 
 type Token struct {
@@ -218,6 +385,9 @@ type Token struct {
 	// link
 	Href  string `json:"href"`
 	Title string `json:"title"`
+
+	// def
+	Tag string `json:"tag"`
 
 	Tokens []Token `json:"tokens"`
 }
@@ -831,55 +1001,6 @@ func inlineText(src []rune) (token Token, err error) {
 		Raw:  raw,
 		Text: raw,
 	}, nil
-}
-func findClosingBracket(str []rune, b []rune) int {
-	if strings.Index(string(str), string(b)) == -1 {
-		return -1
-	}
-
-	l := len(str)
-	level := 0
-	for i := 0; i < l; i++ {
-		if str[i] == '\\' {
-			i++
-		} else if str[i] == b[0] {
-			level++
-		} else if str[i] == b[1] {
-			level--
-			if level < 0 {
-				return i
-			}
-		}
-	}
-
-	return -1
-}
-
-func outputLink(match *regexp2.Match, link Token, raw string) Token {
-	href := link.Href
-	title := link.Title
-
-	re := regexp2.MustCompile(`\\([\[\]])`, regexp2.RE2)
-	text, _ := re.Replace(match.GroupByNumber(1).String(), "$1", 0, -1)
-
-	zero := match.GroupByNumber(0).Runes()
-	if zero[0] != '!' {
-		return Token{
-			Type:  "link",
-			Raw:   raw,
-			Href:  href,
-			Title: title,
-			Text:  text,
-		}
-	}
-
-	return Token{
-		Type:  "image",
-		Raw:   raw,
-		Href:  href,
-		Title: title,
-		Text:  text,
-	}
 }
 
 func PreProccesText(text string) {

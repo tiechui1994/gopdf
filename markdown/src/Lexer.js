@@ -46,7 +46,9 @@ module.exports = class Lexer {
       block: block.normal,
       inline: inline.normal
     };
-
+    // pedantic: false
+    // gfm: true
+    // breaks: false
     if (this.options.pedantic) {
       rules.block = block.pedantic;
       rules.inline = inline.pedantic;
