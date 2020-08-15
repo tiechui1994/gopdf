@@ -198,21 +198,70 @@ func (l *Lexer) inlineTokens(text string, tokens *[]Token, inLink, inRawBlock bo
 		if len(links) > 0 {
 			match, _ := inline["reflinkSearch"].FindRunesMatch(maskedSrc)
 			for match != nil {
-				//source := match.GroupByNumber(0).Runes()
-				//source = source[strings.LastIndex(source, "[")+1:]
-
+				zero := match.GroupByNumber(0).Runes()
+				index := str(zero).lastIndexOf("[") + 1
+				search := str(zero).slice(index, -1).string()
+				if includes(links, search, 0) {
+					maskedSrc = []rune(str(maskedSrc).slice(0, match.Index).string() + "[" +
+						strings.Repeat("a", len(zero)-2) + "]")
+				}
 			}
 		}
+
+		if match, _ := inline["blockSkip"].FindRunesMatch(maskedSrc); match != nil {
+			zero := match.GroupByNumber(0).Runes()
+			//reflink := inline["reflinkSearch"].MatchTimeout
+			maskedSrc = []rune(str(maskedSrc).slice(0, match.Index).string() + "[" +
+				strings.Repeat("a", len(zero)-2) + "]" + str(maskedSrc).slice(0, 0).string())
+		}
+
 	}
 }
 
-func includes(source []rune, search string, index int) bool {
-	if index < 0 || index > len(source) {
+type str []rune
+
+func (s *str) slice(start, end int) str {
+	n := len(*s)
+	if start < 0 {
+		start = n + start
+	}
+	if end < 0 {
+		end = n + end
+	}
+
+	return str((*s)[start:end])
+}
+
+func (s *str) lastIndexOf(r string) int {
+	n := len(*s)
+	for i := n - 1; i >= 0; i++ {
+		if string((*s)[i:]) == r {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func (s *str) indexOf(r string) int {
+	n := len(*s)
+	for i := 0; i < n; i++ {
+		if string((*s)[i:]) == r {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func (s *str) includes(search string, index int) bool {
+	if index < 0 || index > len(*s) {
 		return false
 	}
 
-	for i := index; i < len(source); i++ {
-		if strings.HasPrefix(string(source[i:]), search) {
+	n := len(*s)
+	for i := index; i < n; i++ {
+		if strings.HasPrefix(string((*s)[i:]), search) {
 			return true
 		}
 	}
@@ -220,4 +269,21 @@ func includes(source []rune, search string, index int) bool {
 	return false
 }
 
+func (s *str) string() string {
+	return string(*s)
+}
 
+func includes(arr []string, search string, index int) bool {
+	if index < 0 || index > len(arr) {
+		return false
+	}
+
+	n := len(arr)
+	for i := index; i < n; i++ {
+		if arr[i] == search {
+			return true
+		}
+	}
+
+	return false
+}
