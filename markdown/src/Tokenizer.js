@@ -4,6 +4,8 @@ const {
     splitCells,
     findClosingBracket
 } = require('./helpers.js');
+const {Logger} = require("./log");
+const log = new Logger({shortTime: true});
 
 function outputLink(cap, link, raw) {
     const href = link.href;

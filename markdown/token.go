@@ -1,11 +1,45 @@
 package markdown
 
 import (
-	"regexp"
 	"strings"
 	"fmt"
 	"encoding/json"
+	"bytes"
 )
+
+type Token struct {
+	Type string `json:"type"`
+	Raw  string `json:"raw"`
+	Text string `json:"text"`
+
+	// list
+	Ordered bool    `json:"ordered"`
+	Start   string  `json:"start,omitempty"`
+	Loose   bool    `json:"loose,omitempty"`
+	Task    bool    `json:"task,omitempty"`
+	Items   []Token `json:"items,omitempty"`
+	Checked string  `json:"checked,omitempty"`
+
+	// heading
+	Depth int `json:"depth,omitempty"`
+
+	// link
+	Href  string `json:"href,omitempty"`
+	Title string `json:"title,omitempty"`
+
+	// def
+	Tag string `json:"tag,omitempty"`
+
+	Tokens []Token `json:"tokens"`
+}
+
+func (t Token) String() string {
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	encoder.SetIndent("", "  ")
+	encoder.Encode(t)
+	return buf.String()
+}
 
 func findClosingBracket(str []rune, b []rune) int {
 	if strings.Index(string(str), string(b)) == -1 {
@@ -83,6 +117,14 @@ var (
 	block_item     = `^( *)(bull) ?[^\n]*(?:\n(?!\1bull ?)[^\n]*)*`
 	block__comment = `<!--(?!-?>)[\s\S]*?-->`
 
+	block_gfm_nptable = `^ *([^|\n ].*\|.*)\n` + // Header
+		` *([-:]+ *\|[-| :]*)` + // Algin
+		`(?:\n((?:(?!\n|hr|heading|blockquote|code|fences|list).*(?:\n|$))*)\n*|$)` // Cells
+
+	block_gfm_table = `^ *\|(.+)\n` + // Header
+		` *\|?( *[-:]+[-| :]*)` + // Align
+		`(?:\n *((?:(?!\n|hr|heading|blockquote|code|fences|list).*(?:\n|$))*)\n*|$)` // Cells
+
 	// inline
 	// ^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])
 	inline_escape   = `^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_$1{|}~])`
@@ -138,6 +180,14 @@ var (
 	inline__label = `(?:\[(?:\\.|[^\[\]\\])*\]|\\.|$1[^$1]*$1|[^\[\]\\$1])*?`
 	inline__href  = `<(?:\\[<>]?|[^\s<>\\])*>|[^\s\x00-\x1f]*`
 	inline__title = `"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)`
+
+	inline_gfm__extended_email = `[A-Za-z0-9._+-]+(@)[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]*[a-zA-Z0-9])+(?![-_])`
+	inline_gfm_url             = `^((?:ftp|https?):\/\/|www\.)(?:[a-zA-Z0-9\-]+\.?)+[^\s<]*|^email`
+	inline_gfm__backpedal      = `(?:[^?!.,:;*_~()&]+|\([^)]*\)|&(?![a-zA-Z0-9]+;$)|[?!.,:;*_~)]+(?!$))+`
+	inline_gfm_del             = `^~+(?=\S)([\s\S]*?\S)~+`
+
+	// ^(`+|[^`])(?:[\s\S]*?(?:(?=[\\<!\[`*~]|\b_|https?:\/\/|ftp:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@))|(?= {2,}\n|[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@))
+	inline_gfm_text = `^($1+|[^$1])(?:[\s\S]*?(?:(?=[\<!\[$1*~]|\b_|https?:\/\/|ftp:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_$1{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_$1{\|}~-]+@))|(?= {2,}\n|[a-zA-Z0-9.!#$%&'*+\/=?_$1{\|}~-]+@))`
 )
 
 //gfm: true,
@@ -178,6 +228,19 @@ func edit(re interface{}, options ...Options) *editor {
 	}
 
 	return e
+}
+
+func merge(args ...map[string]*Regex) map[string]*Regex {
+	result := make(map[string]*Regex)
+	for i := 0; i < len(args); i++ {
+		if args[i] != nil {
+			for k, v := range args[i] {
+				result[k] = v
+			}
+		}
+	}
+
+	return result
 }
 
 var (
@@ -347,35 +410,65 @@ func initLine() {
 		getRegex()
 }
 
+func initBlockGfm() map[string]*Regex {
+	normal := merge(block)
+	option := Options(RE2)
+	gfm := merge(normal, map[string]*Regex{
+		"nptable": MustCompile(block_gfm_nptable, option),
+		"table":   MustCompile(block_gfm_table, option),
+	})
+	gfm["nptable"] = edit(gfm["nptable"]).
+		replace("hr", block["hr"].String()).
+		replace("heading", " {0,3}#{1,6} ").
+		replace("blockquote", " {0,3}>").
+		replace("code", " {4}[^\n]").
+		replace("fences", " {0,3}(?:`{3,}(?=[^`\n]*\n)|~{3,})[^\n]*\n").
+		replace("list", " {0,3}(?:[*+-]|1[.)]) ").
+		getRegex()
+
+	gfm["table"] = edit(gfm["table"]).
+		replace("hr", block["hr"].String()).
+		replace("heading", " {0,3}#{1,6} ").
+		replace("blockquote", " {0,3}>").
+		replace("code", " {4}[^\n]").
+		replace("fences", " {0,3}(?:`{3,}(?=[^`\n]*\n)|~{3,})[^\n]*\n").
+		replace("list", " {0,3}(?:[*+-]|1[.)]) ").
+		getRegex()
+
+	return gfm
+}
+
+func initInlineGfm(breaks bool) map[string]*Regex {
+	inline_gfm_text = strings.ReplaceAll(inline_gfm_text, "$1", "`")
+	normal := merge(inline)
+	option := Options(RE2)
+	gfm := merge(normal, map[string]*Regex{
+		"escape":          edit(inline["escape"]).replace("])", "~|])").getRegex(),
+		"_extended_email": MustCompile(inline_gfm__extended_email, option),
+		"url":             MustCompile(inline_gfm_url, option),
+		"_backpedal":      MustCompile(inline_gfm__backpedal, option),
+		"del":             MustCompile(inline_gfm_del, option),
+		"text":            MustCompile(inline_gfm_text, option),
+	})
+
+	gfm["url"] = edit(gfm["url"], IgnoreCase).
+		replace("email", gfm["_extended_email"].String()).
+		getRegex()
+
+	if breaks {
+		gfm["br"] = edit(inline["br"]).replace("{2,}", "*").getRegex()
+		gfm["text"] = edit(gfm["text"]).
+			replace("\b_", "\b_| {2,}\n").
+			replace(`\{2,\}`, "*").
+			getRegex()
+	}
+
+	return gfm
+}
+
 func InitFunc() {
 	initBlock()
 	initLine()
-}
-
-type Token struct {
-	Type string `json:"type"`
-	Raw  string `json:"raw"`
-	Text string `json:"text"`
-
-	// list
-	Ordered bool            `json:"ordered"`
-	Start   json.RawMessage `json:"start"`
-	Loose   bool            `json:"loose"`
-	Task    bool            `json:"task"`
-	Items   []Token         `json:"items"`
-	Checked json.RawMessage `json:"checked"`
-
-	// heading
-	Depth int `json:"depth"`
-
-	// link
-	Href  string `json:"href"`
-	Title string `json:"title"`
-
-	// def
-	Tag string `json:"tag"`
-
-	Tokens []Token `json:"tokens"`
 }
 
 func space(src []rune) (token Token, err error) {
@@ -506,9 +599,10 @@ func list(src []rune) (token Token, err error) {
 		Type:    "list",
 		Raw:     string(raw),
 		Ordered: isordered,
-		Start:   json.RawMessage([]byte(start)),
+		Start:   string(start),
 		Loose:   false,
 		Tokens:  []Token{},
+		Items:   []Token{},
 	}
 
 	itemmatch, err := str(raw).match(block["item"])
@@ -518,20 +612,20 @@ func list(src []rune) (token Token, err error) {
 
 	var next bool
 	length := len(itemmatch)
-	replace := regexp.MustCompile(`^ *([*+-]|\d+[.)]) *`)
+	replace := MustCompile(`^ *([*+-]|\d+[.)]) *`, RE2)
 	reloose := MustCompile(`\n\n(?!\s*$)`, RE2)
-	retask := regexp.MustCompile(`^\[[ xX]\] `)
+	retask := MustCompile(`^\[[ xX]\] `, RE2)
 	for i := 0; i < length; i++ {
 		item := itemmatch[i].Runes()
 		raw := item
 		space := len(item)
-		item = []rune(replace.ReplaceAllString(string(item), ""))
+		item = replace.ReplaceRune(item, "", 0, 1)
 
-		index := strings.Index(string(item), "\n ")
+		index := str(item).indexOf("\n ")
 		if index != -1 {
 			space -= len(item)
-			temp, _ := MustCompile(`'^ {1,`+string(space)+`}`, Multiline).Replace(string(item), "", 0, -1)
-			item = []rune(temp)
+			item = MustCompile(`'^ {1,`+string(space)+`}`, Multiline|Global).
+				ReplaceRune(item, "", 0, -1)
 		}
 
 		if i != length-1 {
@@ -547,11 +641,18 @@ func list(src []rune) (token Token, err error) {
 
 			// todo: do nothing
 			if condiotion {
+				strs := make([]string, 0)
+				for k := i + 1; k < length; k++ {
+					strs = append(strs, itemmatch[k].String())
+				}
+				addBack := []rune(strings.Join(strs, "\n"))
+				rawrune := []rune(list.Raw)
+				list.Raw = string(rawrune[0:len(rawrune)-len(addBack)])
+				i = length - 1
 			}
 		}
 
-		temp, _ := reloose.MatchRunes(item)
-		loose := next || temp
+		loose := next || reloose.Test(item)
 		if i != length-1 {
 			next = item[len(item)-1] == '\n'
 			if !loose {
@@ -564,10 +665,10 @@ func list(src []rune) (token Token, err error) {
 		}
 
 		ischecked := "undefined"
-		istask := retask.MatchString(string(item))
+		istask := retask.Test(item)
 		if istask {
 			ischecked = fmt.Sprintf("%v", item[1] != ' ')
-			item = []rune(regexp.MustCompile(`^\[[ xX]\] +`).ReplaceAllString(string(item), ""))
+			item = MustCompile(`^\[[ xX]\] +`, RE2).ReplaceRune(item, "", 0, -1)
 		}
 
 		token := Token{
@@ -580,12 +681,12 @@ func list(src []rune) (token Token, err error) {
 		}
 
 		if ischecked != "undefined" {
-			token.Checked = []byte(fmt.Sprintf("%v", []byte("null")))
+			token.Checked = "null"
 		} else {
-			token.Checked = json.RawMessage{}
+			token.Checked = fmt.Sprintf("%v", ischecked)
 		}
 
-		list.Tokens = append(list.Tokens, token)
+		list.Items = append(list.Items, token)
 	}
 
 	return list, nil
@@ -597,15 +698,18 @@ func def(src []rune) (token Token, err error) {
 		return token, err
 	}
 
-	g3 := match.GroupByNumber(3).Runes()
-	if string(g3) != "" {
-		g3 = g3[1:len(g3)-1]
+	third := match.GroupByNumber(3).Runes()
+	if string(third) != "" {
+		third = str(third).slice(1, len(third)-1)
 	}
+	first := match.GroupByNumber(1).String()
+	tag := MustCompile(`\s+`, Global).ReplaceRune([]rune(strings.ToLower(first)), " ", 0, -1)
 
 	return Token{
+		Tag:    string(tag),
 		Raw:    match.GroupByNumber(0).String(),
 		Href:   match.GroupByNumber(2).String(),
-		Title:  string(g3),
+		Title:  string(third),
 		Tokens: []Token{},
 	}, nil
 }
@@ -617,14 +721,13 @@ func lheading(src []rune) (token Token, err error) {
 	}
 
 	var depth = 2
-	text := match.GroupByNumber(2).Runes()
-	if text[0] == '=' {
+	if match.GroupByNumber(2).Runes()[0] == '=' {
 		depth = 1
 	}
 	return Token{
 		Type:   "heading",
 		Raw:    match.GroupByNumber(0).String(),
-		Text:   string(text),
+		Text:   match.GroupByNumber(1).String(),
 		Depth:  depth,
 		Tokens: []Token{},
 	}, nil
@@ -649,15 +752,15 @@ func paragraph(src []rune) (token Token, err error) {
 	}, nil
 }
 
-func text(src []rune, tokens []Token) (token Token, err error) {
+func text(src []rune, tokens *[]Token) (token Token, err error) {
 	match, err := block["text"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
 
 	raw := match.GroupByNumber(0).String()
-	last := tokens[len(tokens)-1]
-	if last.Type == "text" {
+	n := len(*tokens)
+	if n > 0 && (*tokens)[n-1].Type == "text" {
 		return Token{
 			Raw:    raw,
 			Text:   raw,
@@ -703,7 +806,7 @@ func link(src []rune) (token Token, err error) {
 	lastParentIndex := findClosingBracket(second, []rune("()"))
 	if lastParentIndex > -1 {
 		start := 4
-		if strings.IndexRune(string(zero), '!') == 0 {
+		if str(zero).indexOf("!") == 0 {
 			start = 5
 		}
 		linkLen := start + len(first) + lastParentIndex
@@ -715,16 +818,15 @@ func link(src []rune) (token Token, err error) {
 	href := strings.TrimSpace(string(second))
 	title := ""
 	if len(third) > 0 {
-		title = string(third[1:])
+		title = string(str(third).slice(1, -1))
 	}
-	re := MustCompile(`^<([\s\S]*)>$`, RE2)
-	href, _ = re.Replace(href, "$1", 0, -1)
+	href = MustCompile(`^<([\s\S]*)>$`, RE2).ReplaceStr(href, "$1", 0, 1)
 
 	if href != "" {
-		href, _ = inline["_escapes"].Replace(href, "$1", 0, -1)
+		href = inline["_escapes"].ReplaceStr(href, "$1", 0, -1)
 	}
 	if title != "" {
-		title, _ = inline["_escapes"].Replace(title, "$1", 0, -1)
+		title = inline["_escapes"].ReplaceStr(title, "$1", 0, -1)
 	}
 	link := Link{
 		Href:  href,
@@ -748,17 +850,15 @@ func reflink(src []rune, links map[string]Link) (token Token, err error) {
 
 	zero := match.GroupByNumber(0).Runes()
 	first := match.GroupByNumber(1).Runes()
-	second := match.GroupByNumber(2).Runes()
 
 	var link string
-	if len(second) > 0 {
-		link = string(second)
+	if match.GroupCount() == 3 && match.GroupByNumber(2).Length > 0 {
+		link = match.GroupByNumber(2).String()
 	} else {
 		link = string(first)
 	}
 
-	re := MustCompile(`\s+`, RE2)
-	link, _ = re.Replace(link, " ", 0, -1)
+	link = MustCompile(`\s+`, Global).ReplaceStr(link, " ", 0, -1)
 	link = strings.ToLower(link)
 	ltoken, ok := links[link]
 	if !ok || ltoken.Href == "" {
@@ -783,9 +883,8 @@ func strong(src []rune, markedSrc []rune, preChar string) (token Token, err erro
 	punctaute, _ := inline["punctuation"].Exec([]rune(preChar))
 
 	first := match.GroupByNumber(1).Runes()
-	if len(first) == 0 || len(first) > 0 && preChar == "" || punctaute != nil {
-		index := len(markedSrc) - len(src)
-		markedSrc = markedSrc[index:]
+	if len(first) == 0 || (len(first) > 0 && (preChar == "" || punctaute != nil)) {
+		markedSrc = str(markedSrc).slice(-1 * len(src))
 
 		zero := match.GroupByNumber(0).String()
 		var endReg *Regex
@@ -795,16 +894,17 @@ func strong(src []rune, markedSrc []rune, preChar string) (token Token, err erro
 			endReg = inline["strong_endUnd"] // endUnd
 		}
 
+		endReg.LastIndex = 0
 		match, err = endReg.Exec(markedSrc)
 		for match != nil {
-			text := markedSrc[0:match.Index+3]
+			text := str(markedSrc).slice(0, match.Index+3)
 			strongMatch, _ := inline["strong_middle"].Exec(text)
 			if strongMatch != nil {
 				zero := strongMatch.GroupByNumber(0).Runes()
 				return Token{
 					Type:   "strong",
-					Raw:    string(src[0:len(zero)]),
-					Text:   string(src[2:len(zero)-2]),
+					Raw:    str(src).slice(0, len(zero)).string(),
+					Text:   str(src).slice(2, len(zero)-2).string(),
 					Tokens: []Token{},
 				}, nil
 			}
@@ -824,9 +924,8 @@ func em(src []rune, markedSrc []rune, preChar string) (token Token, err error) {
 
 	punctaute, _ := inline["punctuation"].Exec([]rune(preChar))
 	first := match.GroupByNumber(1).Runes()
-	if len(first) == 0 || len(first) > 0 && preChar == "" || punctaute != nil {
-		index := len(markedSrc) - len(src)
-		markedSrc = markedSrc[index:]
+	if len(first) == 0 || (len(first) > 0 && (preChar == "" || punctaute != nil)) {
+		markedSrc = str(markedSrc).slice(-1 * len(src))
 
 		zero := match.GroupByNumber(0).String()
 		var endReg *Regex
@@ -836,6 +935,7 @@ func em(src []rune, markedSrc []rune, preChar string) (token Token, err error) {
 			endReg = inline["em_endUnd"] // endUnd
 		}
 
+		endReg.LastIndex = 0
 		match, err = endReg.Exec(markedSrc)
 		for match != nil {
 			text := markedSrc[0:match.Index+2]
@@ -844,8 +944,8 @@ func em(src []rune, markedSrc []rune, preChar string) (token Token, err error) {
 				zero := strongMatch.GroupByNumber(0).Runes()
 				return Token{
 					Type:   "em",
-					Raw:    string(src[0:len(zero)]),
-					Text:   string(src[1:len(zero)-1]),
+					Raw:    str(src).slice(0, len(zero)).string(),
+					Text:   str(src).slice(1, len(zero)-1).string(),
 					Tokens: []Token{},
 				}, nil
 			}

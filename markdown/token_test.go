@@ -66,3 +66,21 @@ func TestBlock(t *testing.T) {
 	data, _ = json.Marshal(bl)
 	ioutil.WriteFile("./block.json", data, 0666)
 }
+
+func TestStr(t *testing.T) {
+	s := str("01234567")
+	t.Log("[-1]", s.slice(-1).string() == "7")
+	t.Log("[-3]", s.slice(-3).string() == "567")
+	t.Log("[-8]", s.slice(-8).string() == "01234567")
+	t.Log("[-12]", s.slice(-12).string() == "01234567")
+
+	t.Log("[-1,-7]", s.slice(-1,-7).string() == "")
+	t.Log("[-1,-12]", s.slice(-1,-12).string() == "")
+	t.Log("[-3,-9]", s.slice(-3,-9).string() == "")
+	t.Log("[-3,-2]", s.slice(-3,-2).string() == "5")
+	t.Log("[-3,-3]", s.slice(-3,-3).string() == "")
+	t.Log("[-8,-2]", s.slice(-8,-2).string() == "012345")
+	t.Log("[-8,-12]", s.slice(-8,-12).string() == "")
+	t.Log("[-9,-12]", s.slice(-9,-12).string() == "")
+	t.Log("[-9,-5]", s.slice(-9,-5).string() == "012")
+}

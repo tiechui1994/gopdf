@@ -3,8 +3,6 @@ package markdown
 import (
 	"testing"
 	"strings"
-	"bytes"
-	"encoding/json"
 )
 
 func TestString(t *testing.T) {
@@ -19,19 +17,24 @@ func TestString(t *testing.T) {
 
 func TestNewLex(t *testing.T) {
 	str := `
-- 1233
-- 2222
+Markdown Quick Reference
+========================
 
-**aa**
+This guide is a very brief overview, with examples, of the syntax that [Markdown] supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It is shown as *text* and not *rendered HTML*.
+
+[Markdown]: http://daringfireball.net/projects/markdown/
+
+
+Simple Text Formatting
+======================
+
+First thing is first. You can use *stars* or _underscores_ for italics. **Double stars** and __double underscores__ for bold. ***Three together*** for ___both___.
+
+Paragraphs are pretty easy too. Just have a blank line between chunks of text.
 `
 	lex := NewLex()
 	tokens := lex.lex(str)
-	var buf bytes.Buffer
-	encode := json.NewEncoder(&buf)
-	encode.SetIndent("", "  ")
 	for _, token := range tokens {
-		buf.Reset()
-		encode.Encode(token)
-		t.Log("\n", buf.String())
+		t.Log("\n", token.String())
 	}
 }

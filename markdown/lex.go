@@ -1,7 +1,6 @@
 package markdown
 
 import (
-	"sort"
 	"strings"
 )
 
@@ -10,19 +9,17 @@ type Link struct {
 	Title string `json:"title"`
 }
 
-type Tokens struct {
-	links  map[string]Link
-	tokens []Token
-}
-
 type Lexer struct {
-	tokens Tokens
+	tokens []Token
+	links  map[string]Link
 }
 
 func NewLex() *Lexer {
+	block = initBlockGfm()
+	inline = initInlineGfm(false)
 	lex := Lexer{}
-	lex.tokens.tokens = []Token{}
-	lex.tokens.links = make(map[string]Link)
+	lex.tokens = []Token{}
+	lex.links = make(map[string]Link)
 	return &lex
 }
 
@@ -32,23 +29,20 @@ func (l *Lexer) lex(text string) []Token {
 	re_blank := MustCompile(`\t`, RE2)
 	text, _ = re_blank.Replace(text, "    ", 0, -1)
 
-	l.blockTokens(text, &l.tokens.tokens, true)
-	l.inline(&l.tokens.tokens)
+	l.blockTokens(text, &l.tokens, true)
+	l.inline(&l.tokens)
 
-	return l.tokens.tokens
+	return l.tokens
 }
 
-func (l *Lexer) blockTokens(text string, tokens *[]Token, top bool) []Token {
+func (l *Lexer) blockTokens(content string, tokens *[]Token, top bool) []Token {
 	re_blank := MustCompile(`^ +$`, Multiline)
-	text, _ = re_blank.Replace(text, "", 0, -1)
+	content, _ = re_blank.Replace(content, "", 0, -1)
 
-	var (
-		token Token
-	)
-	src := []rune(text)
+	src := []rune(content)
 	for len(src) > 0 {
 		// newline
-		if token, _ = space(src); !IsEmpty(token) {
+		if token, _ := space(src); !IsEmpty(token) {
 			src = src[len([]rune(token.Raw)):]
 			if token.Type != "" {
 				*tokens = append(*tokens, token)
@@ -57,7 +51,7 @@ func (l *Lexer) blockTokens(text string, tokens *[]Token, top bool) []Token {
 		}
 
 		// code
-		if token, _ = code(src, l.tokens.tokens); !IsEmpty(token) {
+		if token, _ := code(src, l.tokens); !IsEmpty(token) {
 			src = src[len([]rune(token.Raw)):]
 			if token.Type != "" {
 				*tokens = append(*tokens, token)
@@ -72,14 +66,14 @@ func (l *Lexer) blockTokens(text string, tokens *[]Token, top bool) []Token {
 		}
 
 		// fences
-		if token, _ = fences(src); !IsEmpty(token) {
+		if token, _ := fences(src); !IsEmpty(token) {
 			src = src[len([]rune(token.Raw)):]
 			*tokens = append(*tokens, token)
 			continue
 		}
 
 		// heading
-		if token, _ = heading(src); !IsEmpty(token) {
+		if token, _ := heading(src); !IsEmpty(token) {
 			src = src[len([]rune(token.Raw)):]
 			*tokens = append(*tokens, token)
 			continue
@@ -88,14 +82,14 @@ func (l *Lexer) blockTokens(text string, tokens *[]Token, top bool) []Token {
 		// TODO: table no leading pipe (gfm)
 
 		// hr
-		if token, _ = hr(src); !IsEmpty(token) {
+		if token, _ := hr(src); !IsEmpty(token) {
 			src = src[len([]rune(token.Raw)):]
 			*tokens = append(*tokens, token)
 			continue
 		}
 
 		// blockquote
-		if token, _ = blockquote(src); !IsEmpty(token) {
+		if token, _ := blockquote(src); !IsEmpty(token) {
 			src = src[len([]rune(token.Raw)):]
 			token.Tokens = l.blockTokens(token.Text, &[]Token{}, top)
 			*tokens = append(*tokens, token)
@@ -103,7 +97,7 @@ func (l *Lexer) blockTokens(text string, tokens *[]Token, top bool) []Token {
 		}
 
 		// list
-		if token, _ = list(src); !IsEmpty(token) {
+		if token, _ := list(src); !IsEmpty(token) {
 			src = src[len([]rune(token.Raw)):]
 			n := len(token.Items)
 			for i := 0; i < n; i++ {
@@ -116,37 +110,39 @@ func (l *Lexer) blockTokens(text string, tokens *[]Token, top bool) []Token {
 		// TODO: html
 
 		// def
-		token, _ = def(src)
-		if top && !IsEmpty(token) {
-			src = src[len([]rune(token.Raw)):]
-			if IsEmpty(l.tokens.links[token.Tag]) {
-				l.tokens.links[token.Tag] = Link{
-					Href:  token.Href,
-					Title: token.Title,
+		if top {
+			if token, _ := def(src); !IsEmpty(token) {
+				src = src[len([]rune(token.Raw)):]
+				if IsEmpty(l.links[token.Tag]) {
+					l.links[token.Tag] = Link{
+						Href:  token.Href,
+						Title: token.Title,
+					}
 				}
+				continue
 			}
-			continue
 		}
 
 		// TODO: table (gfm)
 
 		// lheading
-		if token, _ = lheading(src); !IsEmpty(token) {
+		if token, _ := lheading(src); !IsEmpty(token) {
 			src = src[len([]rune(token.Raw)):]
 			*tokens = append(*tokens, token)
 			continue
 		}
 
 		// top-level paragraph
-		token, _ = paragraph(src)
-		if top && !IsEmpty(token) {
-			src = src[len([]rune(token.Raw)):]
-			*tokens = append(*tokens, token)
-			continue
+		if top {
+			if token, _ := paragraph(src); !IsEmpty(token) {
+				src = src[len([]rune(token.Raw)):]
+				*tokens = append(*tokens, token)
+				continue
+			}
 		}
 
 		// text
-		if token, _ = paragraph(src); !IsEmpty(token) {
+		if token, _ := text(src, tokens); !IsEmpty(token) {
 			src = src[len([]rune(token.Raw)):]
 			if token.Type != "" {
 				*tokens = append(*tokens, token)
@@ -186,10 +182,12 @@ func (l *Lexer) inline(tokens *[]Token) []Token {
 			in := len(token.Items)
 			for k := 0; k < in; k++ {
 				l.inline(&token.Items[k].Tokens)
+				(*tokens)[i] = token
 			}
 		default:
 			// do nothing
 		}
+		(*tokens)[i] = token
 	}
 
 	return *tokens
@@ -198,12 +196,11 @@ func (l *Lexer) inline(tokens *[]Token) []Token {
 func (l *Lexer) inlineTokens(text string, tokens *[]Token, inLink, inRawBlock bool, prevChar string) []Token {
 	maskedSrc := []rune(text)
 	src := []rune(text)
-	if len(l.tokens.links) > 0 {
-		links := make([]string, 0, len(l.tokens.links))
-		for key := range l.tokens.links {
+	if len(l.links) > 0 {
+		links := make([]string, 0, len(l.links))
+		for key := range l.links {
 			links = append(links, key)
 		}
-		sort.Strings(links)
 
 		if len(links) > 0 {
 			linkSearch := inline["reflinkSearch"]
@@ -215,6 +212,7 @@ func (l *Lexer) inlineTokens(text string, tokens *[]Token, inLink, inRawBlock bo
 					maskedSrc = []rune(str(maskedSrc).slice(0, match.Index).string() + "[" +
 						strings.Repeat("a", len(zero)-2) + "]" + str(maskedSrc).slice(linkSearch.LastIndex).string())
 				}
+				match, _ = linkSearch.Exec(maskedSrc)
 			}
 		}
 	}
@@ -231,7 +229,7 @@ func (l *Lexer) inlineTokens(text string, tokens *[]Token, inLink, inRawBlock bo
 	for len(src) > 0 {
 		// escape
 		if token, _ := escape(src); !IsEmpty(token) {
-			src = src[len(token.Raw):]
+			src = src[len([]rune(token.Raw)):]
 			*tokens = append(*tokens, token)
 			continue
 		}
@@ -240,7 +238,7 @@ func (l *Lexer) inlineTokens(text string, tokens *[]Token, inLink, inRawBlock bo
 
 		// link
 		if token, _ := link(src); !IsEmpty(token) {
-			src = src[len(token.Raw):]
+			src = src[len([]rune(token.Raw)):]
 			if token.Type == "link" {
 				token.Tokens = l.inlineTokens(token.Text, &[]Token{}, true, inRawBlock, "")
 			}
@@ -249,8 +247,8 @@ func (l *Lexer) inlineTokens(text string, tokens *[]Token, inLink, inRawBlock bo
 		}
 
 		// relink, nolink
-		if token, _ := reflink(src, l.tokens.links); !IsEmpty(token) {
-			src = src[len(token.Raw):]
+		if token, _ := reflink(src, l.links); !IsEmpty(token) {
+			src = src[len([]rune(token.Raw)):]
 			if token.Type == "link" {
 				token.Tokens = l.inlineTokens(token.Text, &[]Token{}, true, inRawBlock, "")
 			}
@@ -260,7 +258,7 @@ func (l *Lexer) inlineTokens(text string, tokens *[]Token, inLink, inRawBlock bo
 
 		// strong
 		if token, _ := strong(src, maskedSrc, prevChar); !IsEmpty(token) {
-			src = src[len(token.Raw):]
+			src = src[len([]rune(token.Raw)):]
 			token.Tokens = l.inlineTokens(token.Text, &[]Token{}, inLink, inRawBlock, "")
 			*tokens = append(*tokens, token)
 			continue
@@ -268,7 +266,7 @@ func (l *Lexer) inlineTokens(text string, tokens *[]Token, inLink, inRawBlock bo
 
 		// em
 		if token, _ := em(src, maskedSrc, prevChar); !IsEmpty(token) {
-			src = src[len(token.Raw):]
+			src = src[len([]rune(token.Raw)):]
 			token.Tokens = l.inlineTokens(token.Text, &[]Token{}, inLink, inRawBlock, "")
 			*tokens = append(*tokens, token)
 			continue
@@ -276,44 +274,45 @@ func (l *Lexer) inlineTokens(text string, tokens *[]Token, inLink, inRawBlock bo
 
 		// code
 		if token, _ := codespan(src); !IsEmpty(token) {
-			src = src[len(token.Raw):]
+			src = src[len([]rune(token.Raw)):]
 			*tokens = append(*tokens, token)
 			continue
 		}
 
 		// br
 		if token, _ := br(src); !IsEmpty(token) {
-			src = src[len(token.Raw):]
+			src = src[len([]rune(token.Raw)):]
 			*tokens = append(*tokens, token)
 			continue
 		}
 
 		// del
-		//if token, _ := del(src); !IsEmpty(token) {
-		//	src = src[len(token.Raw):]
-		//	token.Tokens = l.inlineTokens(token.Text, &[]Token{}, inLink, inRawBlock, "")
-		//	*tokens = append(*tokens, token)
-		//	continue
-		//}
+		if token, _ := del(src); !IsEmpty(token) {
+			src = src[len([]rune(token.Raw)):]
+			token.Tokens = l.inlineTokens(token.Text, &[]Token{}, inLink, inRawBlock, "")
+			*tokens = append(*tokens, token)
+			continue
+		}
 
 		// autolink
 		if token, _ := autoLink(src); !IsEmpty(token) {
-			src = src[len(token.Raw):]
+			src = src[len([]rune(token.Raw)):]
 			*tokens = append(*tokens, token)
 			continue
 		}
 
 		// url
-		//token, _ := url(src)
-		//if !inLink && !IsEmpty(token) {
-		//	src = src[len(token.Raw):]
-		//	*tokens = append(*tokens, token)
-		//	continue
-		//}
+		if !inLink {
+			if token, _ := url(src); !IsEmpty(token) {
+				src = src[len([]rune(token.Raw)):]
+				*tokens = append(*tokens, token)
+				continue
+			}
+		}
 
 		// text
 		if token, _ := inlineText(src, inRawBlock); !IsEmpty(token) {
-			src = src[len(token.Raw):]
+			src = src[len([]rune(token.Raw)):]
 			prevChar = str([]rune(token.Raw)).slice(-1).string()
 			*tokens = append(*tokens, token)
 			continue

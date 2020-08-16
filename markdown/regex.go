@@ -68,3 +68,21 @@ func (r *Regex) Test(src []rune) bool {
 	match, err := r.Exec(src)
 	return match != nil && err == nil
 }
+
+func (r *Regex) ReplaceRune(input []rune, repl string, startAt, count int) []rune {
+	result, err := r.Replace(string(input), repl, startAt, count)
+	if err != nil {
+		return []rune(input)
+	}
+
+	return []rune(result)
+}
+
+func (r *Regex) ReplaceStr(input string, repl string, startAt, count int) string {
+	result, err := r.Replace(input, repl, startAt, count)
+	if err != nil {
+		return input
+	}
+
+	return result
+}

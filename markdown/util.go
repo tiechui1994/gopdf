@@ -33,19 +33,29 @@ type str []rune
 func (s str) slice(start int, end ...int) str {
 	n := len(s)
 	i := start
-	if start < 0 {
+	if start < 0 && start < -n {
+		i = 0
+	} else if start < 0 {
 		i = n + start
 	}
 
 	j := n
 	if len(end) > 0 {
-		if end[0] > 0 && end[0] < n {
+		if end[0] >= 0 && end[0] < n {
 			j = end[0]
 		}
 
-		if end[0] < 0 && end[0] > -n {
+		if end[0] < 0 && end[0] >= -n {
 			j = n + end[0]
 		}
+
+		if end[0] < -n {
+			j = 0
+		}
+	}
+
+	if j < i {
+		return str("")
 	}
 
 	return str(s[i:j])
@@ -53,8 +63,8 @@ func (s str) slice(start int, end ...int) str {
 
 func (s str) lastIndexOf(r string) int {
 	n := len(s)
-	for i := n - 1; i >= 0; i++ {
-		if string(s[i:]) == r {
+	for i := n - 1; i >= 0; i-- {
+		if strings.HasPrefix(string(s[i:]), r) {
 			return i
 		}
 	}
@@ -65,7 +75,7 @@ func (s str) lastIndexOf(r string) int {
 func (s str) indexOf(r string) int {
 	n := len(s)
 	for i := 0; i < n; i++ {
-		if string((s)[i:]) == r {
+		if strings.HasPrefix(string(s[i:]), r) {
 			return i
 		}
 	}
@@ -80,7 +90,7 @@ func (s str) includes(search string, index int) bool {
 
 	n := len(s)
 	for i := index; i < n; i++ {
-		if strings.HasPrefix(string((s)[i:]), search) {
+		if strings.HasPrefix(string(s[i:]), search) {
 			return true
 		}
 	}
