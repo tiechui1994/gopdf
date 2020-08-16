@@ -6,7 +6,6 @@ import (
 	"log"
 	"encoding/json"
 	"bytes"
-	"github.com/dlclark/regexp2"
 )
 
 var (
@@ -52,8 +51,18 @@ func TestBlockquote(t *testing.T) {
 	log.Printf("\n%v", buf.String())
 }
 
-func TestRe(t *testing.T) {
-	re := regexp2.MustCompile(`^<([\s\S]*)>$`, regexp2.RE2)
-	res, err := re.Replace("<Java,Vivo>", "$1", 0, -1)
-	t.Log(res, err)
+func TestBlock(t *testing.T) {
+	var in = make(map[string]string)
+	for k, v := range inline {
+		in[k] = v.String()
+	}
+	data, _ := json.Marshal(in)
+	ioutil.WriteFile("./inline.json", data, 0666)
+
+	var bl = make(map[string]string)
+	for k, v := range block {
+		bl[k] = v.String()
+	}
+	data, _ = json.Marshal(bl)
+	ioutil.WriteFile("./block.json", data, 0666)
 }

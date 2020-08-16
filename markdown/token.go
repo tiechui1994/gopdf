@@ -30,7 +30,7 @@ func findClosingBracket(str []rune, b []rune) int {
 	return -1
 }
 
-func outputLink(match *Match, link Token, raw string) Token {
+func outputLink(match *Match, link Link, raw string) Token {
 	href := link.Href
 	title := link.Title
 
@@ -40,20 +40,22 @@ func outputLink(match *Match, link Token, raw string) Token {
 	zero := match.GroupByNumber(0).Runes()
 	if zero[0] != '!' {
 		return Token{
-			Type:  "link",
-			Raw:   raw,
-			Href:  href,
-			Title: title,
-			Text:  text,
+			Type:   "link",
+			Raw:    raw,
+			Href:   href,
+			Title:  title,
+			Text:   text,
+			Tokens: []Token{},
 		}
 	}
 
 	return Token{
-		Type:  "image",
-		Raw:   raw,
-		Href:  href,
-		Title: title,
-		Text:  text,
+		Type:   "image",
+		Raw:    raw,
+		Href:   href,
+		Title:  title,
+		Text:   text,
+		Tokens: []Token{},
 	}
 }
 
@@ -385,13 +387,15 @@ func space(src []rune) (token Token, err error) {
 	raw := match.GroupByNumber(0).Runes()
 	if len(raw) > 1 {
 		return Token{
-			Type: "space",
-			Raw:  string(raw),
+			Type:   "space",
+			Raw:    string(raw),
+			Tokens: []Token{},
 		}, nil
 	}
 
 	return Token{
-		Raw: "\n",
+		Raw:    "\n",
+		Tokens: []Token{},
 	}, nil
 }
 
@@ -405,16 +409,18 @@ func code(src []rune, tokens []Token) (token Token, err error) {
 	raw := match.GroupByNumber(0).String()
 	if last.Type == "paragraph" {
 		return Token{
-			Raw:  raw,
-			Text: strings.TrimRight(raw, " "),
+			Raw:    raw,
+			Text:   strings.TrimRight(raw, " "),
+			Tokens: []Token{},
 		}, nil
 	}
 
 	text, _ := MustCompile(`^ {4}`, Multiline).Replace(raw, "", 0, -1)
 	return Token{
-		Type: "code",
-		Raw:  raw,
-		Text: text,
+		Type:   "code",
+		Raw:    raw,
+		Text:   text,
+		Tokens: []Token{},
 	}, nil
 }
 
@@ -426,9 +432,10 @@ func fences(src []rune) (token Token, err error) {
 
 	raw := match.GroupByNumber(0).String()
 	return Token{
-		Type: "code",
-		Raw:  raw,
-		Text: raw,
+		Type:   "code",
+		Raw:    raw,
+		Text:   raw,
+		Tokens: []Token{},
 	}, nil
 }
 
@@ -441,10 +448,11 @@ func heading(src []rune) (token Token, err error) {
 	raw := match.GroupByNumber(0).String()
 	text := match.GroupByNumber(2).String()
 	return Token{
-		Type:  "heading",
-		Raw:   raw,
-		Depth: len(match.Captures[1].String()),
-		Text:  text,
+		Type:   "heading",
+		Raw:    raw,
+		Depth:  len(match.Captures[1].String()),
+		Text:   text,
+		Tokens: []Token{},
 	}, nil
 }
 
@@ -455,8 +463,9 @@ func hr(src []rune) (token Token, err error) {
 	}
 	text := match.GroupByNumber(0).String()
 	return Token{
-		Type: "hr",
-		Raw:  text,
+		Type:   "hr",
+		Raw:    text,
+		Tokens: []Token{},
 	}, nil
 }
 
@@ -471,9 +480,10 @@ func blockquote(src []rune) (token Token, err error) {
 	text, _ := regex.Replace(raw, "", 0, -1)
 
 	return Token{
-		Type: "blockquote",
-		Raw:  raw,
-		Text: text,
+		Type:   "blockquote",
+		Raw:    raw,
+		Text:   text,
+		Tokens: []Token{},
 	}, nil
 }
 
@@ -561,11 +571,12 @@ func list(src []rune) (token Token, err error) {
 		}
 
 		token := Token{
-			Type:  "list_item",
-			Raw:   string(raw),
-			Text:  string(item),
-			Task:  istask,
-			Loose: loose,
+			Type:   "list_item",
+			Raw:    string(raw),
+			Text:   string(item),
+			Task:   istask,
+			Loose:  loose,
+			Tokens: []Token{},
 		}
 
 		if ischecked != "undefined" {
@@ -592,9 +603,10 @@ func def(src []rune) (token Token, err error) {
 	}
 
 	return Token{
-		Raw:   match.GroupByNumber(0).String(),
-		Href:  match.GroupByNumber(2).String(),
-		Title: string(g3),
+		Raw:    match.GroupByNumber(0).String(),
+		Href:   match.GroupByNumber(2).String(),
+		Title:  string(g3),
+		Tokens: []Token{},
 	}, nil
 }
 
@@ -610,10 +622,11 @@ func lheading(src []rune) (token Token, err error) {
 		depth = 1
 	}
 	return Token{
-		Type:  "heading",
-		Raw:   match.GroupByNumber(0).String(),
-		Text:  string(text),
-		Depth: depth,
+		Type:   "heading",
+		Raw:    match.GroupByNumber(0).String(),
+		Text:   string(text),
+		Depth:  depth,
+		Tokens: []Token{},
 	}, nil
 }
 
@@ -629,9 +642,10 @@ func paragraph(src []rune) (token Token, err error) {
 	}
 
 	return Token{
-		Type: "paragraph",
-		Raw:  match.GroupByNumber(0).String(),
-		Text: string(text),
+		Type:   "paragraph",
+		Raw:    match.GroupByNumber(0).String(),
+		Text:   string(text),
+		Tokens: []Token{},
 	}, nil
 }
 
@@ -645,15 +659,17 @@ func text(src []rune, tokens []Token) (token Token, err error) {
 	last := tokens[len(tokens)-1]
 	if last.Type == "text" {
 		return Token{
-			Raw:  raw,
-			Text: raw,
+			Raw:    raw,
+			Text:   raw,
+			Tokens: []Token{},
 		}, nil
 	}
 
 	return Token{
-		Type: "text",
-		Raw:  raw,
-		Text: raw,
+		Type:   "text",
+		Raw:    raw,
+		Text:   raw,
+		Tokens: []Token{},
 	}, nil
 }
 
@@ -667,9 +683,10 @@ func escape(src []rune) (token Token, err error) {
 	text := match.GroupByNumber(1).String()
 
 	return Token{
-		Type: "escape",
-		Raw:  raw,
-		Text: text,
+		Type:   "escape",
+		Raw:    raw,
+		Text:   text,
+		Tokens: []Token{},
 	}, nil
 }
 
@@ -709,14 +726,14 @@ func link(src []rune) (token Token, err error) {
 	if title != "" {
 		title, _ = inline["_escapes"].Replace(title, "$1", 0, -1)
 	}
-	token = Token{
+	link := Link{
 		Href:  href,
 		Title: title,
 	}
-	return outputLink(match, token, string(zero)), nil
+	return outputLink(match, link, string(zero)), nil
 }
 
-func reflink(src []rune, links map[string]Token) (token Token, err error) {
+func reflink(src []rune, links map[string]Link) (token Token, err error) {
 	match, err := inline["reflink"].Exec(src)
 	if err != nil {
 		return token, err
@@ -747,9 +764,10 @@ func reflink(src []rune, links map[string]Token) (token Token, err error) {
 	if !ok || ltoken.Href == "" {
 		text := string(zero[0])
 		return Token{
-			Type: "text",
-			Raw:  text,
-			Text: text,
+			Type:   "text",
+			Raw:    text,
+			Text:   text,
+			Tokens: []Token{},
 		}, nil
 	}
 
@@ -757,7 +775,7 @@ func reflink(src []rune, links map[string]Token) (token Token, err error) {
 }
 
 func strong(src []rune, markedSrc []rune, preChar string) (token Token, err error) {
-	match, err := inline["strong"].Exec(src)
+	match, err := inline["strong_start"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -784,9 +802,10 @@ func strong(src []rune, markedSrc []rune, preChar string) (token Token, err erro
 			if strongMatch != nil {
 				zero := strongMatch.GroupByNumber(0).Runes()
 				return Token{
-					Type: "strong",
-					Raw:  string(src[0:len(zero)]),
-					Text: string(src[2:len(zero)-2]),
+					Type:   "strong",
+					Raw:    string(src[0:len(zero)]),
+					Text:   string(src[2:len(zero)-2]),
+					Tokens: []Token{},
 				}, nil
 			}
 
@@ -798,7 +817,7 @@ func strong(src []rune, markedSrc []rune, preChar string) (token Token, err erro
 }
 
 func em(src []rune, markedSrc []rune, preChar string) (token Token, err error) {
-	match, err := inline["em"].Exec(src)
+	match, err := inline["em_start"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -824,9 +843,10 @@ func em(src []rune, markedSrc []rune, preChar string) (token Token, err error) {
 			if strongMatch != nil {
 				zero := strongMatch.GroupByNumber(0).Runes()
 				return Token{
-					Type: "em",
-					Raw:  string(src[0:len(zero)]),
-					Text: string(src[1:len(zero)-1]),
+					Type:   "em",
+					Raw:    string(src[0:len(zero)]),
+					Text:   string(src[1:len(zero)-1]),
+					Tokens: []Token{},
 				}, nil
 			}
 
@@ -858,9 +878,10 @@ func codespan(src []rune) (token Token, err error) {
 	}
 
 	return Token{
-		Type: "codespan",
-		Raw:  raw,
-		Text: text,
+		Type:   "codespan",
+		Raw:    raw,
+		Text:   text,
+		Tokens: []Token{},
 	}, nil
 }
 
@@ -872,8 +893,9 @@ func br(src []rune) (token Token, err error) {
 
 	raw := match.GroupByNumber(0).String()
 	return Token{
-		Type: "br",
-		Raw:  raw,
+		Type:   "br",
+		Raw:    raw,
+		Tokens: []Token{},
 	}, nil
 }
 
@@ -886,9 +908,10 @@ func del(src []rune) (token Token, err error) {
 	raw := match.GroupByNumber(0).String()
 	text := match.GroupByNumber(1).String()
 	return Token{
-		Type: "del",
-		Raw:  raw,
-		Text: text,
+		Type:   "del",
+		Raw:    raw,
+		Text:   text,
+		Tokens: []Token{},
 	}, nil
 }
 
@@ -973,7 +996,8 @@ func url(src []rune) (token Token, err error) {
 	}, nil
 }
 
-func inlineText(src []rune) (token Token, err error) {
+// TODO:
+func inlineText(src []rune, inRawBlock bool) (token Token, err error) {
 	match, err := inline["text"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
@@ -981,23 +1005,9 @@ func inlineText(src []rune) (token Token, err error) {
 
 	raw := match.GroupByNumber(0).String()
 	return Token{
-		Type: "text",
-		Raw:  raw,
-		Text: raw,
+		Type:   "text",
+		Raw:    raw,
+		Text:   raw,
+		Tokens: []Token{},
 	}, nil
-}
-
-func PreProccesText(text string) {
-	re_break := MustCompile(`\r\n|\r`, RE2)
-	text, _ = re_break.Replace(text, "", 0, -1)
-	re_blank := MustCompile(`\t`, RE2)
-	text, _ = re_blank.Replace(text, "    ", 0, -1)
-
-	re_blank = MustCompile(`^ +$`, Multiline)
-	text, _ = re_blank.Replace(text, "", 0, -1)
-
-	src := []rune(text)
-	for len(src) != 0 {
-		_ = src
-	}
 }

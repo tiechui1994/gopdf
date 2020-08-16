@@ -3,9 +3,10 @@ package markdown
 import (
 	"testing"
 	"log"
+	"github.com/dlclark/regexp2"
 )
 
-func TestRegex_Exec(t *testing.T) {
+func TestExec(t *testing.T) {
 	src := []rune("215 中华人民工行 926 2315")
 	reg := MustCompile(`[0-5]{2}`, RE2|Global)
 	m, err := reg.Exec(src)
@@ -46,4 +47,10 @@ wwww2121 327qq sss为1`
 	}
 
 	t.Log(reg.LastIndex)
+}
+
+func TestRegexGroupReplace(t *testing.T) {
+	re := regexp2.MustCompile(`^<([\s\S]*)>$`, regexp2.RE2)
+	res, err := re.Replace("<Java,Vivo>", "$1", 0, -1)
+	t.Log(res, err)
 }

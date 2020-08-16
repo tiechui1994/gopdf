@@ -30,16 +30,25 @@ func IsEmpty(object interface{}) bool {
 
 type str []rune
 
-func (s str) slice(start, end int) str {
+func (s str) slice(start int, end ...int) str {
 	n := len(s)
+	i := start
 	if start < 0 {
-		start = n + start
-	}
-	if end < 0 {
-		end = n + end
+		i = n + start
 	}
 
-	return str(s[start:end])
+	j := n
+	if len(end) > 0 {
+		if end[0] > 0 && end[0] < n {
+			j = end[0]
+		}
+
+		if end[0] < 0 && end[0] > -n {
+			j = n + end[0]
+		}
+	}
+
+	return str(s[i:j])
 }
 
 func (s str) lastIndexOf(r string) int {
