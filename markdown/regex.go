@@ -31,6 +31,8 @@ type Regex struct {
 	Source     string
 }
 
+type Match = regexp2.Match
+
 func MustCompile(source string, opt Options) *Regex {
 	reg := Regex{
 		option:     opt,
@@ -48,7 +50,7 @@ func MustCompile(source string, opt Options) *Regex {
 	return &reg
 }
 
-func (r *Regex) Exec(src []rune) (*regexp2.Match, error) {
+func (r *Regex) Exec(src []rune) (*Match, error) {
 	match, err := r.FindRunesMatchStartingAt(src, r.LastIndex)
 	if match == nil || err != nil {
 		r.LastIndex = 0

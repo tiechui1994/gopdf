@@ -5,8 +5,6 @@ import (
 	"strings"
 	"fmt"
 	"encoding/json"
-
-	"github.com/dlclark/regexp2"
 )
 
 func findClosingBracket(str []rune, b []rune) int {
@@ -32,7 +30,7 @@ func findClosingBracket(str []rune, b []rune) int {
 	return -1
 }
 
-func outputLink(match *regexp2.Match, link Token, raw string) Token {
+func outputLink(match *Match, link Token, raw string) Token {
 	href := link.Href
 	title := link.Title
 
@@ -57,18 +55,6 @@ func outputLink(match *regexp2.Match, link Token, raw string) Token {
 		Title: title,
 		Text:  text,
 	}
-}
-
-func matchAll(re *Regex, src []rune) ([]*regexp2.Match, error) {
-	matches := make([]*regexp2.Match, 0)
-	matched, err := re.Exec(src)
-
-	for err == nil && matched != nil {
-		matches = append(matches, matched)
-		matched, err = re.FindNextMatch(matched)
-	}
-
-	return matches, err
 }
 
 var (
@@ -515,7 +501,7 @@ func list(src []rune) (token Token, err error) {
 		Tokens:  []Token{},
 	}
 
-	itemmatch, err := matchAll(block["item"], raw)
+	itemmatch, err := str(raw).match(block["item"])
 	if err != nil {
 		return token, err
 	}

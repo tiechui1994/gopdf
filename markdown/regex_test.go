@@ -15,3 +15,35 @@ func TestRegex_Exec(t *testing.T) {
 	m, err = reg.Exec(src)
 	log.Println(err, m.GroupByNumber(0), reg.LastIndex)
 }
+
+func TestMatch1(t *testing.T) {
+	src := `123 234 12wx vivo12
+google11 34得到 782cc
+wwww2121 327qq sss为1`
+	reg := MustCompile("([0-9]{1})([a-z]{2})", Global|Multiline|RE2)
+
+	matches, err := str([]rune(src)).match(reg)
+	if err == nil {
+		for _, m := range matches {
+			t.Log(m.String())
+		}
+	}
+
+	t.Log(reg.LastIndex)
+}
+
+func TestMatch2(t *testing.T) {
+	src := `123 234 12wx vivo12
+google11 34得到 782cc
+wwww2121 327qq sss为1`
+	reg := MustCompile("([0-9]{1})([a-z]{2})", Multiline|RE2)
+
+	matches, err := str([]rune(src)).match(reg)
+	if err == nil {
+		for _, m := range matches {
+			t.Log(m.String(), m.GroupByNumber(1).String(), m.GroupByNumber(2).String(), m.Index)
+		}
+	}
+
+	t.Log(reg.LastIndex)
+}
