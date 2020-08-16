@@ -1,7 +1,6 @@
 package markdown
 
 import (
-	"github.com/dlclark/regexp2"
 	"sort"
 	"strings"
 )
@@ -25,15 +24,14 @@ func NewLex() {
 }
 
 func (l *Lexer) lex(text string) {
-	re_break := regexp2.MustCompile(`\r\n|\r`, regexp2.RE2)
+	re_break := MustCompile(`\r\n|\r`, RE2)
 	text, _ = re_break.Replace(text, "", 0, -1)
-	re_blank := regexp2.MustCompile(`\t`, regexp2.RE2)
+	re_blank := MustCompile(`\t`, RE2)
 	text, _ = re_blank.Replace(text, "    ", 0, -1)
-
 }
 
 func (l *Lexer) blockTokens(text string, tokens *[]Token, top bool) []Token {
-	re_blank := regexp2.MustCompile(`^ +$`, regexp2.Multiline)
+	re_blank := MustCompile(`^ +$`, Multiline)
 	text, _ = re_blank.Replace(text, "", 0, -1)
 
 	var (
@@ -220,8 +218,8 @@ func (l *Lexer) inlineTokens(text string, tokens *[]Token, inLink, inRawBlock bo
 
 type str []rune
 
-func (s *str) slice(start, end int) str {
-	n := len(*s)
+func (s str) slice(start, end int) str {
+	n := len(s)
 	if start < 0 {
 		start = n + start
 	}
@@ -229,13 +227,13 @@ func (s *str) slice(start, end int) str {
 		end = n + end
 	}
 
-	return str((*s)[start:end])
+	return str(s[start:end])
 }
 
-func (s *str) lastIndexOf(r string) int {
-	n := len(*s)
+func (s str) lastIndexOf(r string) int {
+	n := len(s)
 	for i := n - 1; i >= 0; i++ {
-		if string((*s)[i:]) == r {
+		if string(s[i:]) == r {
 			return i
 		}
 	}
@@ -243,10 +241,10 @@ func (s *str) lastIndexOf(r string) int {
 	return -1
 }
 
-func (s *str) indexOf(r string) int {
-	n := len(*s)
+func (s str) indexOf(r string) int {
+	n := len(s)
 	for i := 0; i < n; i++ {
-		if string((*s)[i:]) == r {
+		if string((s)[i:]) == r {
 			return i
 		}
 	}
@@ -254,14 +252,14 @@ func (s *str) indexOf(r string) int {
 	return -1
 }
 
-func (s *str) includes(search string, index int) bool {
-	if index < 0 || index > len(*s) {
+func (s str) includes(search string, index int) bool {
+	if index < 0 || index > len(s) {
 		return false
 	}
 
-	n := len(*s)
+	n := len(s)
 	for i := index; i < n; i++ {
-		if strings.HasPrefix(string((*s)[i:]), search) {
+		if strings.HasPrefix(string((s)[i:]), search) {
 			return true
 		}
 	}
@@ -269,8 +267,8 @@ func (s *str) includes(search string, index int) bool {
 	return false
 }
 
-func (s *str) string() string {
-	return string(*s)
+func (s str) string() string {
+	return string(s)
 }
 
 func includes(arr []string, search string, index int) bool {

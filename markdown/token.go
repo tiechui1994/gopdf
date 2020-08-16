@@ -3,10 +3,10 @@ package markdown
 import (
 	"regexp"
 	"strings"
-
-	"github.com/dlclark/regexp2"
 	"fmt"
 	"encoding/json"
+
+	"github.com/dlclark/regexp2"
 )
 
 func findClosingBracket(str []rune, b []rune) int {
@@ -36,7 +36,7 @@ func outputLink(match *regexp2.Match, link Token, raw string) Token {
 	href := link.Href
 	title := link.Title
 
-	re := regexp2.MustCompile(`\\([\[\]])`, regexp2.RE2)
+	re := MustCompile(`\\([\[\]])`, RE2)
 	text, _ := re.Replace(match.GroupByNumber(1).String(), "$1", 0, -1)
 
 	zero := match.GroupByNumber(0).Runes()
@@ -59,9 +59,9 @@ func outputLink(match *regexp2.Match, link Token, raw string) Token {
 	}
 }
 
-func matchAll(re *regexp2.Regexp, src []rune) ([]*regexp2.Match, error) {
+func matchAll(re *Regex, src []rune) ([]*regexp2.Match, error) {
 	matches := make([]*regexp2.Match, 0)
-	matched, err := re.FindRunesMatch(src)
+	matched, err := re.Exec(src)
 
 	for err == nil && matched != nil {
 		matches = append(matches, matched)
@@ -157,31 +157,33 @@ var (
 //mangle: true,
 
 type editor struct {
-	getRegex func() *regexp2.Regexp
+	getRegex func() *Regex
 	replace  func(name, value string) *editor
 }
 
-func edit(re interface{}, options ...regexp2.RegexOptions) *editor {
+func edit(re interface{}, options ...Options) *editor {
 	e := new(editor)
 	var regex string
 	switch re.(type) {
-	case *regexp2.Regexp:
-		regex = re.(*regexp2.Regexp).String()
+	case *Regex:
+		regex = re.(*Regex).Source
 	case string:
 		regex = re.(string)
 	}
 
-	var opt = regexp2.RegexOptions(regexp2.RE2)
+	var opt = Options(RE2)
 	if len(options) > 0 {
-		opt = options[0]
+		for _, val := range options {
+			opt = opt | val
+		}
 	}
 
-	e.getRegex = func() *regexp2.Regexp {
-		return regexp2.MustCompile(regex, opt)
+	e.getRegex = func() *Regex {
+		return MustCompile(regex, opt)
 	}
 
 	e.replace = func(name, value string) *editor {
-		caret := regexp2.MustCompile(`(^|[^\[])\^`, regexp2.RE2)
+		caret := MustCompile(`(^|[^\[])\^`, RE2)
 		value, _ = caret.Replace(value, "$1", 0, -1)
 		regex = strings.ReplaceAll(regex, name, value)
 		return e
@@ -191,49 +193,48 @@ func edit(re interface{}, options ...regexp2.RegexOptions) *editor {
 }
 
 var (
-	block  map[string]*regexp2.Regexp
-	inline map[string]*regexp2.Regexp
+	block  map[string]*Regex
+	inline map[string]*Regex
 )
 
 func initBlock() {
 	block_fences = strings.Replace(block_fences, "$1", "`", -1)
-	block = make(map[string]*regexp2.Regexp)
+	block = make(map[string]*Regex)
 
-	option := regexp2.RegexOptions(regexp2.RE2)
-	block["newline"] = regexp2.MustCompile(block_newline, option)
-	block["code"] = regexp2.MustCompile(block_code, option)
-	block["fences"] = regexp2.MustCompile(block_fences, option)
-	block["hr"] = regexp2.MustCompile(block_hr, option)
-	block["heading"] = regexp2.MustCompile(block_heading, option)
-	block["list"] = regexp2.MustCompile(block_list, option)
-	block["def"] = regexp2.MustCompile(block_def, option)
-	block["lheading"] = regexp2.MustCompile(block_lheading, option)
-	block["text"] = regexp2.MustCompile(block_text, option)
+	option := Options(RE2)
+	block["newline"] = MustCompile(block_newline, option)
+	block["code"] = MustCompile(block_code, option)
+	block["fences"] = MustCompile(block_fences, option)
+	block["hr"] = MustCompile(block_hr, option)
+	block["heading"] = MustCompile(block_heading, option)
+	block["list"] = MustCompile(block_list, option)
+	block["def"] = MustCompile(block_def, option)
+	block["lheading"] = MustCompile(block_lheading, option)
+	block["text"] = MustCompile(block_text, option)
 
-	block["_label"] = regexp2.MustCompile(block__label, option)
-	block["_title"] = regexp2.MustCompile(block__title, option)
+	block["_label"] = MustCompile(block__label, option)
+	block["_title"] = MustCompile(block__title, option)
 	block["def"] = edit(block["def"]).
 		replace("label", block["_label"].String()).
 		replace("title", block["_title"].String()).
 		getRegex()
 
-	// TODO: item(gm)
-	block["item"] = regexp2.MustCompile(block_item, option)
-	block["bullet"] = regexp2.MustCompile(block_bullet, option|regexp2.ECMAScript)
-	block["item"] = edit(block["item"], regexp2.Multiline|regexp2.RE2).
+	block["item"] = MustCompile(block_item, option)
+	block["bullet"] = MustCompile(block_bullet, option)
+	block["item"] = edit(block["item"], Global|Multiline).
 		replace("bull", block["bullet"].String()).
 		getRegex()
 
-	block["list"] = regexp2.MustCompile(block_list, option)
+	block["list"] = MustCompile(block_list, option)
 	block["list"] = edit(block["list"]).
 		replace("bull", block["bullet"].String()).
 		replace("hr", "\\n+(?=\\1?(?:(?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$))").
 		replace("def", "\\n+(?="+block["def"].String()+")").
 		getRegex()
 
-	block["_comment"] = regexp2.MustCompile(block__comment, option)
+	block["_comment"] = MustCompile(block__comment, option)
 
-	block["_paragraph"] = regexp2.MustCompile(block__paragraph, option)
+	block["_paragraph"] = MustCompile(block__paragraph, option)
 	block["paragraph"] = edit(block["_paragraph"]).
 		replace("hr", block["hr"].String()).
 		replace("heading", " {0,3}#{1,6} ").
@@ -243,7 +244,7 @@ func initBlock() {
 		replace("list", " {0,3}(?:[*+-]|1[.)]) "). // only lists starting from 1 can interrupt
 		getRegex()
 
-	block["blockquote"] = regexp2.MustCompile(block_blockquote, option)
+	block["blockquote"] = MustCompile(block_blockquote, option)
 	block["blockquote"] = edit(block["blockquote"]).
 		replace("paragraph", block["paragraph"].String()).
 		getRegex()
@@ -259,38 +260,38 @@ func initLine() {
 	inline__email = strings.ReplaceAll(inline__email, "$1", "`")
 	inline__attribute = strings.ReplaceAll(inline__attribute, "$1", "`")
 	inline__label = strings.ReplaceAll(inline__label, "$1", "`")
-	inline = make(map[string]*regexp2.Regexp)
+	inline = make(map[string]*Regex)
 
-	option := regexp2.RegexOptions(regexp2.RE2)
-	inline["escape"] = regexp2.MustCompile(inline_escape, option)
-	inline["autolink"] = regexp2.MustCompile(inline_autolink, option)
-	inline["tag"] = regexp2.MustCompile(inline_tag, option)
-	inline["link"] = regexp2.MustCompile(inline_link, option)
-	inline["reflink"] = regexp2.MustCompile(inline_reflink, option)
-	inline["nolink"] = regexp2.MustCompile(inline_nolink, option)
+	option := Options(RE2)
+	inline["escape"] = MustCompile(inline_escape, option)
+	inline["autolink"] = MustCompile(inline_autolink, option)
+	inline["tag"] = MustCompile(inline_tag, option)
+	inline["link"] = MustCompile(inline_link, option)
+	inline["reflink"] = MustCompile(inline_reflink, option)
+	inline["nolink"] = MustCompile(inline_nolink, option)
 
-	inline["strong_start"] = regexp2.MustCompile(inline_strong_start, option)
-	inline["strong_middle"] = regexp2.MustCompile(inline_strong_middle, option)
-	inline["strong_endAst"] = regexp2.MustCompile(inline_strong_endAst, option)
-	inline["strong_endUnd"] = regexp2.MustCompile(inline_strong_endUnd, option)
+	inline["strong_start"] = MustCompile(inline_strong_start, option)
+	inline["strong_middle"] = MustCompile(inline_strong_middle, option)
+	inline["strong_endAst"] = MustCompile(inline_strong_endAst, option)
+	inline["strong_endUnd"] = MustCompile(inline_strong_endUnd, option)
 
-	inline["em_start"] = regexp2.MustCompile(inline_em_start, option)
-	inline["em_middle"] = regexp2.MustCompile(inline_em_middle, option)
-	inline["em_endAst"] = regexp2.MustCompile(inline_em_endAst, option)
-	inline["em_endUnd"] = regexp2.MustCompile(inline_em_endUnd, option)
+	inline["em_start"] = MustCompile(inline_em_start, option)
+	inline["em_middle"] = MustCompile(inline_em_middle, option)
+	inline["em_endAst"] = MustCompile(inline_em_endAst, option)
+	inline["em_endUnd"] = MustCompile(inline_em_endUnd, option)
 
-	inline["code"] = regexp2.MustCompile(inline_code, option)
-	inline["br"] = regexp2.MustCompile(inline_br, option)
-	inline["text"] = regexp2.MustCompile(inline_text, option)
-	inline["punctuation"] = regexp2.MustCompile(inline_punctuation, option)
+	inline["code"] = MustCompile(inline_code, option)
+	inline["br"] = MustCompile(inline_br, option)
+	inline["text"] = MustCompile(inline_text, option)
+	inline["punctuation"] = MustCompile(inline_punctuation, option)
 
-	inline["_punctuation"] = regexp2.MustCompile(inline__punctuation, option)
+	inline["_punctuation"] = MustCompile(inline__punctuation, option)
 	inline["punctuation"] = edit(inline["punctuation"]).
 		replace("punctuation", inline__punctuation).
 		getRegex()
 
-	inline["_blockSkip"] = regexp2.MustCompile(inline__blockSkip, option)
-	inline["_overlapSkip"] = regexp2.MustCompile(inline__overlapSkip, option)
+	inline["_blockSkip"] = MustCompile(inline__blockSkip, option)
+	inline["_overlapSkip"] = MustCompile(inline__overlapSkip, option)
 
 	inline["em_start"] = edit(inline["em_start"]).
 		replace("punctuation", inline["_punctuation"].String()).
@@ -299,10 +300,10 @@ func initLine() {
 		replace("punctuation", inline["_punctuation"].String()).
 		replace("overlapSkip", inline["_overlapSkip"].String()).
 		getRegex()
-	inline["em_endAst"] = edit(inline["em_endAst"]).
+	inline["em_endAst"] = edit(inline["em_endAst"], Global).
 		replace("punctuation", inline["_punctuation"].String()).
 		getRegex()
-	inline["em_endUnd"] = edit(inline["em_start"]).
+	inline["em_endUnd"] = edit(inline["em_endUnd"], Global).
 		replace("punctuation", inline["_punctuation"].String()).
 		getRegex()
 
@@ -313,37 +314,35 @@ func initLine() {
 		replace("punctuation", inline["_punctuation"].String()).
 		replace("blockSkip", inline["_blockSkip"].String()).
 		getRegex()
-	inline["strong_endAst"] = edit(inline["strong_endAst"]).
+	inline["strong_endAst"] = edit(inline["strong_endAst"], Global).
 		replace("punctuation", inline["_punctuation"].String()).
 		getRegex()
-	inline["strong_endUnd"] = edit(inline["strong_start"]).
+	inline["strong_endUnd"] = edit(inline["strong_endUnd"], Global).
 		replace("punctuation", inline["_punctuation"].String()).
 		getRegex()
 
-	// TODO: g
-	inline["blockSkip"] = edit(inline["_blockSkip"]).
+	inline["blockSkip"] = edit(inline["_blockSkip"], Global).
 		getRegex()
-	inline["overlapSkip"] = edit(inline["_overlapSkip"]).
+	inline["overlapSkip"] = edit(inline["_overlapSkip"], Global).
 		getRegex()
 
-	// TODO: g
-	inline["_escapes"] = regexp2.MustCompile(inline__escapes, option)
-	inline["_scheme"] = regexp2.MustCompile(inline__scheme, option)
-	inline["_email"] = regexp2.MustCompile(inline__email, option)
+	inline["_escapes"] = MustCompile(inline__escapes, option|Global)
+	inline["_scheme"] = MustCompile(inline__scheme, option)
+	inline["_email"] = MustCompile(inline__email, option)
 	inline["autolink"] = edit(inline["autolink"]).
 		replace("scheme", inline["_scheme"].String()).
 		replace("email", inline["_email"].String()).
 		getRegex()
 
-	inline["_attribute"] = regexp2.MustCompile(inline__attribute, option)
+	inline["_attribute"] = MustCompile(inline__attribute, option)
 	inline["tag"] = edit(inline["tag"]).
 		replace("comment", block["_comment"].String()).
 		replace("attribute", inline["_attribute"].String()).
 		getRegex()
 
-	inline["_label"] = regexp2.MustCompile(inline__label, option)
-	inline["_href"] = regexp2.MustCompile(inline__href, option)
-	inline["_title"] = regexp2.MustCompile(inline__title, option)
+	inline["_label"] = MustCompile(inline__label, option)
+	inline["_href"] = MustCompile(inline__href, option)
+	inline["_title"] = MustCompile(inline__title, option)
 	inline["link"] = edit(inline["link"]).
 		replace("label", inline["_label"].String()).
 		replace("href", inline["_href"].String()).
@@ -354,8 +353,7 @@ func initLine() {
 		replace("label", inline["_label"].String()).
 		getRegex()
 
-	// TODO: g
-	inline["reflinkSearch"] = edit(inline_reflinkSearch).
+	inline["reflinkSearch"] = edit(inline_reflinkSearch, Global).
 		replace("reflink", inline["reflink"].String()).
 		replace("nolink", inline["nolink"].String()).
 		getRegex()
@@ -393,7 +391,7 @@ type Token struct {
 }
 
 func space(src []rune) (token Token, err error) {
-	match, err := block["newline"].FindRunesMatch(src)
+	match, err := block["newline"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -412,7 +410,7 @@ func space(src []rune) (token Token, err error) {
 }
 
 func code(src []rune, tokens []Token) (token Token, err error) {
-	match, err := block["code"].FindRunesMatch(src)
+	match, err := block["code"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -426,7 +424,7 @@ func code(src []rune, tokens []Token) (token Token, err error) {
 		}, nil
 	}
 
-	text, _ := regexp2.MustCompile(`^ {4}`, regexp2.Multiline).Replace(raw, "", 0, -1)
+	text, _ := MustCompile(`^ {4}`, Multiline).Replace(raw, "", 0, -1)
 	return Token{
 		Type: "code",
 		Raw:  raw,
@@ -435,7 +433,7 @@ func code(src []rune, tokens []Token) (token Token, err error) {
 }
 
 func fences(src []rune) (token Token, err error) {
-	match, err := block["fences"].FindRunesMatch(src)
+	match, err := block["fences"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -449,7 +447,7 @@ func fences(src []rune) (token Token, err error) {
 }
 
 func heading(src []rune) (token Token, err error) {
-	match, err := block["heading"].FindRunesMatch(src)
+	match, err := block["heading"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -465,7 +463,7 @@ func heading(src []rune) (token Token, err error) {
 }
 
 func hr(src []rune) (token Token, err error) {
-	match, err := block["hr"].FindRunesMatch(src)
+	match, err := block["hr"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -477,13 +475,13 @@ func hr(src []rune) (token Token, err error) {
 }
 
 func blockquote(src []rune) (token Token, err error) {
-	match, err := block["blockquote"].FindRunesMatch(src)
+	match, err := block["blockquote"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
 
 	raw := match.GroupByNumber(0).String()
-	regex := regexp2.MustCompile(`^ *> ?`, regexp2.Multiline)
+	regex := MustCompile(`^ *> ?`, Multiline)
 	text, _ := regex.Replace(raw, "", 0, -1)
 
 	return Token{
@@ -494,7 +492,7 @@ func blockquote(src []rune) (token Token, err error) {
 }
 
 func list(src []rune) (token Token, err error) {
-	match, err := block["list"].FindRunesMatch(src)
+	match, err := block["list"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -525,7 +523,7 @@ func list(src []rune) (token Token, err error) {
 	var next bool
 	length := len(itemmatch)
 	replace := regexp.MustCompile(`^ *([*+-]|\d+[.)]) *`)
-	reloose := regexp2.MustCompile(`\n\n(?!\s*$)`, regexp2.RE2)
+	reloose := MustCompile(`\n\n(?!\s*$)`, RE2)
 	retask := regexp.MustCompile(`^\[[ xX]\] `)
 	for i := 0; i < length; i++ {
 		item := itemmatch[i].Runes()
@@ -536,12 +534,12 @@ func list(src []rune) (token Token, err error) {
 		index := strings.Index(string(item), "\n ")
 		if index != -1 {
 			space -= len(item)
-			temp, _ := regexp2.MustCompile(`'^ {1,`+string(space)+`}`, regexp2.Multiline).Replace(string(item), "", 0, -1)
+			temp, _ := MustCompile(`'^ {1,`+string(space)+`}`, Multiline).Replace(string(item), "", 0, -1)
 			item = []rune(temp)
 		}
 
 		if i != length-1 {
-			t, _ := block["bullet"].FindRunesMatch(itemmatch[i+1].Runes())
+			t, _ := block["bullet"].Exec(itemmatch[i+1].Runes())
 			b := t.GroupByNumber(0).Runes()
 
 			var condiotion bool
@@ -597,7 +595,7 @@ func list(src []rune) (token Token, err error) {
 }
 
 func def(src []rune) (token Token, err error) {
-	match, err := block["def"].FindRunesMatch(src)
+	match, err := block["def"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -615,7 +613,7 @@ func def(src []rune) (token Token, err error) {
 }
 
 func lheading(src []rune) (token Token, err error) {
-	match, err := block["lheading"].FindRunesMatch(src)
+	match, err := block["lheading"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -634,7 +632,7 @@ func lheading(src []rune) (token Token, err error) {
 }
 
 func paragraph(src []rune) (token Token, err error) {
-	match, err := block["paragraph"].FindRunesMatch(src)
+	match, err := block["paragraph"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -652,7 +650,7 @@ func paragraph(src []rune) (token Token, err error) {
 }
 
 func text(src []rune, tokens []Token) (token Token, err error) {
-	match, err := block["text"].FindRunesMatch(src)
+	match, err := block["text"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -674,7 +672,7 @@ func text(src []rune, tokens []Token) (token Token, err error) {
 }
 
 func escape(src []rune) (token Token, err error) {
-	match, err := inline["escape"].FindRunesMatch(src)
+	match, err := inline["escape"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -690,7 +688,7 @@ func escape(src []rune) (token Token, err error) {
 }
 
 func link(src []rune) (token Token, err error) {
-	match, err := inline["link"].FindRunesMatch(src)
+	match, err := inline["link"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -716,7 +714,7 @@ func link(src []rune) (token Token, err error) {
 	if len(third) > 0 {
 		title = string(third[1:])
 	}
-	re := regexp2.MustCompile(`^<([\s\S]*)>$`, regexp2.RE2)
+	re := MustCompile(`^<([\s\S]*)>$`, RE2)
 	href, _ = re.Replace(href, "$1", 0, -1)
 
 	if href != "" {
@@ -733,12 +731,12 @@ func link(src []rune) (token Token, err error) {
 }
 
 func reflink(src []rune, links map[string]Token) (token Token, err error) {
-	match, err := inline["reflink"].FindRunesMatch(src)
+	match, err := inline["reflink"].Exec(src)
 	if err != nil {
 		return token, err
 	}
 	if match == nil {
-		match, err = inline["nolink"].FindRunesMatch(src)
+		match, err = inline["nolink"].Exec(src)
 	}
 
 	if err != nil || match == nil {
@@ -756,7 +754,7 @@ func reflink(src []rune, links map[string]Token) (token Token, err error) {
 		link = string(first)
 	}
 
-	re := regexp2.MustCompile(`\s+`, regexp2.RE2)
+	re := MustCompile(`\s+`, RE2)
 	link, _ = re.Replace(link, " ", 0, -1)
 	link = strings.ToLower(link)
 	ltoken, ok := links[link]
@@ -773,12 +771,12 @@ func reflink(src []rune, links map[string]Token) (token Token, err error) {
 }
 
 func strong(src []rune, markedSrc []rune, preChar string) (token Token, err error) {
-	match, err := inline["strong"].FindRunesMatch(src)
+	match, err := inline["strong"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
 
-	punctaute, _ := inline["punctuation"].FindRunesMatch([]rune(preChar))
+	punctaute, _ := inline["punctuation"].Exec([]rune(preChar))
 
 	first := match.GroupByNumber(1).Runes()
 	if len(first) == 0 || len(first) > 0 && preChar == "" || punctaute != nil {
@@ -786,17 +784,17 @@ func strong(src []rune, markedSrc []rune, preChar string) (token Token, err erro
 		markedSrc = markedSrc[index:]
 
 		zero := match.GroupByNumber(0).String()
-		var endReg *regexp2.Regexp
+		var endReg *Regex
 		if zero == "**" {
 			endReg = inline["strong_endAst"] // endAst
 		} else {
 			endReg = inline["strong_endUnd"] // endUnd
 		}
 
-		match, err = endReg.FindRunesMatch(markedSrc)
+		match, err = endReg.Exec(markedSrc)
 		for match != nil {
 			text := markedSrc[0:match.Index+3]
-			strongMatch, _ := inline["strong_middle"].FindRunesMatch(text)
+			strongMatch, _ := inline["strong_middle"].Exec(text)
 			if strongMatch != nil {
 				zero := strongMatch.GroupByNumber(0).Runes()
 				return Token{
@@ -806,7 +804,7 @@ func strong(src []rune, markedSrc []rune, preChar string) (token Token, err erro
 				}, nil
 			}
 
-			match, err = endReg.FindRunesMatch(markedSrc)
+			match, err = endReg.Exec(markedSrc)
 		}
 	}
 
@@ -814,29 +812,29 @@ func strong(src []rune, markedSrc []rune, preChar string) (token Token, err erro
 }
 
 func em(src []rune, markedSrc []rune, preChar string) (token Token, err error) {
-	match, err := inline["em"].FindRunesMatch(src)
+	match, err := inline["em"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
 
-	punctaute, _ := inline["punctuation"].FindRunesMatch([]rune(preChar))
+	punctaute, _ := inline["punctuation"].Exec([]rune(preChar))
 	first := match.GroupByNumber(1).Runes()
 	if len(first) == 0 || len(first) > 0 && preChar == "" || punctaute != nil {
 		index := len(markedSrc) - len(src)
 		markedSrc = markedSrc[index:]
 
 		zero := match.GroupByNumber(0).String()
-		var endReg *regexp2.Regexp
+		var endReg *Regex
 		if zero == "*" {
 			endReg = inline["em_endAst"] // endAst
 		} else {
 			endReg = inline["em_endUnd"] // endUnd
 		}
 
-		match, err = endReg.FindRunesMatch(markedSrc)
+		match, err = endReg.Exec(markedSrc)
 		for match != nil {
 			text := markedSrc[0:match.Index+2]
-			strongMatch, _ := inline["em_middle"].FindRunesMatch(text)
+			strongMatch, _ := inline["em_middle"].Exec(text)
 			if strongMatch != nil {
 				zero := strongMatch.GroupByNumber(0).Runes()
 				return Token{
@@ -846,7 +844,7 @@ func em(src []rune, markedSrc []rune, preChar string) (token Token, err error) {
 				}, nil
 			}
 
-			match, err = endReg.FindRunesMatch(markedSrc)
+			match, err = endReg.Exec(markedSrc)
 		}
 	}
 
@@ -854,7 +852,7 @@ func em(src []rune, markedSrc []rune, preChar string) (token Token, err error) {
 }
 
 func codespan(src []rune) (token Token, err error) {
-	match, err := inline["code"].FindRunesMatch(src)
+	match, err := inline["code"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -862,10 +860,10 @@ func codespan(src []rune) (token Token, err error) {
 	raw := match.GroupByNumber(0).String()
 	text := match.GroupByNumber(2).String()
 
-	re := regexp2.MustCompile(`\n`, regexp2.RE2)
+	re := MustCompile(`\n`, RE2)
 	text, _ = re.Replace(text, " ", 0, -1)
 
-	reHasNonSpaceChars := regexp2.MustCompile(`[^ ]`, regexp2.RE2)
+	reHasNonSpaceChars := MustCompile(`[^ ]`, RE2)
 	hasNonSpaceChars, _ := reHasNonSpaceChars.MatchString(text)
 	hasSpaceCharsOnBothEnds := strings.HasPrefix(text, " ") && strings.HasSuffix(text, " ")
 
@@ -881,7 +879,7 @@ func codespan(src []rune) (token Token, err error) {
 }
 
 func br(src []rune) (token Token, err error) {
-	match, err := inline["br"].FindRunesMatch(src)
+	match, err := inline["br"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -894,7 +892,7 @@ func br(src []rune) (token Token, err error) {
 }
 
 func del(src []rune) (token Token, err error) {
-	match, err := inline["del"].FindRunesMatch(src)
+	match, err := inline["del"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -909,7 +907,7 @@ func del(src []rune) (token Token, err error) {
 }
 
 func autoLink(src []rune) (token Token, err error) {
-	match, err := inline["autolink"].FindRunesMatch(src)
+	match, err := inline["autolink"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -940,7 +938,7 @@ func autoLink(src []rune) (token Token, err error) {
 }
 
 func url(src []rune) (token Token, err error) {
-	match, err := inline["url"].FindRunesMatch(src)
+	match, err := inline["url"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -953,13 +951,13 @@ func url(src []rune) (token Token, err error) {
 	} else {
 		var preCapZero, zeroCap string
 		preCapZero = match.GroupByNumber(0).String()
-		zeroMatch, _ := inline["_backpedal"].FindRunesMatch([]rune(preCapZero))
+		zeroMatch, _ := inline["_backpedal"].Exec([]rune(preCapZero))
 		if zeroMatch != nil {
 			zeroCap = zeroMatch.GroupByNumber(0).String()
 		}
 		for preCapZero != zeroCap {
 			preCapZero = zeroCap
-			zeroMatch, _ = inline["_backpedal"].FindRunesMatch([]rune(preCapZero))
+			zeroMatch, _ = inline["_backpedal"].Exec([]rune(preCapZero))
 			if zeroMatch != nil {
 				zeroCap = zeroMatch.GroupByNumber(0).String()
 			} else {
@@ -990,7 +988,7 @@ func url(src []rune) (token Token, err error) {
 }
 
 func inlineText(src []rune) (token Token, err error) {
-	match, err := inline["text"].FindRunesMatch(src)
+	match, err := inline["text"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
@@ -1004,12 +1002,12 @@ func inlineText(src []rune) (token Token, err error) {
 }
 
 func PreProccesText(text string) {
-	re_break := regexp2.MustCompile(`\r\n|\r`, regexp2.None)
+	re_break := MustCompile(`\r\n|\r`, RE2)
 	text, _ = re_break.Replace(text, "", 0, -1)
-	re_blank := regexp2.MustCompile(`\t`, regexp2.None)
+	re_blank := MustCompile(`\t`, RE2)
 	text, _ = re_blank.Replace(text, "    ", 0, -1)
 
-	re_blank = regexp2.MustCompile(`^ +$`, regexp2.Multiline)
+	re_blank = MustCompile(`^ +$`, Multiline)
 	text, _ = re_blank.Replace(text, "", 0, -1)
 
 	src := []rune(text)
