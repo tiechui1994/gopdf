@@ -51,7 +51,7 @@ func (l *Lexer) blockTokens(content string, tokens *[]Token, top bool) []Token {
 		}
 
 		// code
-		if token, _ := code(src, l.tokens); !IsEmpty(token) {
+		if token, _ := code(src, &l.tokens); !IsEmpty(token) {
 			src = src[len([]rune(token.Raw)):]
 			if token.Type != "" {
 				*tokens = append(*tokens, token)
@@ -173,6 +173,7 @@ func (l *Lexer) inline(tokens *[]Token) []Token {
 		case "paragraph", "text", "heading":
 			token.Tokens = []Token{}
 			l.inlineTokens(token.Text, &token.Tokens, false, false, "")
+
 		case "table":
 			// TODO
 
@@ -220,10 +221,11 @@ func (l *Lexer) inlineTokens(text string, tokens *[]Token, inLink, inRawBlock bo
 	// Mask out other blocks
 	blockSkip := inline["blockSkip"]
 	match, _ := blockSkip.Exec(maskedSrc)
-	if match != nil {
+	for match != nil {
 		zero := match.GroupByNumber(0).Runes()
 		maskedSrc = []rune(str(maskedSrc).slice(0, match.Index).string() + "[" +
 			strings.Repeat("a", len(zero)-2) + "]" + str(maskedSrc).slice(blockSkip.LastIndex).string())
+		match, _ = blockSkip.Exec(maskedSrc)
 	}
 
 	for len(src) > 0 {
@@ -313,7 +315,7 @@ func (l *Lexer) inlineTokens(text string, tokens *[]Token, inLink, inRawBlock bo
 		// text
 		if token, _ := inlineText(src, inRawBlock); !IsEmpty(token) {
 			src = src[len([]rune(token.Raw)):]
-			prevChar = str([]rune(token.Raw)).slice(-1).string()
+			prevChar = str(token.Raw).slice(-1).string()
 			*tokens = append(*tokens, token)
 			continue
 		}

@@ -492,27 +492,29 @@ func space(src []rune) (token Token, err error) {
 	}, nil
 }
 
-func code(src []rune, tokens []Token) (token Token, err error) {
+func code(src []rune, tokens *[]Token) (token Token, err error) {
 	match, err := block["code"].Exec(src)
 	if err != nil || match == nil {
 		return token, err
 	}
 
-	last := tokens[len(tokens)-1]
 	raw := match.GroupByNumber(0).String()
-	if last.Type == "paragraph" {
-		return Token{
-			Raw:    raw,
-			Text:   strings.TrimRight(raw, " "),
-			Tokens: []Token{},
-		}, nil
+	if len(*tokens) > 0 {
+		last := (*tokens)[len(*tokens)-1]
+		if last.Type == "paragraph" {
+			return Token{
+				Raw:    raw,
+				Text:   strings.TrimRight(raw, " "),
+				Tokens: []Token{},
+			}, nil
+		}
 	}
 
-	text, _ := MustCompile(`^ {4}`, Multiline).Replace(raw, "", 0, -1)
+	text := MustCompile(`^ {4}`, Multiline|Global).ReplaceStr(raw, "", 0, -1)
 	return Token{
 		Type:   "code",
 		Raw:    raw,
-		Text:   text,
+		Text:   strings.TrimRight(text, "\n"),
 		Tokens: []Token{},
 	}, nil
 }
@@ -543,7 +545,7 @@ func heading(src []rune) (token Token, err error) {
 	return Token{
 		Type:   "heading",
 		Raw:    raw,
-		Depth:  len(match.Captures[1].String()),
+		Depth:  len(match.GroupByNumber(1).Runes()),
 		Text:   text,
 		Tokens: []Token{},
 	}, nil
@@ -554,10 +556,9 @@ func hr(src []rune) (token Token, err error) {
 	if err != nil || match == nil {
 		return token, err
 	}
-	text := match.GroupByNumber(0).String()
 	return Token{
 		Type:   "hr",
-		Raw:    text,
+		Raw:    match.GroupByNumber(0).String(),
 		Tokens: []Token{},
 	}, nil
 }
@@ -569,9 +570,7 @@ func blockquote(src []rune) (token Token, err error) {
 	}
 
 	raw := match.GroupByNumber(0).String()
-	regex := MustCompile(`^ *> ?`, Multiline)
-	text, _ := regex.Replace(raw, "", 0, -1)
-
+	text := MustCompile(`^ *> ?`, Multiline|Global).ReplaceStr(raw, "", 0, -1)
 	return Token{
 		Type:   "blockquote",
 		Raw:    raw,
@@ -1084,6 +1083,7 @@ func url(src []rune) (token Token, err error) {
 
 	return Token{
 		Type: "link",
+		Raw:  match.GroupByNumber(0).String(),
 		Text: text,
 		Href: href,
 		Tokens: []Token{
