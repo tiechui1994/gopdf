@@ -31,6 +31,15 @@ type Token struct {
 	Tag string `json:"tag,omitempty"`
 
 	Tokens []Token `json:"tokens"`
+
+	// table
+	Header []string   `json:"header"`
+	Align  []string   `json:"align"`
+	Cells  [][]string `json:"cells"`
+	Elements struct {
+		Header [][]Token `json:"header"`
+		Cells  [][]Token `json:"cells"`
+	} `json:"elements,omitempty"`
 }
 
 func (t Token) String() string {
