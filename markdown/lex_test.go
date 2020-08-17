@@ -17,10 +17,20 @@ func TestString(t *testing.T) {
 }
 
 func TestNewLex(t *testing.T) {
-	data,_ := ioutil.ReadFile("./src/mark.md")
+	data, _ := ioutil.ReadFile("./src/mark.md")
 	lex := NewLex()
 	tokens := lex.lex(string(data))
 	for _, token := range tokens {
+		_ = token
 		t.Log("\n", token.String())
 	}
+}
+
+func TestLex(t *testing.T) {
+	NewLex()
+	text := `| AA | BB | CC |
+| -- | -- | -- |
+| 1 | 2 | 3, **oo** | 
+| - 4, x | 5 | 6 *ss*  |`
+	t.Log(block["table"].Exec([]rune(text)))
 }

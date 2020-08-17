@@ -120,6 +120,48 @@ func (s str) string() string {
 	return string(s)
 }
 
+func (s str) replace(re *Regex, repl string) str {
+	re.LastIndex = 0
+	var result string
+	if re.Global {
+		result = re.ReplaceStr(string(s), repl, 0, -1)
+	} else {
+		result = re.ReplaceStr(string(s), repl, 0, 1)
+	}
+
+	return str(result)
+}
+
+func (s str) replaceFunc(re *Regex, f func(match *Match, offset int, s str) str) str {
+	result := str{}
+	if re.Global {
+		re.LastIndex = 0
+
+		last := 0
+		match, _ := re.Exec(s)
+		for match != nil {
+			res := f(match, match.Index, s)
+			result = append(result, s[last:match.Index]...)
+			result = append(result, res...)
+			last = re.LastIndex
+			match, _ = re.Exec(s)
+		}
+
+		result = append(result, s[last:]...)
+	} else {
+		re.LastIndex = 0
+		match, _ := re.Exec(s)
+		for match != nil {
+			res := f(match, match.Index, s)
+			result = append(result, s[0:match.Index]...)
+			result = append(result, res...)
+			result = append(result, s[re.LastIndex:]...)
+		}
+	}
+
+	return result
+}
+
 func includes(arr []string, search string, index int) bool {
 	if index < 0 || index > len(arr) {
 		return false

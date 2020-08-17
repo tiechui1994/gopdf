@@ -79,7 +79,12 @@ func (l *Lexer) blockTokens(content string, tokens *[]Token, top bool) []Token {
 			continue
 		}
 
-		// TODO: table no leading pipe (gfm)
+		// table no leading pipe (gfm)
+		if token, _ := nptable(src); !IsEmpty(token) {
+			src = src[len([]rune(token.Raw)):]
+			*tokens = append(*tokens, token)
+			continue
+		}
 
 		// hr
 		if token, _ := hr(src); !IsEmpty(token) {
@@ -123,7 +128,12 @@ func (l *Lexer) blockTokens(content string, tokens *[]Token, top bool) []Token {
 			}
 		}
 
-		// TODO: table (gfm)
+		// table
+		if token, _ := table(src); !IsEmpty(token) {
+			src = src[len([]rune(token.Raw)):]
+			*tokens = append(*tokens, token)
+			continue
+		}
 
 		// lheading
 		if token, _ := lheading(src); !IsEmpty(token) {
@@ -175,7 +185,23 @@ func (l *Lexer) inline(tokens *[]Token) []Token {
 			l.inlineTokens(token.Text, &token.Tokens, false, false, "")
 
 		case "table":
-			// TODO
+			hn := len(token.Header)
+			token.Elements.Header = make([][]Token, hn)
+			for j := 0; j < hn; j++ {
+				token.Elements.Header[j] = []Token{}
+				l.inlineTokens(token.Header[j], &token.Elements.Header[j], false, false, "")
+			}
+
+			cn := len(token.Cells)
+			token.Elements.Cells = make([][][]Token, cn)
+			for j := 0; j < cn; j++ {
+				row := token.Cells[j]
+				token.Elements.Cells[j] = make([][]Token, len(row))
+				for k := 0; k < len(row); k++ {
+					token.Elements.Cells[j][k] = []Token{}
+					l.inlineTokens(row[k], &token.Elements.Cells[j][k], false, false, "")
+				}
+			}
 
 		case "blockquote":
 			l.inline(&token.Tokens)

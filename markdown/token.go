@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"bytes"
+	"regexp"
 )
 
 type Token struct {
@@ -37,8 +38,8 @@ type Token struct {
 	Align  []string   `json:"align"`
 	Cells  [][]string `json:"cells"`
 	Elements struct {
-		Header [][]Token `json:"header"`
-		Cells  [][]Token `json:"cells"`
+		Header [][]Token   `json:"header"`
+		Cells  [][][]Token `json:"cells"`
 	} `json:"elements,omitempty"`
 }
 
@@ -250,6 +251,41 @@ func merge(args ...map[string]*Regex) map[string]*Regex {
 	}
 
 	return result
+}
+
+func splitCells(tableRow string, count int) []string {
+	re := MustCompile(`\|`, Global)
+	row := str(tableRow).replaceFunc(re, func(match *Match, offset int, s str) str {
+		var escaped bool
+		curr := offset
+		curr--
+		for curr >= 0 && s[curr] == '\\' {
+			escaped = !escaped
+			curr--
+		}
+		if escaped {
+			return str("|")
+		} else {
+			return str(" |")
+		}
+	})
+
+	cells := regexp.MustCompile(` \|`).Split(row.string(), -1)
+
+	if len(cells) > count && count != 0 {
+		cells = cells[0:count]
+	} else {
+		for len(cells) < count {
+			cells = append(cells, "")
+		}
+	}
+
+	for i := 0; i < len(cells); i++ {
+		re := MustCompile(`\\|`, Global)
+		cells[i] = str(strings.TrimSpace(cells[i])).replace(re, "|").string()
+	}
+
+	return cells
 }
 
 var (
@@ -560,6 +596,53 @@ func heading(src []rune) (token Token, err error) {
 	}, nil
 }
 
+func nptable(src []rune) (token Token, err error) {
+	matched, err := block["nptable"].Exec(src)
+	if err != nil || matched == nil {
+		return token, err
+	}
+
+	first := matched.GroupByNumber(1).Runes()
+	header := str(first).replace(MustCompile(`^ *| *\| *$`, Global), "").string()
+	second := matched.GroupByNumber(2).Runes()
+	align := str(second).replace(MustCompile(`^ *|\| *$`, Global), "").string()
+	third := matched.GroupByNumber(3).Runes()
+	var celles = make([]string, 0)
+	if len(third) > 0 {
+		temp := str(third).replace(MustCompile(`\n$`, RE2), "").string()
+		celles = strings.Split(temp, "\n")
+	}
+	item := Token{
+		Type:   "table",
+		Header: splitCells(header, 0),
+		Align:  regexp.MustCompile(` *\| *`).Split(align, -1),
+		Cells:  make([][]string, len(celles)),
+		Raw:    matched.GroupByNumber(0).String(),
+	}
+
+	if len(item.Header) == len(item.Align) {
+		n := len(item.Align)
+		for i := 0; i < n; i++ {
+			if MustCompile(`^ *-+: *$`, RE2).Test([]rune(item.Align[i])) {
+				item.Align[i] = "right"
+			} else if MustCompile(`^ *:-+: *$`, RE2).Test([]rune(item.Align[i])) {
+				item.Align[i] = "center"
+			} else if MustCompile(`^ *:-+ *$`, RE2).Test([]rune(item.Align[i])) {
+				item.Align[i] = "left"
+			}
+		}
+
+		n = len(item.Cells)
+		for i := 0; i < n; i++ {
+			cell := celles[i]
+			item.Cells[i] = splitCells(cell, len(item.Header))
+		}
+		return item, nil
+	}
+
+	return token, nil
+}
+
 func hr(src []rune) (token Token, err error) {
 	match, err := block["hr"].Exec(src)
 	if err != nil || match == nil {
@@ -720,6 +803,56 @@ func def(src []rune) (token Token, err error) {
 		Title:  string(third),
 		Tokens: []Token{},
 	}, nil
+}
+
+func table(src []rune) (token Token, err error) {
+	matched, err := block["table"].Exec(src)
+	if err != nil || matched == nil {
+		return token, err
+	}
+
+	first := matched.GroupByNumber(1).Runes()
+	header := str(first).replace(MustCompile(`^ *| *\| *$`, Global), "").string()
+	second := matched.GroupByNumber(2).Runes()
+	align := str(second).replace(MustCompile(`^ *|\| *$`, Global), "").string()
+
+	third := matched.GroupByNumber(3).Runes()
+	var celles = make([]string, 0)
+	if len(third) > 0 {
+		temp := str(third).replace(MustCompile(`\n$`, RE2), "").string()
+		celles = strings.Split(temp, "\n")
+	}
+	item := Token{
+		Type:   "table",
+		Header: splitCells(header, 0),
+		Align:  regexp.MustCompile(` *\| *`).Split(align, -1),
+		Cells:  make([][]string, len(celles)),
+	}
+
+	if len(item.Header) == len(item.Align) {
+		item.Raw = matched.GroupByNumber(0).String()
+
+		n := len(item.Align)
+		for i := 0; i < n; i++ {
+			if MustCompile(`^ *-+: *$`, RE2).Test([]rune(item.Align[i])) {
+				item.Align[i] = "right"
+			} else if MustCompile(`^ *:-+: *$`, RE2).Test([]rune(item.Align[i])) {
+				item.Align[i] = "center"
+			} else if MustCompile(`^ *:-+ *$`, RE2).Test([]rune(item.Align[i])) {
+				item.Align[i] = "left"
+			}
+		}
+
+		n = len(item.Cells)
+		for i := 0; i < n; i++ {
+			cell := celles[i]
+			cell = str(cell).replace(MustCompile(`^ *\| *| *\| *$`, Global), "").string()
+			item.Cells[i] = splitCells(cell, len(item.Header))
+		}
+		return item, nil
+	}
+
+	return token, nil
 }
 
 func lheading(src []rune) (token Token, err error) {
