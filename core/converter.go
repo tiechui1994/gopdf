@@ -262,7 +262,7 @@ func (convert *Converter) LineColor(line string, elements []string) {
 
 // backgroup color
 func (convert *Converter) BackgroundColor(line string, elements []string) {
-	checkLength(line, elements, 9)
+	checkLength(line, elements, 12)
 
 	// white line
 	convert.pdf.SetStrokeColor(255, 255, 255)
@@ -278,10 +278,13 @@ func (convert *Converter) BackgroundColor(line string, elements []string) {
 		parseFloatPanic(elements[4], line)*convert.unit, "F")
 
 	// recover origin backgroup color and line color
-	convert.pdf.SetFillColor(0, 0, 0)
-	convert.pdf.SetStrokeColor(0, 0, 0)
+	convert.pdf.SetFillColor(1, 1, 1)
+	convert.pdf.SetStrokeColor(uint8(parseIntPanic(elements[9], line)),
+		uint8(parseIntPanic(elements[10], line)),
+		uint8(parseIntPanic(elements[11], line)))
 
 	convert.pdf.SetLineType("solid")
+	convert.pdf.SetLineWidth(convert.linew * convert.unit)
 
 	x := parseFloatPanic(elements[1], line) * convert.unit
 	y := parseFloatPanic(elements[2], line) * convert.unit

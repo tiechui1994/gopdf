@@ -470,26 +470,33 @@ func (report *Report) LineColor(red int, green int, blue int) {
 		"|" + strconv.Itoa(blue))
 }
 
-// color: 背景颜色
-// line: 是否需要边框线条, "0000"不需要,  "1111"需要, "0110" 是需要 TOP,RIGHT 线条
-func (report *Report) BackgroundColor(x, y, w, h float64, color string, line string) {
-	if !rline.MatchString(line) {
-		line = "0000"
+// bgcolor: background color. style is "r,g,b", eg. "1,1,1" is black
+// lines: whether border lines are needed. eg, "0000" is not needed, "1111" is needed, "0110" is
+// required for TOP, RIGHT lines.
+// lcolor: line color, style is "r,g,b", eg. "1,1,1" is black
+func (report *Report) BackgroundColor(x, y, w, h float64, bgcolor string, lines string, lcolor ...string) {
+	if !rline.MatchString(lines) {
+		lines = "0000"
 	}
-	if len(line) == 1 {
-		line = strings.Repeat(line, 4)
+	if len(lines) == 1 {
+		lines = strings.Repeat(lines, 4)
 	}
-	if len(line) == 2 {
-		line = strings.Repeat(line, 2)
+	if len(lines) == 2 {
+		lines = strings.Repeat(lines, 2)
 	}
-	if len(line) == 3 {
-		line += "0"
+	if len(lines) == 3 {
+		lines += "0"
 	}
 
-	red, green, blue := util.GetColorRGB(color)
+	bgred, bggreen, bgblue := util.RGB(bgcolor)
+	var lred, lgreen, lblue = 1, 1, 1
+	if lcolor != nil {
+		lred, lgreen, lblue = util.RGB(lcolor[0])
+	}
 
 	report.addAtomicCell("BC|" + util.Ftoa(x) + "|" + util.Ftoa(y) + "|" + util.Ftoa(w) + "|" +
-		util.Ftoa(h) + "|" + strconv.Itoa(red) + "|" + strconv.Itoa(green) + "|" + strconv.Itoa(blue) + "|" + line)
+		util.Ftoa(h) + "|" + strconv.Itoa(bgred) + "|" + strconv.Itoa(bggreen) + "|" + strconv.Itoa(bgblue) + "|" + lines + "|" +
+		strconv.Itoa(lred) + "|" + strconv.Itoa(lgreen) + "|" + strconv.Itoa(lblue))
 }
 
 // 线条灰度
