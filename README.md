@@ -1,5 +1,7 @@
 ## gopdf
 
+![GitHub](https://img.shields.io/github/v/release/tiechui1994/gopdf)
+![GitHub](https://img.shields.io/github/commit-activity/w/tiechui1994/gopdf)
 ![GitHub](https://img.shields.io/github/license/tiechui1994/gopdf)
 ![GitHub issues](https://img.shields.io/github/issues/tiechui1994/gopdf)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/tiechui1994/gopdf)
