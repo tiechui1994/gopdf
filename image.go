@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/tiechui1994/gopdf/core"
@@ -20,36 +19,7 @@ type Image struct {
 }
 
 func NewImage(path string, pdf *core.Report) *Image {
-	var temppath []string
-	if _, err := os.Stat(path); err != nil {
-		path = fmt.Sprintf("/tmp/%v.png", time.Now().Unix())
-		temppath = append(temppath, path)
-		DrawPNG(path)
-	}
-
-	dstPath := fmt.Sprintf("/tmp/%v.jpeg", time.Now().UnixNano())
-	srcPath, _ := filepath.Abs(path)
-	err := Convert2JPEG(srcPath, dstPath)
-	if err != nil {
-		log.Println(err)
-		return nil
-	}
-
-	temppath = append(temppath, dstPath)
-
-	w, h := GetImageWidthAndHeight(dstPath)
-	image := &Image{
-		pdf:      pdf,
-		path:     dstPath,
-		width:    float64(w),
-		height:   float64(h),
-		temppath: temppath,
-	}
-	if dstPath != "" {
-		pdf.AddCallBack(image.delTempImage)
-	}
-
-	return image
+	return NewImageWithWidthAndHeight(path, 0, 0, pdf)
 }
 
 func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Report) *Image {
@@ -70,12 +40,26 @@ func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Re
 
 	dstPath := fmt.Sprintf("/tmp/%v.jpeg", time.Now().UnixNano())
 	srcPath, _ := filepath.Abs(path)
-	err := Convert2JPEG(srcPath, dstPath)
-	if err != nil {
-		return nil
+	Convert2JPEG(srcPath, dstPath)
+	temppath = append(temppath, dstPath)
+
+	image := &Image{
+		pdf:      pdf,
+		path:     dstPath,
+		temppath: temppath,
 	}
 
-	w, h := GetImageWidthAndHeight(dstPath)
+	image.imageWidthHeight(image.path, width, height)
+
+	if dstPath != "" {
+		pdf.AddCallBack(image.delTempImage)
+	}
+
+	return image
+}
+
+func (image *Image) imageWidthHeight(path string, width, height float64) *Image {
+	w, h := GetImageWidthAndHeight(path)
 	if width > 0 && height > 0 {
 		if float64(h)*width/float64(w) > height {
 			width = float64(w) * height / float64(h)
@@ -86,21 +70,12 @@ func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Re
 		height = float64(h) * width / float64(w)
 	} else if height > 0 {
 		width = float64(w) * height / float64(h)
+	} else {
+		width, height = float64(w), float64(h)
 	}
 
-	temppath = append(temppath, dstPath)
-
-	image := &Image{
-		pdf:      pdf,
-		path:     dstPath,
-		width:    width,
-		height:   height,
-		temppath: temppath,
-	}
-
-	if dstPath != "" {
-		pdf.AddCallBack(image.delTempImage)
-	}
+	image.width = width
+	image.height = height
 
 	return image
 }
@@ -146,6 +121,12 @@ draw:
 		image.pdf.SetXY(sx, y+float64(image.height)+image.margin.Bottom)
 	} else {
 		image.pdf.SetXY(x+float64(image.width), y)
+	}
+
+	if image.autobreak {
+		sx, _ = image.pdf.GetPageStartXY()
+		_, sy := image.pdf.GetXY()
+		image.pdf.SetXY(sx, sy+image.height)
 	}
 
 	return false, true, nil

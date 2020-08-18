@@ -1,3 +1,5 @@
+github.com/dlclark/regexp2 v1.2.0 h1:8sAhBGEM0dRWogWqWyQeIJnxjWO6oIjl8FKqREDsGfk=
+github.com/dlclark/regexp2 v1.2.0/go.mod h1:2pZnwuY/m+8K6iRw6wQdMtk+rH5tNGR1i55kozfMjCc=
 github.com/phpdave11/gofpdi v1.0.8 h1:9HRg0Z0qDfWeMU7ska+YNQ13RHxTxqP5KTg/dBl4o7c=
 github.com/phpdave11/gofpdi v1.0.8/go.mod h1:vBmVV0Do6hSBHC8uKUQ71JGW+ZGQq74llk/7bXwjDoI=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
@@ -6,5 +8,4 @@ github.com/signintech/gopdf v0.9.8 h1:tafWEjYhorfHMl9JT9II43fvf5XhUwrjUKVNwQqqyJ
 github.com/signintech/gopdf v0.9.8/go.mod h1:MrARAC6LaOgbnV6vrC5885VuoWCXazhAqx8L8zmjYy4=
 golang.org/x/image v0.0.0-20200801110659-972c09e46d76 h1:U7GPaoQyQmX+CBRWXKrvRzWTbd+slqeSh8uARsIyhAw=
 golang.org/x/image v0.0.0-20200801110659-972c09e46d76/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
-golang.org/x/text v0.3.0 h1:g61tztE5qeGQ89tm6NTjjM9VPIm088od1l6aSorWRWg=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=

@@ -11,6 +11,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/phpdave11/gofpdi"
 )
 
 const subsetFont = "SubsetFont"
@@ -29,6 +31,8 @@ type GoPdf struct {
 	pdfObjs []IObj
 	config  Config
 	anchors map[string]anchorOption
+
+	indexOfCatalogObj int
 
 	/*---index ของ obj สำคัญๆ เก็บเพื่อลด loop ตอนค้นหา---*/
 	//index ของ obj pages
@@ -61,6 +65,13 @@ type GoPdf struct {
 	//info
 	isUseInfo bool
 	info      *PdfInfo
+
+        //outlines
+        outlines *OutlinesObj
+        indexOfOutlinesObj int
+
+	// gofpdi free pdf document importer
+	fpdi *gofpdi.Importer
 }
 
 //SetLineWidth : set line width
@@ -157,6 +168,7 @@ func (gp *GoPdf) Br(h float64) {
 
 //SetGrayFill set the grayscale for the fill, takes a float64 between 0.0 and 1.0
 func (gp *GoPdf) SetGrayFill(grayScale float64) {
+	gp.curr.txtColorMode = "gray"
 	gp.curr.grayFill = grayScale
 	gp.getContent().AppendStreamSetGrayFill(grayScale)
 }
@@ -240,7 +252,7 @@ func (gp *GoPdf) imageByHolder(img ImageHolder, x float64, y float64, rect *Rect
 			//ยัดรูป
 			procset := gp.pdfObjs[gp.indexOfProcSet].(*ProcSetObj)
 			gp.getContent().AppendStreamImage(gp.curr.CountOfImg, x, y, imgRect)
-			procset.RealteXobjs = append(procset.RealteXobjs, RealteXobject{IndexOfObj: index})
+			procset.RelateXobjs = append(procset.RelateXobjs, RelateXobject{IndexOfObj: index})
 			//เก็บข้อมูลรูปเอาไว้
 			var imgcache ImageCache
 			imgcache.Index = gp.curr.CountOfImg
@@ -326,6 +338,10 @@ func (gp *GoPdf) AddPageWithOption(opt PageOption) {
 	gp.resetCurrXY()
 }
 
+func (gp *GoPdf) AddOutline(title string) {
+        gp.outlines.AddOutline(gp.curr.IndexOfPageObj + 1, title)
+}
+
 //Start : init gopdf
 func (gp *GoPdf) Start(config Config) {
 
@@ -340,8 +356,14 @@ func (gp *GoPdf) Start(config Config) {
 	pages.init(func() *GoPdf {
 		return gp
 	})
-	gp.addObj(catalog)
-	gp.indexOfPagesObj = gp.addObj(pages)
+	gp.outlines = new(OutlinesObj)
+	gp.outlines.init(func() *GoPdf {
+		return gp
+	})
+        gp.indexOfCatalogObj = gp.addObj(catalog)
+        gp.indexOfPagesObj = gp.addObj(pages)
+	gp.indexOfOutlinesObj = gp.addObj(gp.outlines)
+	gp.outlines.SetIndexObjOutlines(gp.indexOfOutlinesObj)
 
 	//indexOfProcSet
 	procset := new(ProcSetObj)
@@ -369,10 +391,10 @@ func (gp *GoPdf) SetFontWithStyle(family string, style int, size int) error {
 			sub, ok := obj.(*SubsetFontObj)
 			if ok {
 				if sub.GetFamily() == family && sub.GetTtfFontOption().Style == style&^Underline {
-					gp.curr.Font_Size = size
-					gp.curr.Font_Style = style
-					gp.curr.Font_FontCount = sub.CountOfFont
-					gp.curr.Font_ISubset = sub
+					gp.curr.FontSize = size
+					gp.curr.FontStyle = style
+					gp.curr.FontFontCount = sub.CountOfFont
+					gp.curr.FontISubset = sub
 					found = true
 					break
 				}
@@ -412,6 +434,7 @@ func (gp *GoPdf) Read(p []byte) (int, error) {
 	return gp.buf.Read(p)
 }
 
+// Close clears the gopdf buffer.
 func (gp *GoPdf) Close() error {
 	gp.buf = bytes.Buffer{}
 	return nil
@@ -482,7 +505,7 @@ func (gp *GoPdf) GetBytesPdf() []byte {
 //Text write text start at current x,y ( current y is the baseline of text )
 func (gp *GoPdf) Text(text string) error {
 
-	err := gp.curr.Font_ISubset.AddChars(text)
+	err := gp.curr.FontISubset.AddChars(text)
 	if err != nil {
 		return err
 	}
@@ -498,7 +521,7 @@ func (gp *GoPdf) Text(text string) error {
 //CellWithOption create cell of text ( use current x,y is upper-left corner of cell)
 func (gp *GoPdf) CellWithOption(rectangle *Rect, text string, opt CellOption) error {
 	rectangle = rectangle.UnitsToPoints(gp.config.Unit)
-	err := gp.curr.Font_ISubset.AddChars(text)
+	err := gp.curr.FontISubset.AddChars(text)
 	if err != nil {
 		return err
 	}
@@ -519,7 +542,7 @@ func (gp *GoPdf) Cell(rectangle *Rect, text string) error {
 		Float:  Right,
 	}
 
-	err := gp.curr.Font_ISubset.AddChars(text)
+	err := gp.curr.FontISubset.AddChars(text)
 	if err != nil {
 		return err
 	}
@@ -539,10 +562,10 @@ func (gp *GoPdf) MultiCell(rectangle *Rect, text string) error {
 	length := len([]rune(text))
 
 	// get lineHeight
-	if err := gp.curr.Font_ISubset.AddChars(text); err != nil {
+	if err := gp.curr.FontISubset.AddChars(text); err != nil {
 		return err
 	}
-	_, lineHeight, _, err := createContent(gp.curr.Font_ISubset, text, gp.curr.Font_Size, nil)
+	_, lineHeight, _, err := createContent(gp.curr.FontISubset, text, gp.curr.FontSize, nil)
 	if err != nil {
 		return err
 	}
@@ -573,21 +596,159 @@ func (gp *GoPdf) MultiCell(rectangle *Rect, text string) error {
 	return nil
 }
 
-// AddExternalLink
+// SplitText splits text into multiple lines based on width.
+func (gp *GoPdf) SplitText(text string, width float64) ([]string, error) {
+	var lineText []rune
+	var lineTexts []string
+	utf8Texts := []rune(text)
+	utf8TextsLen := len(utf8Texts) // utf8 string quantity
+	if utf8TextsLen == 0 {
+		return lineTexts, errors.New("empty string")
+	}
+	for i := 0; i < utf8TextsLen; i++ {
+		lineWidth, err := gp.MeasureTextWidth(string(lineText))
+		if err != nil {
+			return nil, err
+		}
+		runeWidth, err := gp.MeasureTextWidth(string(utf8Texts[i]))
+		if err != nil {
+			return nil, err
+		}
+		if lineWidth+runeWidth > width && utf8Texts[i] != '\n' {
+			lineTexts = append(lineTexts, string(lineText))
+			lineText = lineText[0:0]
+			i--
+			continue
+		}
+		if utf8Texts[i] == '\n' {
+			lineTexts = append(lineTexts, string(lineText))
+			lineText = lineText[0:0]
+			continue
+		}
+		if i == utf8TextsLen-1 {
+			lineText = append(lineText, utf8Texts[i])
+			lineTexts = append(lineTexts, string(lineText))
+		}
+		lineText = append(lineText, utf8Texts[i])
+
+	}
+	return lineTexts, nil
+}
+
+// ImportPage imports a page and return template id.
+// gofpdi code
+func (gp *GoPdf) ImportPage(sourceFile string, pageno int, box string) int {
+	// Set source file for fpdi
+	gp.fpdi.SetSourceFile(sourceFile)
+
+	// gofpdi needs to know where to start the object id at.
+	// By default, it starts at 1, but gopdf adds a few objects initially.
+	startObjID := gp.GetNextObjectID()
+
+	// Set gofpdi next object ID to  whatever the value of startObjID is
+	gp.fpdi.SetNextObjectID(startObjID)
+
+	// Import page
+	tpl := gp.fpdi.ImportPage(pageno, box)
+
+	// Import objects into current pdf document
+	tplObjIDs := gp.fpdi.PutFormXobjects()
+
+	// Set template names and ids in gopdf
+	gp.ImportTemplates(tplObjIDs)
+
+	// Get a map[int]string of the imported objects.
+	// The map keys will be the ID of each object.
+	imported := gp.fpdi.GetImportedObjects()
+
+	// Import gofpdi objects into gopdf, starting at whatever the value of startObjID is
+	gp.ImportObjects(imported, startObjID)
+
+	// Return template ID
+	return tpl
+}
+
+// ImportPageStream imports page using a stream.
+// Return template id after importing.
+// gofpdi code
+func (gp *GoPdf) ImportPageStream(sourceStream *io.ReadSeeker, pageno int, box string) int {
+	// Set source file for fpdi
+	gp.fpdi.SetSourceStream(sourceStream)
+
+	// gofpdi needs to know where to start the object id at.
+	// By default, it starts at 1, but gopdf adds a few objects initially.
+	startObjID := gp.GetNextObjectID()
+
+	// Set gofpdi next object ID to  whatever the value of startObjID is
+	gp.fpdi.SetNextObjectID(startObjID)
+
+	// Import page
+	tpl := gp.fpdi.ImportPage(pageno, box)
+
+	// Import objects into current pdf document
+	tplObjIDs := gp.fpdi.PutFormXobjects()
+
+	// Set template names and ids in gopdf
+	gp.ImportTemplates(tplObjIDs)
+
+	// Get a map[int]string of the imported objects.
+	// The map keys will be the ID of each object.
+	imported := gp.fpdi.GetImportedObjects()
+
+	// Import gofpdi objects into gopdf, starting at whatever the value of startObjID is
+	gp.ImportObjects(imported, startObjID)
+
+	// Return template ID
+	return tpl
+}
+
+// UseImportedTemplate draws an imported PDF page.
+func (gp *GoPdf) UseImportedTemplate(tplid int, x float64, y float64, w float64, h float64) {
+	gp.UnitsToPointsVar(&x, &y, &w, &h)
+	// Get template values to draw
+	tplName, scaleX, scaleY, tX, tY := gp.fpdi.UseTemplate(tplid, x, y, w, h)
+	gp.getContent().AppendStreamImportedTemplate(tplName, scaleX, scaleY, tX, tY)
+}
+
+// GetNextObjectID gets the next object ID so that gofpdi knows where to start the object IDs.
+func (gp *GoPdf) GetNextObjectID() int {
+	return len(gp.pdfObjs) + 1
+}
+
+// ImportObjects imports objects from gofpdi into current document.
+func (gp *GoPdf) ImportObjects(objs map[int]string, startObjID int) {
+	for i := startObjID; i < len(objs)+startObjID; i++ {
+		if objs[i] != "" {
+			gp.addObj(&ImportedObj{Data: objs[i]})
+		}
+	}
+}
+
+// ImportTemplates names into procset dictionary.
+func (gp *GoPdf) ImportTemplates(tpls map[string]int) {
+	procset := gp.pdfObjs[gp.indexOfProcSet].(*ProcSetObj)
+	for tplName, tplID := range tpls {
+		procset.ImportedTemplateIds[tplName] = tplID
+	}
+}
+
+// AddExternalLink adds a new external link.
 func (gp *GoPdf) AddExternalLink(url string, x, y, w, h float64) {
 	gp.UnitsToPointsVar(&x, &y, &w, &h)
 	page := gp.pdfObjs[gp.curr.IndexOfPageObj].(*PageObj)
 	page.Links = append(page.Links, linkOption{x, gp.config.PageSize.H - y, w, h, url, ""})
 }
 
+// AddInternalLink adds a new internal link.
 func (gp *GoPdf) AddInternalLink(anchor string, x, y, w, h float64) {
 	gp.UnitsToPointsVar(&x, &y, &w, &h)
 	page := gp.pdfObjs[gp.curr.IndexOfPageObj].(*PageObj)
 	page.Links = append(page.Links, linkOption{x, gp.config.PageSize.H - y, w, h, "", anchor})
 }
 
+// SetAnchor creates a new anchor.
 func (gp *GoPdf) SetAnchor(name string) {
-	y := gp.config.PageSize.H - gp.curr.Y + float64(gp.curr.Font_Size)
+	y := gp.config.PageSize.H - gp.curr.Y + float64(gp.curr.FontSize)
 	gp.anchors[name] = anchorOption{gp.curr.IndexOfPageObj, y}
 }
 
@@ -647,8 +808,8 @@ func (gp *GoPdf) AddTTFFontByReaderWithOption(family string, rd io.Reader, optio
 
 	if gp.indexOfProcSet != -1 {
 		procset := gp.pdfObjs[gp.indexOfProcSet].(*ProcSetObj)
-		if !procset.Realtes.IsContainsFamilyAndStyle(family, option.Style&^Underline) {
-			procset.Realtes = append(procset.Realtes, RelateFont{Family: family, IndexOfObj: index, CountOfFont: gp.curr.CountOfFont, Style: option.Style &^ Underline})
+		if !procset.Relates.IsContainsFamilyAndStyle(family, option.Style&^Underline) {
+			procset.Relates = append(procset.Relates, RelateFont{Family: family, IndexOfObj: index, CountOfFont: gp.curr.CountOfFont, Style: option.Style &^ Underline})
 			subsetFont.CountOfFont = gp.curr.CountOfFont
 			gp.curr.CountOfFont++
 		}
@@ -697,6 +858,7 @@ func (gp *GoPdf) KernOverride(family string, fn FuncKernOverride) error {
 
 //SetTextColor :  function sets the text color
 func (gp *GoPdf) SetTextColor(r uint8, g uint8, b uint8) {
+	gp.curr.txtColorMode = "color"
 	rgb := Rgb{
 		r: r,
 		g: g,
@@ -718,12 +880,12 @@ func (gp *GoPdf) SetFillColor(r uint8, g uint8, b uint8) {
 //MeasureTextWidth : measure Width of text (use current font)
 func (gp *GoPdf) MeasureTextWidth(text string) (float64, error) {
 
-	err := gp.curr.Font_ISubset.AddChars(text) //AddChars for create CharacterToGlyphIndex
+	err := gp.curr.FontISubset.AddChars(text) //AddChars for create CharacterToGlyphIndex
 	if err != nil {
 		return 0, err
 	}
 
-	_, _, textWidthPdfUnit, err := createContent(gp.curr.Font_ISubset, text, gp.curr.Font_Size, nil)
+	_, _, textWidthPdfUnit, err := createContent(gp.curr.FontISubset, text, gp.curr.FontSize, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -788,7 +950,9 @@ func (gp *GoPdf) init() {
 	gp.curr.CountOfL = 0
 	gp.curr.CountOfImg = 0 //img
 	gp.curr.ImgCaches = *new([]ImageCache)
+	gp.curr.transparencyMap = make(map[string]Transparency)
 	gp.anchors = make(map[string]anchorOption)
+	gp.curr.txtColorMode = "gray"
 
 	//init index
 	gp.indexOfPagesObj = -1
@@ -804,6 +968,9 @@ func (gp *GoPdf) init() {
 
 	// change the unit type
 	gp.config.PageSize = *gp.config.PageSize.UnitsToPoints(gp.config.Unit)
+
+	// init gofpdi free pdf document importer
+	gp.fpdi = gofpdi.NewImporter()
 }
 
 func (gp *GoPdf) resetCurrXY() {
@@ -856,6 +1023,11 @@ func (gp *GoPdf) prepare() {
 		gp.addObj(encObj)
 	}
 
+        if gp.outlines.Count() > 0 {
+                catalogObj := gp.pdfObjs[gp.indexOfCatalogObj].(*CatalogObj)
+                catalogObj.SetIndexObjOutlines(gp.indexOfOutlinesObj)
+        }
+
 	if gp.indexOfPagesObj != -1 {
 		indexCurrPage := -1
 		var pagesObj *PagesObj
@@ -865,15 +1037,16 @@ func (gp *GoPdf) prepare() {
 		for i < max {
 			objtype := gp.pdfObjs[i].getType()
 			//fmt.Printf(" objtype = %s , %d \n", objtype , i)
-			if objtype == "Page" {
+			switch objtype {
+			case "Page":
 				pagesObj.Kids = fmt.Sprintf("%s %d 0 R ", pagesObj.Kids, i+1)
 				pagesObj.PageCount++
 				indexCurrPage = i
-			} else if objtype == "Content" {
+			case "Content":
 				if indexCurrPage != -1 {
 					gp.pdfObjs[indexCurrPage].(*PageObj).Contents = fmt.Sprintf("%s %d 0 R ", gp.pdfObjs[indexCurrPage].(*PageObj).Contents, i+1)
 				}
-			} else if objtype == "Font" {
+			case "Font":
 				tmpfont := gp.pdfObjs[i].(*FontObj)
 				j := 0
 				jmax := len(gp.indexEncodingObjFonts)
@@ -888,7 +1061,7 @@ func (gp *GoPdf) prepare() {
 					}
 					j++
 				}
-			} else if objtype == "Encryption" {
+			case "Encryption":
 				gp.encryptionObjID = i + 1
 			}
 			i++
@@ -1002,6 +1175,114 @@ func encodeUtf8(str string) string {
 func infodate(t time.Time) string {
 	ft := t.Format("20060102150405-07'00'")
 	return ft
+}
+
+// SetAlpha sets transparency.
+// alpha: 		value from 0 (transparent) to 1 (opaque)
+// blendMode:   blend mode, one of the following:
+//          		Normal, Multiply, Screen, Overlay, Darken, Lighten, ColorDodge, ColorBurn,
+//          		HardLight, SoftLight, Difference, Exclusion, Hue, Saturation, Color, Luminosity
+func (gp *GoPdf) SetAlpha(alpha float64, blendModeStr string) error {
+	if alpha < 0.0 || alpha > 1.0 {
+		return errors.Unwrap(fmt.Errorf("alpha value (0.0 - 1.0) is out of range: %.3f", alpha))
+	}
+
+	blendMode, err := getBlendMode(blendModeStr)
+	if err != nil {
+		return err
+	}
+
+	alphaStr := fmt.Sprintf("%.3f", alpha)
+	keyStr := fmt.Sprintf("%s %s", alphaStr, blendMode)
+
+	transparency, ok := gp.curr.transparencyMap[keyStr]
+	if !ok {
+		index, err := gp.addExtGStateObj(&ExtGStateObj{
+			ca: alpha,
+			CA: alpha,
+			BM: blendMode,
+		})
+
+		if err != nil {
+			return err
+		}
+
+		transparency = Transparency{IndexOfExtGState: index + 1}
+
+		gp.curr.transparencyMap[keyStr] = transparency
+	}
+
+	gp.curr.transparency = transparency
+
+	return err
+}
+
+func getBlendMode(blendModeStr string) (bl string, err error) {
+	switch blendModeStr {
+	case
+		"Hue",
+		"Color",
+		"Normal",
+		"Screen",
+		"Darken",
+		"Overlay",
+		"Lighten",
+		"Multiply",
+		"ColorBurn",
+		"HardLight",
+		"SoftLight",
+		"Exclusion",
+		"Difference",
+		"ColorDodge",
+		"Saturation",
+		"Luminosity":
+		bl = "/" + blendModeStr
+	case "":
+		bl = "/Normal"
+	default:
+		err = errors.Unwrap(fmt.Errorf("blendMode is unknown"))
+	}
+
+	return bl, err
+}
+
+func (gp *GoPdf) addExtGStateObj(extGStateObj *ExtGStateObj) (index int, err error) {
+	extGStateObj.init(func() *GoPdf {
+		return gp
+	})
+	index = gp.addObj(extGStateObj)
+
+	var pdfObj interface{}
+	pdfObj = gp.pdfObjs[gp.indexOfProcSet]
+
+	procset, ok := pdfObj.(*ProcSetObj)
+	if !ok {
+		err = errors.Unwrap(fmt.Errorf("can't convert pdfobject to procsetobj"))
+		return index, err
+	}
+	procset.ExtGStates = append(procset.ExtGStates, ExtGS{Index: index})
+
+	return index, nil
+}
+
+// IsCurrFontContainGlyph defines is current font contains to a glyph
+// r:           any rune
+func (gp *GoPdf) IsCurrFontContainGlyph (r rune) (bool, error) {
+	fontISubset := gp.curr.FontISubset
+	if fontISubset == nil {
+		return false, nil
+	}
+
+	glyphIndex, err := fontISubset.CharCodeToGlyphIndex(r)
+	if err != nil {
+		return false, err
+	}
+
+	if glyphIndex == 0 {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 //tool for validate pdf https://www.pdf-online.com/osa/validate.aspx

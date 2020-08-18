@@ -17,7 +17,8 @@ type cacheContentText struct {
 	rectangle      *Rect
 	textColor      Rgb
 	grayFill       float64
-	fontCountIndex int //Curr.Font_FontCount+1
+	txtColorMode   string
+	fontCountIndex int //Curr.FontFontCount+1
 	fontSize       int
 	fontStyle      int
 	setXCount      int //จำนวนครั้งที่ใช้ setX
@@ -31,6 +32,7 @@ type cacheContentText struct {
 	//---result---
 	cellWidthPdfUnit, textWidthPdfUnit float64
 	cellHeightPdfUnit                  float64
+	transparency                       Transparency
 }
 
 func (c *cacheContentText) isSame(cache cacheContentText) bool {
@@ -122,18 +124,16 @@ func (c *cacheContentText) write(w io.Writer, protection *PDFProtection) error {
 		return err
 	}
 
+	if c.transparency.IndexOfExtGState != 0 {
+		linkToGSObj := fmt.Sprintf("/GS%d gs\n", c.transparency.IndexOfExtGState)
+		io.WriteString(w, linkToGSObj)
+	}
 	io.WriteString(w, "BT\n")
 	fmt.Fprintf(w, "%0.2f %0.2f TD\n", x, y)
 	fmt.Fprintf(w, "/F%d %d Tf\n", c.fontCountIndex, c.fontSize)
-	if !(r == 0 && g == 0 && b == 0) {
-		rFloat := float64(r) * 0.00392156862745
-		gFloat := float64(g) * 0.00392156862745
-		bFloat := float64(b) * 0.00392156862745
-		fmt.Fprintf(w, "%0.2f %0.2f %0.2f rg\n", rFloat, gFloat, bFloat)
-	} else {
-		//c.AppendStreamSetGrayFill(grayFill)
+	if c.txtColorMode == "color" {
+		fmt.Fprintf(w, "%0.3f %0.3f %0.3f rg\n", float64(r)/255, float64(g)/255, float64(b)/255)
 	}
-
 	io.WriteString(w, "[<")
 
 	unitsPerEm := int(c.fontSubset.ttfp.UnitsPerEm())
@@ -237,7 +237,7 @@ func (c *cacheContentText) underline(w io.Writer, startX float64, startY float64
 	h := c.pageHeight()
 	ut := float64(c.fontSubset.GetUt())
 	up := float64(c.fontSubset.GetUp())
-	textH := ContentObj_CalTextHeight(c.fontSize)
+	textH := ContentObjCalTextHeight(c.fontSize)
 	arg3 := float64(h) - (float64(startY) - ((up / unitsPerEm) * float64(c.fontSize))) - textH
 	arg4 := (ut / unitsPerEm) * float64(c.fontSize)
 	fmt.Fprintf(w, "%0.2f %0.2f %0.2f -%0.2f re f\n", startX, arg3, endX-startX, arg4)
@@ -333,7 +333,7 @@ type CacheContent struct {
 func (c *CacheContent) Setup(rectangle *Rect,
 	textColor Rgb,
 	grayFill float64,
-	fontCountIndex int, //Curr.Font_FontCount+1
+	fontCountIndex int, //Curr.FontFontCount+1
 	fontSize int,
 	fontStyle int,
 	setXCount int, //จำนวนครั้งที่ใช้ setX

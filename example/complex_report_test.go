@@ -73,6 +73,7 @@ func ComplexReportExecutor(report *core.Report) {
 	// 二维码
 	im := gopdf.NewImageWithWidthAndHeight(qrcodeFile, 70, 70, report)
 	im.SetMargin(core.Scope{Left: 340, Top: -40})
+	im.SetAutoBreak()
 	im.GenerateAtomicCell()
 
 	// 基本信息
