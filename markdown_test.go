@@ -5,11 +5,11 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"log"
-
-	"github.com/tiechui1994/gopdf/core"
 	"bytes"
 	"fmt"
-	"github.com/robertkrimen/otto"
+
+	"github.com/tiechui1994/gopdf/core"
+	"github.com/tiechui1994/gopdf/lex"
 )
 
 func init() {
@@ -46,28 +46,21 @@ func MarkdownReport() {
 }
 
 func MarkdownReportExecutor(report *core.Report) {
-	data, _ := ioutil.ReadFile("./markdown/src/mark.json")
-	var list []Token
-	err := json.Unmarshal(data, &list)
-	if err != nil {
-		return
-	}
+	data, _ := ioutil.ReadFile("./markdown.md")
+	var lexer = lex.NewLex()
+	tokens := lexer.Lex(string(data))
 	var fonts = map[string]string{
 		FONT_BOLD:   MD_MB,
 		FONT_NORMAL: MD_MC,
 		FONT_IALIC:  MD_MC,
 	}
 	md, _ := NewMarkdownText(report, 0, fonts)
-	md.SetTokens(list)
+	md.SetTokens(tokens)
 	md.GenerateAtomicCell()
 }
 
 func TestMarkdown(t *testing.T) {
-	data, _ := ioutil.ReadFile("/home/quinn/workspace/marked/lib/marked.js")
-	vm := otto.New()
-	_, err := vm.Run(string(data))
-	t.Log(err)
-	//MarkdownReport()
+	MarkdownReport()
 }
 
 func TestTokens(t *testing.T) {

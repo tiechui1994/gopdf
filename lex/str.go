@@ -1,32 +1,8 @@
-package markdown
+package lex
 
 import (
-	"reflect"
 	"strings"
 )
-
-func IsEmpty(object interface{}) bool {
-	if object == nil {
-		return true
-	}
-
-	objValue := reflect.ValueOf(object)
-	switch objValue.Kind() {
-	// collection types are empty when they have no element
-	case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice:
-		return objValue.Len() == 0
-	case reflect.Ptr:
-		if objValue.IsNil() {
-			return true
-		}
-		deref := objValue.Elem().Interface()
-		return IsEmpty(deref)
-		// for all other types, compare against the zero value
-	default:
-		zero := reflect.Zero(objValue.Type())
-		return reflect.DeepEqual(object, zero.Interface())
-	}
-}
 
 type str []rune
 
@@ -116,10 +92,6 @@ func (s str) match(re *Regex) ([]*Match, error) {
 	return matches, err
 }
 
-func (s str) string() string {
-	return string(s)
-}
-
 func (s str) replace(re *Regex, repl string) str {
 	re.LastIndex = 0
 	var result string
@@ -162,6 +134,10 @@ func (s str) replaceFunc(re *Regex, f func(match *Match, offset int, s str) str)
 	return result
 }
 
+func (s str) string() string {
+	return string(s)
+}
+
 func includes(arr []string, search string, index int) bool {
 	if index < 0 || index > len(arr) {
 		return false
@@ -175,4 +151,12 @@ func includes(arr []string, search string, index int) bool {
 	}
 
 	return false
+}
+
+func strmap(arr []string, f func(value string, index int, array []string) string) []string {
+	newarr := make([]string, len(arr))
+	for i := 0; i < len(arr); i++ {
+		newarr[i] = f(arr[i], i, arr)
+	}
+	return newarr
 }

@@ -1,4 +1,4 @@
-package markdown
+package lex
 
 import (
 	"strings"
@@ -14,7 +14,7 @@ type Token struct {
 	Text string `json:"text"`
 
 	// list
-	Ordered bool    `json:"ordered"`
+	Ordered bool    `json:"ordered,omitempty"`
 	Start   string  `json:"start,omitempty"`
 	Loose   bool    `json:"loose,omitempty"`
 	Task    bool    `json:"task,omitempty"`
@@ -31,15 +31,15 @@ type Token struct {
 	// def
 	Tag string `json:"tag,omitempty"`
 
-	Tokens []Token `json:"tokens"`
+	Tokens []Token `json:"tokens,omitempty"`
 
 	// table
-	Header []string   `json:"header"`
-	Align  []string   `json:"align"`
-	Cells  [][]string `json:"cells"`
+	Header []string   `json:"header,omitempty"`
+	Align  []string   `json:"align,omitempty"`
+	Cells  [][]string `json:"cells,omitempty"`
 	Elements struct {
-		Header [][]Token   `json:"header"`
-		Cells  [][][]Token `json:"cells"`
+		Header [][]Token   `json:"header,omitempty"`
+		Cells  [][][]Token `json:"cells,omitempty"`
 	} `json:"elements,omitempty"`
 }
 
@@ -49,58 +49,6 @@ func (t Token) String() string {
 	encoder.SetIndent("", "  ")
 	encoder.Encode(t)
 	return buf.String()
-}
-
-func findClosingBracket(str []rune, b []rune) int {
-	if strings.Index(string(str), string(b)) == -1 {
-		return -1
-	}
-
-	l := len(str)
-	level := 0
-	for i := 0; i < l; i++ {
-		if str[i] == '\\' {
-			i++
-		} else if str[i] == b[0] {
-			level++
-		} else if str[i] == b[1] {
-			level--
-			if level < 0 {
-				return i
-			}
-		}
-	}
-
-	return -1
-}
-
-func outputLink(match *Match, link Link, raw string) Token {
-	href := link.Href
-	title := link.Title
-
-	re := MustCompile(`\\([\[\]])`, RE2)
-	text, _ := re.Replace(match.GroupByNumber(1).String(), "$1", 0, -1)
-
-	zero := match.GroupByNumber(0).Runes()
-	if zero[0] != '!' {
-		return Token{
-			Type:   "link",
-			Raw:    raw,
-			Href:   href,
-			Title:  title,
-			Text:   text,
-			Tokens: []Token{},
-		}
-	}
-
-	return Token{
-		Type:   "image",
-		Raw:    raw,
-		Href:   href,
-		Title:  title,
-		Text:   text,
-		Tokens: []Token{},
-	}
 }
 
 var (
@@ -203,90 +151,6 @@ var (
 //gfm: true,
 //headerIds: true,
 //mangle: true,
-
-type editor struct {
-	getRegex func() *Regex
-	replace  func(name, value string) *editor
-}
-
-func edit(re interface{}, options ...Options) *editor {
-	e := new(editor)
-	var regex string
-	switch re.(type) {
-	case *Regex:
-		regex = re.(*Regex).Source
-	case string:
-		regex = re.(string)
-	}
-
-	var opt = Options(RE2)
-	if len(options) > 0 {
-		for _, val := range options {
-			opt = opt | val
-		}
-	}
-
-	e.getRegex = func() *Regex {
-		return MustCompile(regex, opt)
-	}
-
-	e.replace = func(name, value string) *editor {
-		caret := MustCompile(`(^|[^\[])\^`, RE2)
-		value, _ = caret.Replace(value, "$1", 0, -1)
-		regex = strings.ReplaceAll(regex, name, value)
-		return e
-	}
-
-	return e
-}
-
-func merge(args ...map[string]*Regex) map[string]*Regex {
-	result := make(map[string]*Regex)
-	for i := 0; i < len(args); i++ {
-		if args[i] != nil {
-			for k, v := range args[i] {
-				result[k] = v
-			}
-		}
-	}
-
-	return result
-}
-
-func splitCells(tableRow string, count int) []string {
-	re := MustCompile(`\|`, Global)
-	row := str(tableRow).replaceFunc(re, func(match *Match, offset int, s str) str {
-		var escaped bool
-		curr := offset
-		curr--
-		for curr >= 0 && s[curr] == '\\' {
-			escaped = !escaped
-			curr--
-		}
-		if escaped {
-			return str("|")
-		} else {
-			return str(" |")
-		}
-	})
-
-	cells := regexp.MustCompile(` \|`).Split(row.string(), -1)
-
-	if len(cells) > count && count != 0 {
-		cells = cells[0:count]
-	} else {
-		for len(cells) < count {
-			cells = append(cells, "")
-		}
-	}
-
-	for i := 0; i < len(cells); i++ {
-		re := MustCompile(`\\|`, Global)
-		cells[i] = str(strings.TrimSpace(cells[i])).replace(re, "|").string()
-	}
-
-	return cells
-}
 
 var (
 	block  map[string]*Regex
@@ -511,7 +375,7 @@ func initInlineGfm(breaks bool) map[string]*Regex {
 	return gfm
 }
 
-func InitFunc() {
+func init() {
 	initBlock()
 	initLine()
 }
@@ -571,10 +435,15 @@ func fences(src []rune) (token Token, err error) {
 	}
 
 	raw := match.GroupByNumber(0).String()
+	var text string
+	if match.GroupCount() > 3 {
+		text = match.GroupByNumber(3).String()
+	}
+	text = indentCodeCompensation(raw, text)
 	return Token{
 		Type:   "code",
 		Raw:    raw,
-		Text:   raw,
+		Text:   text,
 		Tokens: []Token{},
 	}, nil
 }
@@ -629,6 +498,8 @@ func nptable(src []rune) (token Token, err error) {
 				item.Align[i] = "center"
 			} else if MustCompile(`^ *:-+ *$`, RE2).Test([]rune(item.Align[i])) {
 				item.Align[i] = "left"
+			} else {
+				item.Align[i] = ""
 			}
 		}
 
@@ -828,7 +699,6 @@ func table(src []rune) (token Token, err error) {
 		Align:  regexp.MustCompile(` *\| *`).Split(align, -1),
 		Cells:  make([][]string, len(celles)),
 	}
-
 	if len(item.Header) == len(item.Align) {
 		item.Raw = matched.GroupByNumber(0).String()
 
@@ -840,6 +710,8 @@ func table(src []rune) (token Token, err error) {
 				item.Align[i] = "center"
 			} else if MustCompile(`^ *:-+ *$`, RE2).Test([]rune(item.Align[i])) {
 				item.Align[i] = "left"
+			} else {
+				item.Align[i] = ""
 			}
 		}
 

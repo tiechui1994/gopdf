@@ -1,4 +1,4 @@
-package markdown
+package lex
 
 import (
 	"testing"
@@ -19,7 +19,7 @@ func TestString(t *testing.T) {
 func TestNewLex(t *testing.T) {
 	data, _ := ioutil.ReadFile("./src/mark.md")
 	lex := NewLex()
-	tokens := lex.lex(string(data))
+	tokens := lex.Lex(string(data))
 	for _, token := range tokens {
 		_ = token
 		t.Log("\n", token.String())

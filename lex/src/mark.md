@@ -179,8 +179,5 @@ Inline HTML
 If markdown is too limiting, you can just insert your own crazy HTML. Span-level HTML can *still* use markdown. Block level elements must be separated from text by a blank line and must not have any spaces before the opening and closing HTML.
 
 
-| AA | BB | CC |
-| -- | -- | -- |
-| 1 | 2 | 3, **oo** | 
-| - 4, `x` | 5 | 6 *ss*  |
+
 

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"bytes"
 	"regexp"
-	"encoding/json"
 	"net/http"
 	"os"
 	"time"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/tiechui1994/gopdf/core"
 	"github.com/tiechui1994/gopdf/util"
+	"github.com/tiechui1994/gopdf/lex"
 )
 
 const (
@@ -73,27 +73,7 @@ func init() {
 }
 
 // Token is parse markdown result element
-type Token struct {
-	Type string `json:"type"`
-	Raw  string `json:"raw"`
-	Text string `json:"text"`
-
-	// list
-	Ordered bool            `json:"ordered"`
-	Start   json.RawMessage `json:"start"`
-	Loose   bool            `json:"loose"`
-	Task    bool            `json:"task"`
-	Items   []Token         `json:"items"`
-
-	// heading
-	Depth int `json:"depth"`
-
-	// link
-	Href  string `json:"href"`
-	Title string `json:"title"`
-
-	Tokens []Token `json:"tokens"`
-}
+type Token = lex.Token
 
 type mardown interface {
 	SetText(font interface{}, text ...string)
@@ -416,7 +396,6 @@ func (c *MdSpace) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	c.pdf.SetXY(x, y)
 	return false, true, nil
 }
-
 
 func (c *MdSpace) String() string {
 	return fmt.Sprint("[type=space]")
@@ -1019,7 +998,7 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 			mt.children = append(mt.children, code)
 
 			abs.lineHeight = 8
-			space := &MdSpace{abstract:abs}
+			space := &MdSpace{abstract: abs}
 			mt.children = append(mt.children, space)
 		case TYPE_EM:
 			em := &MdText{abstract: abs}

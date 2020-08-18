@@ -1,4 +1,4 @@
-package markdown
+package lex
 
 import (
 	"strings"
@@ -23,7 +23,7 @@ func NewLex() *Lexer {
 	return &lex
 }
 
-func (l *Lexer) lex(text string) []Token {
+func (l *Lexer) Lex(text string) []Token {
 	re_break := MustCompile(`\r\n|\r`, RE2)
 	text, _ = re_break.Replace(text, "", 0, -1)
 	re_blank := MustCompile(`\t`, RE2)

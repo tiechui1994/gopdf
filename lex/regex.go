@@ -1,4 +1,4 @@
-package markdown
+package lex
 
 import (
 	"github.com/dlclark/regexp2"

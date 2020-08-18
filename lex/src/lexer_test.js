@@ -3,9 +3,11 @@ const Lexer = require('./Lexer.js');
 const {defaults} = require('./defaults.js');
 
 const src = fs.readFileSync('./mark.md');
-
 const tokens = Lexer.lex(src.toString(), defaults);
-
-const files = JSON.stringify(tokens);
-
-fs.writeFile("./mark.json", files, (err) => {});
+fs.writeFile("./mark.json", JSON.stringify(tokens), (err) => {
+    if (err) {
+        console.log("err", err)
+    } else {
+        console.log("success")
+    }
+});

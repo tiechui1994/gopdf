@@ -37,7 +37,6 @@ function indentCodeCompensation(raw, text) {
     if (matchIndentToCode === null) {
         return text;
     }
-
     const indentToCode = matchIndentToCode[1];
 
     return text
