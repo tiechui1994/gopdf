@@ -41,9 +41,9 @@ const (
 )
 
 const (
-	lineHeight  = 16.0
-	mimFontSize = 12.0
-	fontSize    = 14.0
+	lineHeight  = 18.0
+	breakHeight = 8.0
+	fontSize    = 12.0
 )
 
 const (
@@ -162,7 +162,7 @@ func (c *MdText) SetText(font interface{}, texts ...string) {
 		case TYPE_EM:
 			c.font = core.Font{Family: family, Size: fontSize, Style: "U"}
 		case TYPE_CODESPAN, TYPE_CODE:
-			c.font = core.Font{Family: family, Size: mimFontSize, Style: ""}
+			c.font = core.Font{Family: family, Size: fontSize, Style: ""}
 		case TYPE_LINK, TYPE_TEXT:
 			c.font = core.Font{Family: family, Size: fontSize, Style: ""}
 		}
@@ -175,9 +175,9 @@ func (c *MdText) SetText(font interface{}, texts ...string) {
 	if c.lineHeight == 0 {
 		switch c.Type {
 		case TYPE_CODE, TYPE_CODESPAN:
-			c.lineHeight = 18.0
+			c.lineHeight = lineHeight
 		case TYPE_TEXT, TYPE_LINK, TYPE_STRONG, TYPE_EM:
-			c.lineHeight = 20.0
+			c.lineHeight = lineHeight
 		}
 	}
 
@@ -202,6 +202,7 @@ func (c *MdText) SetText(font interface{}, texts ...string) {
 }
 
 func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
+	lineheight := c.lineHeight
 	pageStartX, _ := c.pdf.GetPageStartXY()
 	pageEndX, pageEndY := c.pdf.GetPageEndXY()
 	x1, y := c.pdf.GetXY()
@@ -214,22 +215,22 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	for !c.stoped {
 		if c.padding > 0 && x1 == pageStartX && c.blockquote > 0 {
 			for i := 0; i < c.blockquote; i++ {
-				c.pdf.BackgroundColor(x1+float64(i*4)*spaceLen, y, blockLen, c.lineHeight, color_gray, "0000")
+				c.pdf.BackgroundColor(x1+float64(i*4)*spaceLen, y-3.5, blockLen, lineheight+0.5, color_gray, "0000")
 			}
 		}
 
 		switch c.Type {
 		case TYPE_CODESPAN:
-			c.pdf.BackgroundColor(x1, y, width, c.lineHeight, color_lightgray, "1111", color_whitesmoke)
+			c.pdf.BackgroundColor(x1, y-1.5, width, lineheight-2.2, color_lightgray, "1111", color_whitesmoke)
 			c.pdf.TextColor(util.RGB(color_pink))
-			c.pdf.Cell(x1, y+3.15, text)
+			c.pdf.Cell(x1, y, text)
 			c.pdf.TextColor(util.RGB(color_black))
 		case TYPE_CODE:
 			if c.blockquote > 0 {
 				offsetx := float64(c.blockquote-1)*4*spaceLen + (4*spaceLen - blockLen)
-				c.pdf.BackgroundColor(x1+offsetx, y, x2-x1-offsetx, c.lineHeight, color_whitesmoke, "0000")
+				c.pdf.BackgroundColor(x1+offsetx, y, x2-x1-offsetx, lineheight, color_whitesmoke, "0000")
 			} else {
-				c.pdf.BackgroundColor(x1, y, x2-x1, c.lineHeight, color_whitesmoke, "0000")
+				c.pdf.BackgroundColor(x1, y, x2-x1, lineheight, color_whitesmoke, "0000")
 			}
 			c.pdf.TextColor(util.RGB(color_black))
 			c.pdf.Cell(x1, y+3.15, text)
@@ -238,7 +239,7 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 		case TYPE_LINK:
 			// text
 			c.pdf.TextColor(util.RGB(color_blue))
-			c.pdf.ExternalLink(x1, y+12.0, 15, text, c.link)
+			c.pdf.ExternalLink(x1, y+10.0, 15, text, c.link)
 			c.pdf.TextColor(util.RGB(color_black))
 		default:
 			c.pdf.Cell(x1+c.offsetx, y+c.offsety, text)
@@ -252,7 +253,7 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 		}
 
 		// need new page, x,y must statisfy condition
-		if (y >= pageEndY || pageEndY-y < c.lineHeight) && (newline || math.Abs(x1-pageEndX) < c.precision) {
+		if (y >= pageEndY || pageEndY-y < lineHeight) && (newline || math.Abs(x1-pageEndX) < c.precision) {
 			return true, c.stoped, nil
 		}
 
@@ -358,42 +359,38 @@ type MdSpace struct {
 }
 
 func (c *MdSpace) GenerateAtomicCell() (pagebreak, over bool, err error) {
-	var blockquotey float64
+	var (
+		spaceX, spaceY float64
+		linehieght     = c.lineHeight
+	)
 
-	offsety := c.lineHeight
-	pageEndX, pageEndY := c.pdf.GetPageEndXY()
+	pageStartX, _ := c.pdf.GetPageStartXY()
+	_, pageEndY := c.pdf.GetPageEndXY()
 	x, y := c.pdf.GetXY()
-	if x <= pageEndX {
-		if c.lineHeight == 0 {
-			c.lineHeight = lineHeight
-			offsety = 2 * c.lineHeight
-			blockquotey = y + lineHeight
-		} else {
-			offsety = 2 * c.lineHeight
-			blockquotey = y + c.lineHeight
-		}
+
+	if x == pageStartX {
+		linehieght = breakHeight
+	} else if linehieght == 0 {
+		linehieght = breakHeight + lineHeight
+	} else if linehieght > 0 {
+		linehieght += breakHeight
 	}
 
-	if c.lineHeight == 0 {
-		c.lineHeight = lineHeight
-		offsety = c.lineHeight
-		blockquotey = y
-	}
-
-	x, _ = c.pdf.GetPageStartXY()
-	y += offsety
+	spaceX = pageStartX
+	spaceY = y + linehieght
 
 	if c.blockquote > 0 {
+		log.Println(c.blockquote)
 		for i := 0; i < c.blockquote; i++ {
-			c.pdf.BackgroundColor(x+float64(i*4)*spaceLen, blockquotey, blockLen, c.lineHeight, color_gray, "0000")
+			c.pdf.BackgroundColor(spaceX+float64(i*4)*spaceLen, y-10.0, blockLen, linehieght+10.0, color_gray, "0000")
 		}
 	}
 
-	if pageEndY-y < lineHeight {
+	if pageEndY-spaceY < lineHeight {
 		return true, true, nil
 	}
 
-	c.pdf.SetXY(x, y)
+	c.pdf.SetXY(spaceX, spaceY)
 	return false, true, nil
 }
 
@@ -544,17 +541,17 @@ type MdHeader struct {
 func (h *MdHeader) CalFontSizeAndLineHeight(size int) (fontsize int, lineheight float64) {
 	switch size {
 	case 1:
-		return 26, 26
-	case 2:
 		return 22, 22
+	case 2:
+		return 18, 18
 	case 3:
-		return 20, 18
-	case 4:
 		return 16, 16
+	case 4:
+		return 13, 13
 	case 5:
-		return 14, 14
-	case 6:
 		return 12, 12
+	case 6:
+		return 11, 11
 	}
 
 	return 14, 16
@@ -597,8 +594,7 @@ func (h *MdHeader) SetToken(t Token) (err error) {
 	// break
 	abs := h.getabstract(TYPE_TEXT)
 	abs.lineHeight = lineheight
-	br := &MdText{abstract: abs}
-	br.SetText(font, "\n")
+	br := &MdSpace{abstract: abs}
 	h.children = append(h.children, br)
 
 	// newline
@@ -705,7 +701,9 @@ func (l *MdList) SetToken(t Token) error {
 		return fmt.Errorf("invalid type")
 	}
 
+	var stw bool
 	for index, item := range t.Items {
+		stw = false
 		n := len(item.Tokens)
 		for i, token := range item.Tokens {
 			abs := l.getabstract(token.Type)
@@ -725,6 +723,7 @@ func (l *MdList) SetToken(t Token) error {
 			case TYPE_SPACE:
 				space := &MdSpace{abstract: abs}
 				l.children = append(l.children, space)
+				stw = true
 				continue
 
 			case TYPE_BLOCKQUOTE:
@@ -747,13 +746,13 @@ func (l *MdList) SetToken(t Token) error {
 				continue
 			}
 
-			if token.Ordered {
+			if token.Ordered && !stw {
 				text := &MdText{abstract: abs, offsety: -0.45}
 				text.SetText(core.Font{Family: l.fonts[FONT_NORMAL], Size: fontSize}, fmt.Sprintf("%v. ", index+1))
 				l.children = append(l.children, text)
 			}
 
-			if !token.Ordered {
+			if !token.Ordered && !stw {
 				text := &MdText{abstract: abs, offsety: -6.3}
 				text.SetText(core.Font{Family: l.fonts[FONT_NORMAL], Size: 28}, "· ")
 				l.children = append(l.children, text)
@@ -889,8 +888,7 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 
 			if hasBreakLine(token) {
 				abs := b.getabstract(TYPE_TEXT)
-				br := &MdText{abstract: abs}
-				br.SetText(b.fonts[FONT_NORMAL], "\n")
+				br := &MdSpace{abstract: abs}
 				b.children = append(b.children, br)
 			}
 		case TYPE_EM:
@@ -914,8 +912,7 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 		if lastType != TYPE_SPACE {
 			abs := b.getabstract(TYPE_TEXT)
 			abs.blockquote -= 1
-			br := &MdText{abstract: abs}
-			br.SetText(b.fonts[FONT_NORMAL], "\n")
+			br := &MdSpace{abstract: abs}
 			b.children = append(b.children, br)
 		}
 	}
