@@ -48,3 +48,5 @@ go get -u github.com/tiechui1994/gopdf
 
 3. 开发更加通俗易用的组件, 比如 `paragraph`, `tablecell` 等.
 
+4. 使用 node 相关的技术进行桥接操作.
+
