@@ -1,9 +1,9 @@
 package lex
 
 import (
-	"testing"
-	"log"
 	"github.com/dlclark/regexp2"
+	"log"
+	"testing"
 )
 
 func TestExec(t *testing.T) {

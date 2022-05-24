@@ -1,20 +1,20 @@
 package gopdf
 
 import (
-	"math"
-	"log"
-	"fmt"
-	"strings"
 	"bytes"
-	"regexp"
+	"fmt"
+	"io"
+	"log"
+	"math"
 	"net/http"
 	"os"
+	"regexp"
+	"strings"
 	"time"
-	"io"
 
 	"github.com/tiechui1994/gopdf/core"
-	"github.com/tiechui1994/gopdf/util"
 	"github.com/tiechui1994/gopdf/lex"
+	"github.com/tiechui1994/gopdf/util"
 )
 
 const (
@@ -316,16 +316,16 @@ func (c *MdText) GetSubText(x1, x2 float64) (text string, width float64, newline
 		if math.Abs(w-width) < c.precision {
 			// real with more than page width
 			if w-width > 0 {
-				w = c.pdf.MeasureTextWidth(string(runes[i:j-1]))
+				w = c.pdf.MeasureTextWidth(string(runes[i : j-1]))
 				c.remain = strings.TrimPrefix(c.remain, string(runes[i:j-1]))
 				// reset
-				c.newlines ++
-				return string(runes[i:j-1]), w, true
+				c.newlines++
+				return string(runes[i : j-1]), w, true
 			}
 
 			// try again, can more precise
 			if j+1 < len(runes) {
-				w1 := c.pdf.MeasureTextWidth(string(runes[i:j+1]))
+				w1 := c.pdf.MeasureTextWidth(string(runes[i : j+1]))
 				if math.Abs(w1-width) < c.precision {
 					j = j + 1
 					continue
@@ -334,7 +334,7 @@ func (c *MdText) GetSubText(x1, x2 float64) (text string, width float64, newline
 
 			c.remain = strings.TrimPrefix(c.remain, string(runes[i:j]))
 			// reset
-			c.newlines ++
+			c.newlines++
 			return string(runes[i:j]), w, true
 		}
 
@@ -416,11 +416,11 @@ func (i *MdImage) SetText(_ interface{}, filename ...string) {
 		imageType := response.Header.Get("Content-Type")
 		switch imageType {
 		case "image/png":
-			filepath = fmt.Sprintf("/tmp/%v.png", time.Now().Unix())
+			filepath = fmt.Sprintf(os.TempDir()+string(os.PathSeparator)+"%v.png", time.Now().Unix())
 			fd, _ := os.Create(filepath)
 			io.Copy(fd, response.Body)
 		case "image/jpeg":
-			filepath = fmt.Sprintf("/tmp/%v.jpeg", time.Now().Unix())
+			filepath = fmt.Sprintf(os.TempDir()+string(os.PathSeparator)+"%v.jpeg", time.Now().Unix())
 			fd, _ := os.Create(filepath)
 			io.Copy(fd, response.Body)
 		}
@@ -710,7 +710,7 @@ func (l *MdList) SetToken(t Token) error {
 			// special handle "list", "space"
 			switch token.Type {
 			case TYPE_LIST:
-				// if execute here, it symbols the previos is newline
+				// if execute here, it symbols the previous is newline
 				space := &MdSpace{abstract: l.getabstract(TYPE_SPACE)}
 				l.children = append(l.children, space)
 
@@ -827,7 +827,7 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 		abs := b.getabstract(token.Type)
 		switch token.Type {
 		case TYPE_PARAGRAPH:
-			paragraph := &MdParagraph{abstract: abs, fonts: b.fonts,}
+			paragraph := &MdParagraph{abstract: abs, fonts: b.fonts}
 			paragraph.SetToken(token)
 			b.children = append(b.children, paragraph.children...)
 
@@ -853,7 +853,7 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 			list.SetToken(token)
 			b.children = append(b.children, list.children...)
 		case TYPE_HEADING:
-			header := &MdHeader{abstract: abs, fonts: b.fonts,}
+			header := &MdHeader{abstract: abs, fonts: b.fonts}
 			header.SetToken(token)
 			b.children = append(b.children, header.children...)
 		case TYPE_BLOCKQUOTE:

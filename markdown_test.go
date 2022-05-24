@@ -1,12 +1,13 @@
 package gopdf
 
 import (
-	"testing"
-	"io/ioutil"
-	"encoding/json"
-	"log"
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"testing"
 
 	"github.com/tiechui1994/gopdf/core"
 	"github.com/tiechui1994/gopdf/lex"
@@ -85,7 +86,7 @@ func TestTokens(t *testing.T) {
 }
 
 func TestDrawPNG(t *testing.T) {
-	DrawPNG("./test.png")
-	DrawSunLine("./sunline.png")
-	DrawFiveCycle("./fivecycle.png")
+	DrawPNG(os.TempDir() + string(os.PathSeparator) + "test.png")
+	DrawSunLine(os.TempDir() + string(os.PathSeparator) + "sunline.png")
+	DrawFiveCycle(os.TempDir() + string(os.PathSeparator) + "fivecycle.png")
 }
