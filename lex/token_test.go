@@ -14,7 +14,7 @@ var (
 
 func init() {
 	log.SetFlags(log.Ltime | log.Lshortfile)
-	InitFunc()
+	//InitFunc()
 	data, _ = ioutil.ReadFile("./lex.md")
 }
 
