@@ -1,9 +1,9 @@
 package gopdf
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
-	"fmt"
 	"time"
 
 	"github.com/tiechui1994/gopdf/core"
@@ -33,12 +33,12 @@ func NewImageWithWidthAndHeight(path string, width, height float64, pdf *core.Re
 
 	var temppath []string
 	if _, err := os.Stat(path); err != nil {
-		path = fmt.Sprintf("/tmp/%v.png", time.Now().Unix())
+		path = fmt.Sprintf(os.TempDir()+string(os.PathSeparator)+"%v.png", time.Now().Unix())
 		temppath = append(temppath, path)
 		DrawPNG(path)
 	}
 
-	dstPath := fmt.Sprintf("/tmp/%v.jpeg", time.Now().UnixNano())
+	dstPath := fmt.Sprintf(os.TempDir()+string(os.PathSeparator)+"%v.jpeg", time.Now().UnixNano())
 	srcPath, _ := filepath.Abs(path)
 	Convert2JPEG(srcPath, dstPath)
 	temppath = append(temppath, dstPath)

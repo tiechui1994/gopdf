@@ -5,7 +5,7 @@ import "fmt"
 // the units of below is pixels.
 type Config struct {
 	startX, startY float64 // PDF page start position
-	endX, endY     float64 // PDF page end postion
+	endX, endY     float64 // PDF page end position
 	width, height  float64 // PDF page width and height
 
 	contentWidth, contentHeight float64 // PDF page content width and height

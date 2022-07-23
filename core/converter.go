@@ -101,7 +101,7 @@ func (convert *Converter) Execute() {
 		case "GF", "GS":
 			convert.Grey(line, elements) //
 		case "C", "CL", "CR":
-			convert.Cell(line, elements) // cell contens. third lib basic content
+			convert.Cell(line, elements) // cell contents. third lib basic content
 		case "L", "LV", "LH", "LT":
 			convert.Line(line, elements) // one row
 		case "R":
@@ -111,7 +111,7 @@ func (convert *Converter) Execute() {
 		case "I":
 			convert.Image(line, elements) // image
 		case "M":
-			convert.Margin(line, elements) // margin, can adjust content postion
+			convert.Margin(line, elements) // margin, can adjust content position
 		case "EL":
 			convert.ExternalLink(line, elements) // outer link
 		case "ILA":
@@ -139,7 +139,7 @@ func (convert *Converter) AddFont() {
 // Page
 // [P, mm|pt|in, A4, P|L]
 // mm|pt|in, Indicates the unit of size, respectively representing millimeters, pixels, and feet
-// P|L, Page layout, namely Portait, Landscape
+// P|L, Page layout, namely Portrait, Landscape
 func (convert *Converter) Page(line string, elements []string) {
 	convert.pdf = new(gopdf.GoPdf)
 
@@ -319,32 +319,32 @@ func (convert *Converter) Oval(line string, elements []string) {
 
 // rectangle
 // ["R", x1, y1, x2, y2]
-func (convert *Converter) Rect(line string, eles []string) {
-	checkLength(line, eles, 5)
+func (convert *Converter) Rect(line string, eels []string) {
+	checkLength(line, eels, 5)
 	adj := convert.linew * convert.unit * 0.5
 	convert.pdf.Line(
-		parseFloatPanic(eles[1], line)*convert.unit,
-		parseFloatPanic(eles[2], line)*convert.unit+adj,
-		parseFloatPanic(eles[3], line)*convert.unit+adj*2,
-		parseFloatPanic(eles[2], line)*convert.unit+adj)
+		parseFloatPanic(eels[1], line)*convert.unit,
+		parseFloatPanic(eels[2], line)*convert.unit+adj,
+		parseFloatPanic(eels[3], line)*convert.unit+adj*2,
+		parseFloatPanic(eels[2], line)*convert.unit+adj)
 
 	convert.pdf.Line(
-		parseFloatPanic(eles[1], line)*convert.unit+adj,
-		parseFloatPanic(eles[2], line)*convert.unit,
-		parseFloatPanic(eles[1], line)*convert.unit+adj,
-		parseFloatPanic(eles[4], line)*convert.unit+adj*2)
+		parseFloatPanic(eels[1], line)*convert.unit+adj,
+		parseFloatPanic(eels[2], line)*convert.unit,
+		parseFloatPanic(eels[1], line)*convert.unit+adj,
+		parseFloatPanic(eels[4], line)*convert.unit+adj*2)
 
 	convert.pdf.Line(
-		parseFloatPanic(eles[1], line)*convert.unit,
-		parseFloatPanic(eles[4], line)*convert.unit+adj,
-		parseFloatPanic(eles[3], line)*convert.unit+adj*2,
-		parseFloatPanic(eles[4], line)*convert.unit+adj)
+		parseFloatPanic(eels[1], line)*convert.unit,
+		parseFloatPanic(eels[4], line)*convert.unit+adj,
+		parseFloatPanic(eels[3], line)*convert.unit+adj*2,
+		parseFloatPanic(eels[4], line)*convert.unit+adj)
 
 	convert.pdf.Line(
-		parseFloatPanic(eles[3], line)*convert.unit+adj,
-		parseFloatPanic(eles[2], line)*convert.unit,
-		parseFloatPanic(eles[3], line)*convert.unit+adj,
-		parseFloatPanic(eles[4], line)*convert.unit+adj*2)
+		parseFloatPanic(eels[3], line)*convert.unit+adj,
+		parseFloatPanic(eels[2], line)*convert.unit,
+		parseFloatPanic(eels[3], line)*convert.unit+adj,
+		parseFloatPanic(eels[4], line)*convert.unit+adj*2)
 }
 
 // image
@@ -507,11 +507,10 @@ func (convert *Converter) InternalLinkLink(line string, elements []string) {
 	convert.pdf.SetY(parseFloatPanic(elements[2], line))
 }
 
-
-func (convert *Converter) Margin(line string, eles []string) {
-	checkLength(line, eles, 3)
-	top := parseFloatPanic(eles[1], line)
-	left := parseFloatPanic(eles[2], line)
+func (convert *Converter) Margin(line string, eels []string) {
+	checkLength(line, eels, 3)
+	top := parseFloatPanic(eels[1], line)
+	left := parseFloatPanic(eels[2], line)
 	if top != 0.0 {
 		convert.pdf.SetTopMargin(top)
 	}
@@ -554,8 +553,8 @@ func (convert *Converter) GetBytesPdf() (ret []byte) {
 	return convert.pdf.GetBytesPdf()
 }
 
-func checkLength(line string, eles []string, no int) {
-	if len(eles) < no {
+func checkLength(line string, eels []string, no int) {
+	if len(eels) < no {
 		panic("Column short:" + line)
 	}
 }

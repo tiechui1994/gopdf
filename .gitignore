@@ -1,5 +1,4 @@
 *.pdf
 *.txt
 .idea/
-
-
+sonar/
