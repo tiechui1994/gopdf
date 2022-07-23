@@ -1,12 +1,11 @@
 package lex
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"regexp"
-	"strconv"
 	"strings"
+	"fmt"
+	"encoding/json"
+	"bytes"
+	"regexp"
 )
 
 type Token struct {
@@ -35,9 +34,9 @@ type Token struct {
 	Tokens []Token `json:"tokens,omitempty"`
 
 	// table
-	Header   []string   `json:"header,omitempty"`
-	Align    []string   `json:"align,omitempty"`
-	Cells    [][]string `json:"cells,omitempty"`
+	Header []string   `json:"header,omitempty"`
+	Align  []string   `json:"align,omitempty"`
+	Cells  [][]string `json:"cells,omitempty"`
 	Elements struct {
 		Header [][]Token   `json:"header,omitempty"`
 		Cells  [][][]Token `json:"cells,omitempty"`
@@ -555,7 +554,7 @@ func list(src []rune) (token Token, err error) {
 
 	var start string
 	if isordered {
-		start = string(bull[0 : len(bull)-1])
+		start = string(bull[0:len(bull)-1])
 	}
 
 	list := Token{
@@ -587,7 +586,7 @@ func list(src []rune) (token Token, err error) {
 		index := str(item).indexOf("\n ")
 		if index != -1 {
 			space -= len(item)
-			item = MustCompile(`'^ {1,`+strconv.Itoa(space)+`}`, Multiline|Global).
+			item = MustCompile(`'^ {1,`+string(space)+`}`, Multiline|Global).
 				ReplaceRune(item, "", 0, -1)
 		}
 
@@ -610,7 +609,7 @@ func list(src []rune) (token Token, err error) {
 				}
 				addBack := []rune(strings.Join(strs, "\n"))
 				rawrune := []rune(list.Raw)
-				list.Raw = string(rawrune[0 : len(rawrune)-len(addBack)])
+				list.Raw = string(rawrune[0:len(rawrune)-len(addBack)])
 				i = length - 1
 			}
 		}
@@ -755,7 +754,7 @@ func paragraph(src []rune) (token Token, err error) {
 
 	text := match.GroupByNumber(1).Runes()
 	if text[len(text)-1] == '\n' {
-		text = text[0 : len(text)-1]
+		text = text[0:len(text)-1]
 	}
 
 	return Token{
@@ -952,7 +951,7 @@ func em(src []rune, markedSrc []rune, preChar string) (token Token, err error) {
 		endReg.LastIndex = 0
 		match, err = endReg.Exec(markedSrc)
 		for match != nil {
-			text := markedSrc[0 : match.Index+2]
+			text := markedSrc[0:match.Index+2]
 			strongMatch, _ := inline["em_middle"].Exec(text)
 			if strongMatch != nil {
 				zero := strongMatch.GroupByNumber(0).Runes()
@@ -988,7 +987,7 @@ func codespan(src []rune) (token Token, err error) {
 	hasSpaceCharsOnBothEnds := strings.HasPrefix(text, " ") && strings.HasSuffix(text, " ")
 
 	if hasNonSpaceChars && hasSpaceCharsOnBothEnds {
-		text = text[1 : len(text)-1]
+		text = text[1:len(text)-1]
 	}
 
 	return Token{
