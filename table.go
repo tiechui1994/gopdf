@@ -959,7 +959,7 @@ func (table *Table) cachedPoints(sx, sy float64) {
 	}
 
 	var (
-		x, y = sx + table.margin.Left, sy + table.margin.Top
+		x, y = sx+table.margin.Left, sy+table.margin.Top
 	)
 
 	// 只会缓存一次

@@ -1,9 +1,9 @@
 package lex
 
 import (
-	"io/ioutil"
-	"strings"
 	"testing"
+	"strings"
+	"io/ioutil"
 )
 
 func TestString(t *testing.T) {

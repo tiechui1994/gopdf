@@ -2,8 +2,8 @@ package lex
 
 import (
 	"reflect"
-	"regexp"
 	"strings"
+	"regexp"
 )
 
 func IsEmpty(object interface{}) bool {

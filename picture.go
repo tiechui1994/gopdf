@@ -1,19 +1,19 @@
 package gopdf
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
 	"image/jpeg"
 	"image/png"
+	"os"
+	"fmt"
 	"io"
 	"math"
-	"os"
 
 	"golang.org/x/image/bmp"
-	"golang.org/x/image/tiff"
 	"golang.org/x/image/webp"
+	"golang.org/x/image/tiff"
 )
 
 const (
@@ -35,8 +35,6 @@ func Convert2JPEG(srcPath string, dstPath string) error {
 		return err
 	}
 
-	defer fd.Close()
-
 	_, pictureType, err := image.DecodeConfig(fd)
 	if err != nil {
 		return err
@@ -44,7 +42,6 @@ func Convert2JPEG(srcPath string, dstPath string) error {
 
 	switch pictureType {
 	case JPEG:
-		fd.Seek(0, 0)
 		writer, err := os.Create(dstPath)
 		if err != nil {
 			return err
@@ -78,7 +75,7 @@ func GetImageWidthAndHeight(picturePath string) (w, h int) {
 
 	config, _, err := image.DecodeConfig(fd)
 	if err != nil {
-		panic("decode image error" + err.Error() + picturePath)
+		panic("decode image error")
 	}
 
 	return config.Width, config.Height

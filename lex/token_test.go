@@ -1,12 +1,11 @@
 package lex
 
 import (
-	"bytes"
-	"encoding/json"
+	"testing"
 	"io/ioutil"
 	"log"
-	"os"
-	"testing"
+	"encoding/json"
+	"bytes"
 )
 
 var (
@@ -15,7 +14,7 @@ var (
 
 func init() {
 	log.SetFlags(log.Ltime | log.Lshortfile)
-	//InitFunc()
+	InitFunc()
 	data, _ = ioutil.ReadFile("./lex.md")
 }
 
@@ -58,14 +57,14 @@ func TestBlock(t *testing.T) {
 		in[k] = v.String()
 	}
 	data, _ := json.Marshal(in)
-	ioutil.WriteFile(os.TempDir()+string(os.PathSeparator)+"inline.json", data, 0666)
+	ioutil.WriteFile("./inline.json", data, 0666)
 
 	var bl = make(map[string]string)
 	for k, v := range block {
 		bl[k] = v.String()
 	}
 	data, _ = json.Marshal(bl)
-	ioutil.WriteFile(os.TempDir()+string(os.PathSeparator)+"block.json", data, 0666)
+	ioutil.WriteFile("./block.json", data, 0666)
 }
 
 func TestStr(t *testing.T) {

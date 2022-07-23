@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
-	"testing"
 	"time"
+	"testing"
 
 	"github.com/tiechui1994/gopdf/core"
 )
