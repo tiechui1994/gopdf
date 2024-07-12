@@ -1,19 +1,19 @@
 package gopdf
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
 	"image/jpeg"
 	"image/png"
-	"os"
-	"fmt"
 	"io"
 	"math"
+	"os"
 
 	"golang.org/x/image/bmp"
-	"golang.org/x/image/webp"
 	"golang.org/x/image/tiff"
+	"golang.org/x/image/webp"
 )
 
 const (
@@ -53,7 +53,7 @@ func Convert2JPEG(srcPath string, dstPath string) error {
 	case WEBP:
 		return ConvertWEBP2JPEG(srcPath, dstPath)
 	case BMP:
-		return ConvertWEBP2JPEG(srcPath, dstPath)
+		return ConvertBMP2JPEG(srcPath, dstPath)
 	case TIFF:
 		return ConvertTIFF2JPEG(srcPath, dstPath)
 	default:
