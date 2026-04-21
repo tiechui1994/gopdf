@@ -6,18 +6,18 @@ import (
 	"strings"
 )
 
-//PageObj pdf page object
+// PageObj pdf page object
 type PageObj struct { //impl IObj
 	Contents        string
 	ResourcesRelate string
 	pageOption      PageOption
-	Links           []linkOption
+	LinkObjIds      []int
 	getRoot         func() *GoPdf
 }
 
 func (p *PageObj) init(funcGetRoot func() *GoPdf) {
 	p.getRoot = funcGetRoot
-	p.Links = make([]linkOption, 0)
+	p.LinkObjIds = make([]int, 0)
 }
 
 func (p *PageObj) setOption(opt PageOption) {
@@ -31,15 +31,10 @@ func (p *PageObj) write(w io.Writer, objID int) error {
 	fmt.Fprintf(w, "  /Resources %s\n", p.ResourcesRelate)
 
 	var err error
-	gp := p.getRoot()
-	if len(p.Links) > 0 {
+	if len(p.LinkObjIds) > 0 {
 		io.WriteString(w, "  /Annots [")
-		for _, l := range p.Links {
-			if l.url != "" {
-				err = p.writeExternalLink(w, l, objID)
-			} else {
-				err = p.writeInternalLink(w, l, gp.anchors)
-			}
+		for _, l := range p.LinkObjIds {
+			_, err = fmt.Fprintf(w, "%d 0 R ", l)
 			if err != nil {
 				return err
 			}
@@ -60,6 +55,10 @@ func (p *PageObj) write(w io.Writer, objID int) error {
 	fmt.Fprintf(w, "  /Contents %s\n", p.Contents) //sample  Contents 8 0 R
 	if !p.pageOption.isEmpty() {
 		fmt.Fprintf(w, " /MediaBox [ 0 0 %0.2f %0.2f ]\n", p.pageOption.PageSize.W, p.pageOption.PageSize.H)
+	}
+	if p.pageOption.isTrimBoxSet() {
+		trimBox := p.pageOption.TrimBox
+		fmt.Fprintf(w, " /TrimBox [ %0.2f %0.2f %0.2f %0.2f ]\n", trimBox.Left, trimBox.Top, trimBox.Right, trimBox.Bottom)
 	}
 	io.WriteString(w, ">>\n")
 	return nil

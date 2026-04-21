@@ -3,7 +3,6 @@ package gopdf
 import (
 	"bytes"
 	"fmt"
-
 	"image"
 
 	// Packages image/jpeg and image/png are not used explicitly in the code below,
@@ -11,17 +10,16 @@ import (
 	// image.Decode to understand JPEG formatted images.
 	_ "image/jpeg"
 	_ "image/png"
-
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 )
 
-//ImageObj image object
+// ImageObj image object
 type ImageObj struct {
 	//imagepath string
-
+	IsMask        bool
+	SplittedMask  bool
 	rawImgReader  *bytes.Reader
 	imginfo       imgInfo
 	pdfProtection *PDFProtection
@@ -41,25 +39,48 @@ func (i *ImageObj) protection() *PDFProtection {
 }
 
 func (i *ImageObj) write(w io.Writer, objID int) error {
+	data := i.imginfo.data
 
-	err := writeImgProp(w, i.imginfo)
-	if err != nil {
+	if i.IsMask {
+		data = i.imginfo.smask
+		if err := writeMaskImgProps(w, i.imginfo); err != nil {
+			return err
+		}
+	} else {
+		if err := writeImgProps(w, i.imginfo, i.SplittedMask); err != nil {
+			return err
+		}
+	}
+
+	if _, err := fmt.Fprintf(w, "\t/Length %d\n>>\n", len(data)); err != nil {
 		return err
 	}
 
-	fmt.Fprintf(w, "/Length %d\n>>\n", len(i.imginfo.data)) // /Length 62303>>\n
-	io.WriteString(w, "stream\n")
+	if _, err := io.WriteString(w, "stream\n"); err != nil {
+		return err
+	}
+
 	if i.protection() != nil {
-		tmp, err := rc4Cip(i.protection().objectkey(objID), i.imginfo.data)
+		tmp, err := rc4Cip(i.protection().objectkey(objID), data)
 		if err != nil {
 			return err
 		}
-		w.Write(tmp)
-		io.WriteString(w, "\n")
+
+		if _, err := w.Write(tmp); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(w, "\n"); err != nil {
+			return err
+		}
 	} else {
-		w.Write(i.imginfo.data)
+		if _, err := w.Write(data); err != nil {
+			return err
+		}
 	}
-	io.WriteString(w, "\nendstream\n")
+
+	if _, err := io.WriteString(w, "\nendstream\n"); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -95,7 +116,7 @@ func (i *ImageObj) getType() string {
 	return "Image"
 }
 
-//SetImagePath set image path
+// SetImagePath set image path
 func (i *ImageObj) SetImagePath(path string) error {
 
 	file, err := os.Open(path)
@@ -111,10 +132,10 @@ func (i *ImageObj) SetImagePath(path string) error {
 	return nil
 }
 
-//SetImage set image
+// SetImage set image
 func (i *ImageObj) SetImage(r io.Reader) error {
 
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}
@@ -123,7 +144,7 @@ func (i *ImageObj) SetImage(r io.Reader) error {
 	return nil
 }
 
-//GetRect get rect of img
+// GetRect get rect of img
 func (i *ImageObj) GetRect() *Rect {
 
 	rect, err := i.getRect()
@@ -133,7 +154,7 @@ func (i *ImageObj) GetRect() *Rect {
 	return rect
 }
 
-//GetRect get rect of img
+// GetRect get rect of img
 func (i *ImageObj) getRect() (*Rect, error) {
 
 	i.rawImgReader.Seek(0, 0)
@@ -178,7 +199,7 @@ func (i *ImageObj) parse() error {
 	return nil
 }
 
-//Parse parse img
+// Parse parse img
 func (i *ImageObj) Parse() error {
 	return i.parse()
 }

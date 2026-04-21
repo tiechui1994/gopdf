@@ -6,27 +6,26 @@ import (
 	"compress/zlib"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 )
 
-//ErrFontLicenseDoesNotAllowEmbedding Font license does not allow embedding
+// ErrFontLicenseDoesNotAllowEmbedding Font license does not allow embedding
 var ErrFontLicenseDoesNotAllowEmbedding = errors.New("Font license does not allow embedding")
 
-//FontMaker font maker
+// FontMaker font maker
 type FontMaker struct {
 	results []string
 }
 
-//GetResults get result
+// GetResults get result
 func (f *FontMaker) GetResults() []string {
 	return f.results
 }
 
-//NewFontMaker new FontMaker
+// NewFontMaker new FontMaker
 func NewFontMaker() *FontMaker {
 	return new(FontMaker)
 }
@@ -65,7 +64,7 @@ func (f *FontMaker) MakeFont(fontpath string, mappath string, encode string, out
 	var buff bytes.Buffer
 	gzipwriter := zlib.NewWriter(&buff)
 
-	fontbytes, err := ioutil.ReadFile(fontpath)
+	fontbytes, err := os.ReadFile(fontpath)
 	if err != nil {
 		return err
 	}
@@ -75,7 +74,7 @@ func (f *FontMaker) MakeFont(fontpath string, mappath string, encode string, out
 		return err
 	}
 	gzipwriter.Close()
-	err = ioutil.WriteFile(outfolderpath+"/"+gzfilename, buff.Bytes(), 0644)
+	err = os.WriteFile(outfolderpath+"/"+gzfilename, buff.Bytes(), 0644)
 	if err != nil {
 		return err
 	}
@@ -174,10 +173,10 @@ func (f *FontMaker) MakeDefinitionFile(gofontname string, mappath string, export
 	str += "func (me * " + gofontname + ")GetDesc() []gopdf.FontDescItem{\n"
 	str += "\treturn me.desc\n"
 	str += "}\n"
-	str += "func (me * " + gofontname + ")GetUp() int{\n"
+	str += "func (me * " + gofontname + ")GetUnderlinePosition() int{\n"
 	str += "\treturn me.up\n"
 	str += "}\n"
-	str += "func (me * " + gofontname + ")GetUt()  int{\n"
+	str += "func (me * " + gofontname + ")GetUnderlineThickness()  int{\n"
 	str += "\treturn me.ut\n"
 	str += "}\n"
 	str += "func (me * " + gofontname + ")GetCw() gopdf.FontCw{\n"
@@ -202,7 +201,7 @@ func (f *FontMaker) MakeDefinitionFile(gofontname string, mappath string, export
 	str += "\treturn me.family\n"
 	str += "}\n"
 
-	err = ioutil.WriteFile(exportfile, []byte(str), 0666)
+	err = os.WriteFile(exportfile, []byte(str), 0666)
 	if err != nil {
 		return "", err
 	}
@@ -251,11 +250,14 @@ func (f *FontMaker) MakeFontDescriptor(info TtfInfo) (string, error) {
 	}
 	flags += 1 << 5
 	italicAngle, err := info.GetInt64("ItalicAngle")
+	if err != nil {
+		return "", err
+	}
 	if italicAngle != 0 {
 		flags += 1 << 6
 	}
 	fd += fmt.Sprintf("\tme.desc[3] =  gopdf.FontDescItem{ Key: \"Flags\", Val :  \"%d\" }\n", flags)
-	//fmt.Printf("\n----\n")
+
 	// FontBBox
 	fbb, err := info.GetInt64s("FontBBox")
 	if err != nil {
@@ -327,7 +329,7 @@ func (f *FontMaker) MakeWidthArray(widths map[int]int) (string, error) {
 	str := "\tme.cw = make(gopdf.FontCw)\n"
 	for c := 0; c <= 255; c++ {
 		str += "\tme.cw["
-		chr := string(c)
+		chr := string(rune(c))
 		if chr == "\"" {
 			str += "gopdf.ToByte(\"\\\"\")"
 		} else if chr == "\\" {
@@ -372,7 +374,7 @@ func (f *FontMaker) GetInfoFromTrueType(fontpath string, fontmaps []FontMap) (Tt
 
 	info := NewTtfInfo()
 
-	fileContent, err := ioutil.ReadFile(fontpath)
+	fileContent, err := os.ReadFile(fontpath)
 	if err != nil {
 		return nil, err
 	}
@@ -480,7 +482,6 @@ func (f *FontMaker) LoadMap(encodingpath string) ([]FontMap, error) {
 			return nil, err
 		}
 		name := e[2]
-		//fmt.Println("strC = "+strC+"strUv = "+strUv+" c=%d , uv= %d", c, uv)
 		fontmaps[c].Name = name
 		fontmaps[c].Uv = int(uv)
 	}

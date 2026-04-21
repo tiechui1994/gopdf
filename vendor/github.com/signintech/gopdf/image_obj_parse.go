@@ -8,49 +8,105 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	_ "image/gif"
+	"image/png"
 	"io"
-	"io/ioutil"
+	"os"
 	"strings"
 )
 
-func writeImgProp(w io.Writer, imginfo imgInfo) error {
+type ColorSpaces string
 
-	io.WriteString(w, "<</Type /XObject\n")
-	io.WriteString(w, "/Subtype /Image\n")
-	fmt.Fprintf(w, "/Width %d\n", imginfo.w)  // /Width 675\n"
-	fmt.Fprintf(w, "/Height %d\n", imginfo.h) //  /Height 942\n"
-	if isColspaceIndexed(imginfo) {
-		size := len(imginfo.pal)/3 - 1
-		fmt.Fprintf(w, "/ColorSpace [/Indexed /DeviceRGB %d %d 0 R]\n", size, imginfo.deviceRGBObjID+1)
-	} else {
-		fmt.Fprintf(w, "/ColorSpace /%s\n", imginfo.colspace)
-		if imginfo.colspace == "DeviceCMYK" {
-			io.WriteString(w, "/Decode [1 0 1 0 1 0 1 0]\n")
-		}
+const (
+	DeviceGray = "DeviceGray"
+)
+
+func writeMaskImgProps(w io.Writer, imginfo imgInfo) error {
+	if err := writeBaseImgProps(w, imginfo, DeviceGray); err != nil {
+		return err
 	}
-	fmt.Fprintf(w, "/BitsPerComponent %s\n", imginfo.bitsPerComponent)
-	if strings.TrimSpace(imginfo.filter) != "" {
-		fmt.Fprintf(w, "/Filter /%s\n", imginfo.filter)
+
+	decode := "\t/DecodeParms <<\n"
+	decode += "\t\t/Predictor 15\n"
+	decode += "\t\t/Colors 1\n"
+	decode += "\t\t/BitsPerComponent 8\n"
+	decode += fmt.Sprintf("\t\t/Columns %d\n", imginfo.w)
+	decode += "\t>>\n"
+
+	if _, err := io.WriteString(w, decode); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func writeImgProps(w io.Writer, imginfo imgInfo, splittedMask bool) error {
+	if err := writeBaseImgProps(w, imginfo, imginfo.colspace); err != nil {
+		return err
 	}
 
 	if strings.TrimSpace(imginfo.decodeParms) != "" {
-		fmt.Fprintf(w, "/DecodeParms <<%s>>\n", imginfo.decodeParms)
+		if _, err := fmt.Fprintf(w, "\t/DecodeParms <<%s>>\n", imginfo.decodeParms); err != nil {
+			return err
+		}
+	}
+
+	if splittedMask {
+		return nil
 	}
 
 	if imginfo.trns != nil && len(imginfo.trns) > 0 {
 		j := 0
+		content := "\t/Mask ["
 		max := len(imginfo.trns)
-		io.WriteString(w, "/Mask [")
+
 		for j < max {
-			fmt.Fprintf(w, "%d ", imginfo.trns[j])
-			fmt.Fprintf(w, "%d ", imginfo.trns[j])
+			content += fmt.Sprintf("\t\t%d ", imginfo.trns[j])
+			content += fmt.Sprintf("\t\t%d ", imginfo.trns[j])
 			j++
 		}
-		io.WriteString(w, "]\n")
+
+		content += "\t]\n"
+
+		if _, err := io.WriteString(w, content); err != nil {
+			return err
+		}
 	}
 
 	if haveSMask(imginfo) {
-		fmt.Fprintf(w, "/SMask %d 0 R\n", imginfo.smarkObjID+1)
+		if _, err := fmt.Fprintf(w, "\t/SMask %d 0 R\n", imginfo.smarkObjID+1); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func writeBaseImgProps(w io.Writer, imginfo imgInfo, colorSpace string) error {
+	content := "<<\n"
+	content += "\t/Type /XObject\n"
+	content += "\t/Subtype /Image\n"
+	content += fmt.Sprintf("\t/Width %d\n", imginfo.w)
+	content += fmt.Sprintf("\t/Height %d\n", imginfo.h)
+
+	if isColspaceIndexed(imginfo) {
+		size := len(imginfo.pal)/3 - 1
+		content += fmt.Sprintf("\t/ColorSpace [/Indexed /DeviceRGB %d %d 0 R]\n", size, imginfo.deviceRGBObjID+1)
+	} else {
+		content += fmt.Sprintf("\t/ColorSpace /%s\n", colorSpace)
+		if imginfo.colspace == "DeviceCMYK" {
+			content += "\t/Decode [1 0 1 0 1 0 1 0]\n"
+		}
+	}
+
+	content += fmt.Sprintf("\t/BitsPerComponent %s\n", imginfo.bitsPerComponent)
+
+	if strings.TrimSpace(imginfo.filter) != "" {
+		content += fmt.Sprintf("\t/Filter /%s\n", imginfo.filter)
+	}
+
+	if _, err := io.WriteString(w, content); err != nil {
+		return err
 	}
 
 	return nil
@@ -71,7 +127,7 @@ func haveSMask(imginfo imgInfo) bool {
 }
 
 func parseImgByPath(path string) (imgInfo, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return imgInfo{}, err
 	}
@@ -79,7 +135,7 @@ func parseImgByPath(path string) (imgInfo, error) {
 }
 
 func parseImg(raw *bytes.Reader) (imgInfo, error) {
-	//fmt.Printf("----------\n")
+	// fmt.Printf("----------\n")
 	var info imgInfo
 	raw.Seek(0, 0)
 	imgConfig, formatname, err := image.DecodeConfig(raw)
@@ -95,7 +151,7 @@ func parseImg(raw *bytes.Reader) (imgInfo, error) {
 			return info, err
 		}
 		raw.Seek(0, 0)
-		info.data, err = ioutil.ReadAll(raw)
+		info.data, err = io.ReadAll(raw)
 		if err != nil {
 			return info, err
 		}
@@ -105,9 +161,28 @@ func parseImg(raw *bytes.Reader) (imgInfo, error) {
 		if err != nil {
 			return info, err
 		}
+	} else if formatname == "gif" {
+		// Convert to png
+		raw.Seek(0, 0)
+		var img image.Image
+		img, _, err = image.Decode(raw)
+		if err != nil {
+			return info, err
+		}
+		pngBuf := new(bytes.Buffer)
+		err = png.Encode(pngBuf, img)
+		if err != nil {
+			return info, err
+		}
+		info, err = parseImg(bytes.NewReader(pngBuf.Bytes()))
+		if err != nil {
+			return info, err
+		}
+	} else {
+		return info, fmt.Errorf("Image format %v is not supported", formatname)
 	}
 
-	//fmt.Printf("%#v\n", info)
+	// fmt.Printf("%#v\n", info)
 
 	return info, nil
 }
@@ -136,7 +211,7 @@ var pngMagicNumber = []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}
 var pngIHDR = []byte{0x49, 0x48, 0x44, 0x52}
 
 func parsePng(f *bytes.Reader, info *imgInfo, imgConfig image.Config) error {
-	//f := bytes.NewReader(raw)
+	// f := bytes.NewReader(raw)
 	f.Seek(0, 0)
 	b, err := readBytes(f, 8)
 	if err != nil {
@@ -146,7 +221,7 @@ func parsePng(f *bytes.Reader, info *imgInfo, imgConfig image.Config) error {
 		return errors.New("Not a PNG file")
 	}
 
-	f.Seek(4, 1) //skip header chunk
+	f.Seek(4, 1) // skip header chunk
 	b, err = readBytes(f, 4)
 	if err != nil {
 		return err
@@ -163,7 +238,7 @@ func parsePng(f *bytes.Reader, info *imgInfo, imgConfig image.Config) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Printf("w=%d h=%d\n", w, h)
+	// fmt.Printf("w=%d h=%d\n", w, h)
 
 	bpc, err := readBytes(f, 1)
 	if err != nil {
@@ -215,12 +290,12 @@ func parsePng(f *bytes.Reader, info *imgInfo, imgConfig image.Config) error {
 		return errors.New("Interlacing not supported")
 	}
 
-	_, err = f.Seek(4, 1) //skip
+	_, err = f.Seek(4, 1) // skip
 	if err != nil {
 		return err
 	}
 
-	//decodeParms := "/Predictor 15 /Colors '.($colspace=='DeviceRGB' ? 3 : 1).' /BitsPerComponent '.$bpc.' /Columns '.$w;
+	// decodeParms := "/Predictor 15 /Colors '.($colspace=='DeviceRGB' ? 3 : 1).' /BitsPerComponent '.$bpc.' /Columns '.$w;
 
 	var pal []byte
 	var trns []byte
@@ -232,7 +307,7 @@ func parsePng(f *bytes.Reader, info *imgInfo, imgConfig image.Config) error {
 		}
 		n := int(un)
 		typ, err := readBytes(f, 4)
-		//fmt.Printf(">>>>%+v-%s-%d\n", typ, string(typ), n)
+		// fmt.Printf(">>>>%+v-%s-%d\n", typ, string(typ), n)
 		if err != nil {
 			return err
 		}
@@ -242,7 +317,7 @@ func parsePng(f *bytes.Reader, info *imgInfo, imgConfig image.Config) error {
 			if err != nil {
 				return err
 			}
-			_, err = f.Seek(int64(4), 1) //skip
+			_, err = f.Seek(int64(4), 1) // skip
 			if err != nil {
 				return err
 			}
@@ -265,27 +340,27 @@ func parsePng(f *bytes.Reader, info *imgInfo, imgConfig image.Config) error {
 				}
 			}
 
-			_, err = f.Seek(int64(4), 1) //skip
+			_, err = f.Seek(int64(4), 1) // skip
 			if err != nil {
 				return err
 			}
 
 		} else if string(typ) == "IDAT" {
-			//fmt.Printf("n=%d\n\n", n)
+			// fmt.Printf("n=%d\n\n", n)
 			var d []byte
 			d, err = readBytes(f, n)
 			if err != nil {
 				return err
 			}
 			data = append(data, d...)
-			_, err = f.Seek(int64(4), 1) //skip
+			_, err = f.Seek(int64(4), 1) // skip
 			if err != nil {
 				return err
 			}
 		} else if string(typ) == "IEND" {
 			break
 		} else {
-			_, err = f.Seek(int64(n+4), 1) //skip
+			_, err = f.Seek(int64(n+4), 1) // skip
 			if err != nil {
 				return err
 			}
@@ -294,13 +369,13 @@ func parsePng(f *bytes.Reader, info *imgInfo, imgConfig image.Config) error {
 		if n <= 0 {
 			break
 		}
-	} //end for
+	} // end for
 
-	//info.data = data //ok
+	// info.data = data //ok
 	info.trns = trns
 	info.pal = pal
 
-	//fmt.Printf("data= %x", md5.Sum(data))
+	// fmt.Printf("data= %x", md5.Sum(data))
 
 	if colspace == "Indexed" && strings.TrimSpace(string(pal)) == "" {
 		return errors.New("Missing palette")
@@ -318,15 +393,15 @@ func parsePng(f *bytes.Reader, info *imgInfo, imgConfig image.Config) error {
 	}
 	info.decodeParms = fmt.Sprintf("/Predictor 15 /Colors  %d /BitsPerComponent %s /Columns %d", colors, info.bitsPerComponent, w)
 
-	//fmt.Printf("%d = ct[0]\n", ct[0])
-	//fmt.Printf("%x\n", md5.Sum(data))
+	// fmt.Printf("%d = ct[0]\n", ct[0])
+	// fmt.Printf("%x\n", md5.Sum(data))
 	if ct[0] >= 4 {
 		zipReader, err := zlib.NewReader(bytes.NewReader(data))
 		if err != nil {
 			return err
 		}
 		defer zipReader.Close()
-		afterZipData, err := ioutil.ReadAll(zipReader)
+		afterZipData, err := io.ReadAll(zipReader)
 		if err != nil {
 			return err
 		}
@@ -352,7 +427,7 @@ func parsePng(f *bytes.Reader, info *imgInfo, imgConfig image.Config) error {
 				}
 				i++
 			}
-			//fmt.Print("aaaaa")
+			// fmt.Print("aaaaa")
 
 		} else {
 			// RGB image
@@ -373,15 +448,16 @@ func parsePng(f *bytes.Reader, info *imgInfo, imgConfig image.Config) error {
 
 				i++
 			}
-			info.smask, err = compress(alpha)
-			if err != nil {
-				return err
-			}
+		}
 
-			info.data, err = compress(color)
-			if err != nil {
-				return err
-			}
+		info.smask, err = compress(alpha)
+		if err != nil {
+			return err
+		}
+
+		info.data, err = compress(color)
+		if err != nil {
+			return err
 		}
 
 	} else {
@@ -409,7 +485,7 @@ func compress(data []byte) ([]byte, error) {
 
 func readUInt(f *bytes.Reader) (uint, error) {
 	buff, err := readBytes(f, 4)
-	//fmt.Printf("%#v\n\n", buff)
+	// fmt.Printf("%#v\n\n", buff)
 	if err != nil {
 		return 0, err
 	}
@@ -418,17 +494,11 @@ func readUInt(f *bytes.Reader) (uint, error) {
 }
 
 func readInt(f *bytes.Reader) (int, error) {
-
 	u, err := readUInt(f)
 	if err != nil {
 		return 0, err
 	}
-	var v int
-	if u >= 0x8000 {
-		v = int(u) - 65536
-	} else {
-		v = int(u)
-	}
+	v := int(u)
 	return v, nil
 }
 
@@ -450,11 +520,11 @@ func isDeviceRGB(formatname string, img *image.Image) bool {
 	return false
 }
 
-//ImgReactagleToWH  Rectangle to W and H
+// ImgReactagleToWH  Rectangle to W and H
 func ImgReactagleToWH(imageRect image.Rectangle) (float64, float64) {
 	k := 1
-	w := -128 //init
-	h := -128 //init
+	w := -128 // init
+	h := -128 // init
 	if w < 0 {
 		w = -imageRect.Dx() * 72 / w / k
 	}

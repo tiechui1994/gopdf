@@ -7,9 +7,11 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"github.com/pkg/errors"
 	"math"
 	"os"
+	"sort"
+
+	"github.com/pkg/errors"
 )
 
 type PdfWriter struct {
@@ -32,6 +34,7 @@ type PdfWriter struct {
 	current_obj_id  int
 	tpl_id_offset   int
 	use_hash        bool
+	uid             int
 }
 
 type PdfObjectId struct {
@@ -227,7 +230,7 @@ func (this *PdfWriter) endObj() {
 
 func (this *PdfWriter) shaOfInt(i int) string {
 	hasher := sha1.New()
-	hasher.Write([]byte(fmt.Sprintf("%s-%s", i, this.r.sourceFile)))
+	hasher.Write([]byte(fmt.Sprintf("%d-%s", i, this.r.sourceFile)))
 	sha := hex.EncodeToString(hasher.Sum(nil))
 	return sha
 }
@@ -323,9 +326,9 @@ func (this *PdfWriter) writeValue(value *PdfValue) {
 
 	case PDF_TYPE_BOOLEAN:
 		if value.Bool {
-			this.straightOut("true")
+			this.straightOut("true ")
 		} else {
-			this.straightOut("false")
+			this.straightOut("false ")
 		}
 		break
 
@@ -379,7 +382,7 @@ func (this *PdfWriter) PutFormXobjects(reader *PdfReader) (map[string]*PdfObject
 		pdfObjId := new(PdfObjectId)
 		pdfObjId.id = cN
 		pdfObjId.hash = this.shaOfInt(cN)
-		result[fmt.Sprintf("/GOFPDITPL%d", i+this.tpl_id_offset)] = pdfObjId
+		result[fmt.Sprintf("/GOFPDITPL%d-%d", this.uid, i+this.tpl_id_offset)] = pdfObjId
 
 		this.out("<<" + filter + "/Type /XObject")
 		this.out("/Subtype /Form")
@@ -465,22 +468,16 @@ func (this *PdfWriter) putImportedObjects(reader *PdfReader) error {
 	var err error
 	var nObj *PdfValue
 
-	// obj_stack will have new items added to it in the inner loop, so do another loop to check for extras
-	// TODO make the order of this the same every time
-	for {
-		atLeastOne := false
-
-		// FIXME:  How to determine number of objects before this loop?
-		for i := 0; i < 9999; i++ {
-			k := i
-			v := this.obj_stack[i]
-
-			if v == nil {
-				continue
-			}
-
-			atLeastOne = true
-
+	// obj_stack will have new items added to it in the inner loop, so do another loop to check for extras.
+	// Iterate in ascending key order so output is deterministic across runs.
+	for len(this.obj_stack) > 0 {
+		keys := make([]int, 0, len(this.obj_stack))
+		for k := range this.obj_stack {
+			keys = append(keys, k)
+		}
+		sort.Ints(keys)
+		for _, k := range keys {
+			v := this.obj_stack[k]
 			nObj, err = reader.resolveObject(v)
 			if err != nil {
 				return errors.Wrap(err, "Unable to resolve object")
@@ -498,11 +495,7 @@ func (this *PdfWriter) putImportedObjects(reader *PdfReader) error {
 			this.endObj()
 
 			// Remove from stack
-			this.obj_stack[k] = nil
-		}
-
-		if !atLeastOne {
-			break
+			delete(this.obj_stack, k)
 		}
 	}
 
@@ -563,5 +556,5 @@ func (this *PdfWriter) UseTemplate(tplid int, _x float64, _y float64, _w float64
 	tData["ty"] = (0 - _y - _h)
 	tData["lty"] = (0 - _y - _h) - (0-h)*(_h/h)
 
-	return fmt.Sprintf("/GOFPDITPL%d", tplid+this.tpl_id_offset), tData["scaleX"], tData["scaleY"], tData["tx"] * this.k, tData["ty"] * this.k
+	return fmt.Sprintf("/GOFPDITPL%d-%d", this.uid, tplid+this.tpl_id_offset), tData["scaleX"], tData["scaleY"], tData["tx"] * this.k, tData["ty"] * this.k
 }

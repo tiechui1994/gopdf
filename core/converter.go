@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 type FontMap struct {
 	FontName string
 	FileName string
+	Data     []byte // Bytes data of font file, will be converted to temp file if provided
 }
 
 // Converter is a bridge to third-party gopdf.
@@ -32,8 +34,9 @@ type Converter struct {
 	unit  float64
 	fonts []*FontMap // fonts
 
-	linew    float64 // line width
-	lastFont string  // last used font name
+	linew     float64  // line width
+	lastFont  string   // last used font name
+	tempFonts []string // temporary font files created from bytes data, used for cleanup
 }
 
 // var convert.unit float64 = 2.834645669
@@ -129,9 +132,27 @@ func (convert *Converter) Execute() {
 // add fonts
 func (convert *Converter) AddFont() {
 	for _, font := range convert.fonts {
-		err := convert.pdf.AddTTFFont(font.FontName, font.FileName)
+		fileName := font.FileName
+		// If Data is provided, create a temporary file
+		if len(font.Data) > 0 {
+			tempFile, err := ioutil.TempFile("", "gopdf_font_*.ttf")
+			if err != nil {
+				panic("failed to create temp font file: " + err.Error())
+			}
+			defer tempFile.Close()
+
+			_, err = tempFile.Write(font.Data)
+			if err != nil {
+				panic("failed to write temp font file: " + err.Error())
+			}
+
+			fileName = tempFile.Name()
+			convert.tempFonts = append(convert.tempFonts, fileName)
+		}
+
+		err := convert.pdf.AddTTFFont(font.FontName, fileName)
 		if err != nil {
-			panic("font file:" + font.FileName + " not found")
+			panic("font file:" + fileName + " not found, err:" + err.Error())
 		}
 	}
 }
@@ -223,7 +244,8 @@ func (convert *Converter) start(w float64, h float64) {
 // style: "" or "U", ("B", "I")("B" means "Bold", "I" means "Italic", these font self support)
 func (convert *Converter) Font(line string, elements []string) {
 	checkLength(line, elements, 4)
-	err := convert.pdf.SetFont(elements[1], elements[2], parseIntPanic(elements[3], line))
+	size := parseIntPanic(elements[3], line)
+	err := convert.pdf.SetFont(elements[1], elements[2], size)
 	if err != nil {
 		panic(err.Error() + " line;" + line)
 	}
@@ -355,12 +377,15 @@ func (convert *Converter) Image(line string, elements []string) {
 	r.W = parseFloatPanic(elements[4], line)*convert.unit - parseFloatPanic(elements[2], line)*convert.unit
 	r.H = parseFloatPanic(elements[5], line)*convert.unit - parseFloatPanic(elements[3], line)*convert.unit
 
-	convert.pdf.Image(
+	err := convert.pdf.Image(
 		elements[1],
 		parseFloatPanic(elements[2], line)*convert.unit,
 		parseFloatPanic(elements[3], line)*convert.unit,
 		r,
 	)
+	if err != nil {
+		panic(err.Error() + " line;" + line)
+	}
 }
 
 // line
@@ -418,16 +443,23 @@ func (convert *Converter) Cell(line string, elements []string) {
 	switch elements[0] {
 	case "C":
 		checkLength(line, elements, 6)
-		err := convert.pdf.SetFont(elements[1], "", parseIntPanic(elements[2], line))
+		size := parseIntPanic(elements[2], line)
+		err := convert.pdf.SetFont(elements[1], "", size)
 		if err != nil {
 			panic(err.Error() + " line;" + line)
 		}
 		convert.setPosition(elements[3], elements[4], line)
-		convert.pdf.Cell(nil, elements[5])
+		err = convert.pdf.Text(elements[5])
+		if err != nil {
+			panic(err.Error() + " line;" + line)
+		}
 	case "CL":
 		checkLength(line, elements, 4)
 		convert.setPosition(elements[1], elements[2], line)
-		convert.pdf.Cell(nil, elements[3])
+		err := convert.pdf.Text(elements[3])
+		if err != nil {
+			panic(err.Error() + " line;" + line)
+		}
 	case "CR":
 		checkLength(line, elements, 5)
 		tw, err := convert.pdf.MeasureTextWidth(elements[4])
@@ -440,7 +472,10 @@ func (convert *Converter) Cell(line string, elements []string) {
 		finalx := x + w - tw
 		convert.pdf.SetX(finalx)
 		convert.pdf.SetY(y)
-		convert.pdf.Cell(nil, elements[4])
+		err = convert.pdf.Text(elements[4])
+		if err != nil {
+			panic(err.Error() + " line;" + line)
+		}
 	}
 }
 
@@ -460,7 +495,10 @@ func (convert *Converter) ExternalLink(line string, elements []string) {
 	convert.pdf.SetX(x)
 	convert.pdf.SetY(y)
 
-	convert.pdf.Text(elements[5])
+	err := convert.pdf.Text(elements[5])
+	if err != nil {
+		panic(err.Error() + " line;" + line)
+	}
 	y1 := y
 	if y-h > 0 {
 		y1 = y - h
@@ -481,7 +519,10 @@ func (convert *Converter) InternalLinkAnchor(line string, elements []string) {
 	convert.pdf.SetX(x)
 	convert.pdf.SetY(y)
 
-	convert.pdf.Text(elements[5])
+	err := convert.pdf.Text(elements[5])
+	if err != nil {
+		panic(err.Error() + " line;" + line)
+	}
 	y1 := y
 	if y-h > 0 {
 		y1 = y - h
@@ -500,13 +541,15 @@ func (convert *Converter) InternalLinkLink(line string, elements []string) {
 	convert.pdf.SetX(parseFloatPanic(elements[1], line))
 	convert.pdf.SetY(parseFloatPanic(elements[2], line))
 
-	convert.pdf.Text(elements[4])
+	err := convert.pdf.Text(elements[4])
+	if err != nil {
+		panic(err.Error() + " line;" + line)
+	}
 	convert.pdf.SetAnchor(elements[5])
 
 	convert.pdf.SetX(parseFloatPanic(elements[1], line) + parseFloatPanic(elements[3], line))
 	convert.pdf.SetY(parseFloatPanic(elements[2], line))
 }
-
 
 func (convert *Converter) Margin(line string, eles []string) {
 	checkLength(line, eles, 3)
@@ -535,7 +578,10 @@ func (convert *Converter) MeasureTextWidth(text string) float64 {
 }
 
 func (convert *Converter) SetFont(family, style string, size int) {
-	convert.pdf.SetFont(family, style, size)
+	err := convert.pdf.SetFont(family, style, size)
+	if err != nil {
+		panic(err.Error())
+	}
 }
 
 func (convert *Converter) NoCompression() {
@@ -543,7 +589,10 @@ func (convert *Converter) NoCompression() {
 }
 
 func (convert *Converter) WritePdf(filepath string) {
-	convert.pdf.WritePdf(filepath)
+	err := convert.pdf.WritePdf(filepath)
+	if err != nil {
+		panic(err.Error())
+	}
 }
 
 func (convert *Converter) CompressLevel(level int) {
@@ -552,6 +601,17 @@ func (convert *Converter) CompressLevel(level int) {
 
 func (convert *Converter) GetBytesPdf() (ret []byte) {
 	return convert.pdf.GetBytesPdf()
+}
+
+// CleanupTempFonts removes all temporary font files created from bytes data
+func (convert *Converter) CleanupTempFonts() {
+	for _, filePath := range convert.tempFonts {
+		err := os.Remove(filePath)
+		if err != nil {
+			fmt.Printf("Warning: failed to remove temp font file %s: %v\n", filePath, err)
+		}
+	}
+	convert.tempFonts = nil
 }
 
 func checkLength(line string, eles []string, no int) {

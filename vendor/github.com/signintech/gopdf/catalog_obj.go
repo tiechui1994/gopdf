@@ -5,13 +5,13 @@ import (
 	"io"
 )
 
-//CatalogObj : catalog dictionary
+// CatalogObj : catalog dictionary
 type CatalogObj struct { //impl IObj
 	outlinesObjID int
 }
 
 func (c *CatalogObj) init(funcGetRoot func() *GoPdf) {
-        c.outlinesObjID = -1
+	c.outlinesObjID = -1
 
 }
 

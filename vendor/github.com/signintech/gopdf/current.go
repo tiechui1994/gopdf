@@ -1,6 +1,6 @@
 package gopdf
 
-//Current current state
+// Current current state
 type Current struct {
 	setXCount int //many times we go func SetX()
 	X         float64
@@ -11,10 +11,15 @@ type Current struct {
 	CountOfFont    int
 	CountOfL       int
 
-	FontSize      int
+	FontSize      float64
 	FontStyle     int // Regular|Bold|Italic|Underline
 	FontFontCount int
 	FontType      int // CURRENT_FONT_TYPE_IFONT or  CURRENT_FONT_TYPE_SUBSET
+
+	IndexOfColorSpaceObj int
+	CountOfColorSpace    int
+
+	CharSpacing float64
 
 	FontISubset *SubsetFontObj // FontType == CURRENT_FONT_TYPE_SUBSET
 
@@ -24,13 +29,13 @@ type Current struct {
 	//img
 	CountOfImg int
 	//cache of image in pdf file
-	ImgCaches []ImageCache
+	ImgCaches map[int]ImageCache
 
 	//text color mode
 	txtColorMode string //color, gray
 
 	//text color
-	txtColor Rgb
+	txtColor ICacheColorText
 
 	//text grayscale
 	grayFill float64
@@ -42,15 +47,20 @@ type Current struct {
 	//current page size
 	pageSize *Rect
 
-	transparency    Transparency
-	transparencyMap map[string]Transparency
+	//current trim box
+	trimBox *Box
+
+	sMasksMap       SMaskMap
+	extGStatesMap   ExtGStatesMap
+	transparency    *Transparency
+	transparencyMap TransparencyMap
 }
 
-func (c *Current) setTextColor(rgb Rgb) {
-	c.txtColor = rgb
+func (c *Current) setTextColor(color ICacheColorText) {
+	c.txtColor = color
 }
 
-func (c *Current) textColor() Rgb {
+func (c *Current) textColor() ICacheColorText {
 	return c.txtColor
 }
 
@@ -59,38 +69,4 @@ type ImageCache struct {
 	Path  string //ID or Path
 	Index int
 	Rect  *Rect
-}
-
-//Rgb  rgb color
-type Rgb struct {
-	r uint8
-	g uint8
-	b uint8
-}
-
-//SetR set red
-func (rgb *Rgb) SetR(r uint8) {
-	rgb.r = r
-}
-
-//SetG set green
-func (rgb *Rgb) SetG(g uint8) {
-	rgb.g = g
-}
-
-//SetB set blue
-func (rgb *Rgb) SetB(b uint8) {
-	rgb.b = b
-}
-
-func (rgb Rgb) equal(obj Rgb) bool {
-	if rgb.r == obj.r && rgb.g == obj.g && rgb.b == obj.b {
-		return true
-	}
-	return false
-}
-
-// Transparency defines an object alpha.
-type Transparency struct {
-	IndexOfExtGState int
 }

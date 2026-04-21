@@ -83,14 +83,18 @@ func (report *Report) NoCompression() {
 	report.converter.NoCompression()
 }
 
-/****************************************************************
+/*
+***************************************************************
 Compression level:
+
 	-2: Only Huffman compression is used,
 	-1: Default value, compression level 6
 	0:  Not compress,
 	1:  The fastest compression, but the compression ratio is not the best
 	9:  Maximum compression, but the execution efficiency is also the slowest
-****************************************************************/
+
+***************************************************************
+*/
 func (report *Report) CompressLevel(level int) {
 	report.converter.CompressLevel(level)
 }
@@ -103,6 +107,9 @@ func (report *Report) Execute(filepath string) {
 
 	report.execute(true)
 	report.converter.WritePdf(filepath)
+
+	// Clean up temporary font files
+	report.converter.CleanupTempFonts()
 
 	for i := range report.callbacks {
 		report.callbacks[i](report)
@@ -117,6 +124,10 @@ func (report *Report) GetBytesPdf() (ret []byte) {
 
 	report.execute(true)
 	ret = report.converter.GetBytesPdf()
+
+	// Clean up temporary font files
+	report.converter.CleanupTempFonts()
+
 	return
 }
 
@@ -393,9 +404,13 @@ func (report *Report) AddCallBack(callback CallBack) {
 	report.callbacks = append(report.callbacks, callback)
 }
 
-/********************************************
- 将特定的字符串转换成底层可以识别的原子操作符
-*********************************************/
+/*
+*******************************************
+
+	将特定的字符串转换成底层可以识别的原子操作符
+
+********************************************
+*/
 func (report *Report) addAtomicCell(s string) {
 	report.converter.AddAtomicCell(s)
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-//Parsekern parse kerning table  https://www.microsoft.com/typography/otspec/kern.htm
+// Parsekern parse kerning table  https://www.microsoft.com/typography/otspec/kern.htm
 func (t *TTFParser) Parsekern(fd *bytes.Reader) error {
 
 	t.kern = nil //clear
@@ -44,24 +44,23 @@ func (t *TTFParser) Parsekern(fd *bytes.Reader) error {
 
 func (t *TTFParser) parsekernSubTable(fd *bytes.Reader) error {
 
-	t.Skip(fd, 2+2) //skip version and length
-
+	err := t.Skip(fd, 2+2) //skip version and length
+	if err != nil {
+		return err
+	}
 	coverage, err := t.ReadUShort(fd)
 	if err != nil {
 		return err
 	}
 
 	format := coverage & 0xf0
-	//fmt.Printf("format = %d\n", format) //debug
 	t.kern.Kerning = make(KernMap) //init
 	if format == 0 {
-		t.parsekernSubTableFormat0(fd)
+		return t.parsekernSubTableFormat0(fd)
 	} else {
 		//not support other format yet
 		return fmt.Errorf("not support kerning format %d", format)
 	}
-
-	return nil
 }
 
 func (t *TTFParser) parsekernSubTableFormat0(fd *bytes.Reader) error {
@@ -69,7 +68,10 @@ func (t *TTFParser) parsekernSubTableFormat0(fd *bytes.Reader) error {
 	if err != nil {
 		return err
 	}
-	t.Skip(fd, 2+2+2) //skip searchRange , entrySelector , rangeShift
+	err = t.Skip(fd, 2+2+2) //skip searchRange , entrySelector , rangeShift
+	if err != nil {
+		return err
+	}
 
 	i := uint(0)
 	for i < nPairs {
