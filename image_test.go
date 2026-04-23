@@ -1,27 +1,14 @@
 package gopdf
 
 import (
+	"os"
 	"testing"
 
 	"github.com/tiechui1994/gopdf/core"
 )
 
-const (
-	IMAGE_IG = "IPAexG"
-	IMAGE_MD = "MPBOLD"
-)
-
 func ComplexImageReport() {
 	r := core.CreateReport()
-	font1 := core.FontMap{
-		FontName: IMAGE_IG,
-		FileName: "example//ttf/ipaexg.ttf",
-	}
-	font2 := core.FontMap{
-		FontName: IMAGE_MD,
-		FileName: "example//ttf/mplus-1p-bold.ttf",
-	}
-	r.SetFonts([]*core.FontMap{&font1, &font2})
 	r.SetPage("A4", "P")
 
 	r.RegisterExecutor(core.Executor(ImageReportExecutor), core.Detail)
@@ -30,8 +17,8 @@ func ComplexImageReport() {
 	r.SaveAtomicCellText("image_test.txt")
 }
 func ImageReportExecutor(report *core.Report) {
-	report.Font(DIV_MD, 10, "")
-	report.SetFont(DIV_MD, 10)
+	report.Font(core.FontSansBold, 10, "")
+	report.SetFont(core.FontSansBold, 10)
 	cat := "example//pictures/cat.jpg"
 	rand := "example//pictures/rand.jpeg"
 	i1 := NewImage(rand, report)
@@ -55,5 +42,10 @@ func ImageReportExecutor(report *core.Report) {
 }
 
 func TestImage(t *testing.T) {
+	for _, p := range []string{"example//pictures/rand.jpeg", "example//pictures/cat.jpg"} {
+		if _, err := os.Stat(p); err != nil {
+			t.Skip("image fixtures not in tree:", p)
+		}
+	}
 	ComplexImageReport()
 }

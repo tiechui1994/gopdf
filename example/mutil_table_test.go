@@ -1,13 +1,13 @@
 package example
 
 import (
-	"github.com/tiechui1994/gopdf/core"
-	"github.com/tiechui1994/gopdf"
-	"time"
-	"math/rand"
 	"fmt"
+	"github.com/tiechui1994/gopdf"
+	"github.com/tiechui1994/gopdf/core"
+	"math/rand"
 	"strings"
 	"testing"
+	"time"
 )
 
 var (
@@ -16,19 +16,6 @@ var (
 
 func MutilTable() {
 	r := core.CreateReport()
-	font1 := core.FontMap{
-		FontName: TABLE_IG,
-		FileName: "ttf//ipaexg.ttf",
-	}
-	font2 := core.FontMap{
-		FontName: TABLE_MD,
-		FileName: "ttf//mplus-1p-bold.ttf",
-	}
-	font3 := core.FontMap{
-		FontName: TABLE_MY,
-		FileName: "ttf//microsoft.ttf",
-	}
-	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
 	r.SetPage("A4", "P")
 
 	r.RegisterExecutor(core.Executor(MutilTableExecutor), core.Detail)
@@ -46,7 +33,7 @@ func MutilTableExecutor(report *core.Report) {
 	for i := 0; i < rows; i += 5 {
 		key := rand.Intn(3)
 		//key := (i+1)%2 + 1
-		f1 := core.Font{Family: TABLE_MY, Size: 10}
+		f1 := core.Font{Family: core.FontSans, Size: 10}
 		border := core.NewScope(4.0, 4.0, 0, 0)
 
 		switch key {

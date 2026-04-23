@@ -111,6 +111,46 @@ func splitCells(tableRow string, count int) []string {
 	return cells
 }
 
+// TrimGFMTableRow strips outer whitespace and leading/trailing '|' from a GFM table line.
+func TrimGFMTableRow(s string) string {
+	s = strings.TrimSpace(s)
+	for strings.HasPrefix(s, "|") {
+		s = strings.TrimSpace(strings.TrimPrefix(s, "|"))
+	}
+	for strings.HasSuffix(s, "|") {
+		s = strings.TrimSpace(strings.TrimSuffix(s, "|"))
+	}
+	return strings.TrimSpace(s)
+}
+
+// SplitGFMAlignRow splits an alignment delimiter row into per-column spec strings.
+func SplitGFMAlignRow(s string) []string {
+	s = TrimGFMTableRow(s)
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, "|")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		out = append(out, strings.TrimSpace(p))
+	}
+	return out
+}
+
+// PadAlignTo pads or trims a slice to exactly n strings (for header/align/cell column sync).
+func PadAlignTo(row []string, n int) []string {
+	if n <= 0 {
+		return nil
+	}
+	out := make([]string, n)
+	for i := 0; i < n; i++ {
+		if i < len(row) {
+			out[i] = row[i]
+		}
+	}
+	return out
+}
+
 // token
 
 func findClosingBracket(str []rune, b []rune) int {

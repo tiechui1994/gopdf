@@ -2,7 +2,7 @@ package core
 
 import "fmt"
 
-// the units of below is pixels.
+// Config holds page geometry in PDF points (pt).
 type Config struct {
 	startX, startY float64 // PDF page start position
 	endX, endY     float64 // PDF page end postion
@@ -11,10 +11,9 @@ type Config struct {
 	contentWidth, contentHeight float64 // PDF page content width and height
 }
 
-// Params width, height is pdf page width and height
-// Params padingH, padingV is pdf horizontal and vertical padding
-// The units of the above parameters are pixels.
-// Params width must more than 2*padingH, and height must more 2*padingV
+// Params width, height are page width and height in pt.
+// Params padingH, padingV are horizontal and vertical padding in pt.
+// Params width must be greater than 2*padingH, and height greater than 2*padingV.
 func NewConfig(width, height float64, padingH, padingV float64) (*Config, error) {
 	if width <= 0 || height <= 0 || padingH < 0 || padingV < 0 {
 		return nil, fmt.Errorf("params must more than zero")
@@ -56,15 +55,19 @@ func (config *Config) GetEnd() (x, y float64) {
 
 var defaultConfigs map[string]*Config // page -> config
 
-/**************************************
+/*
+*************************************
 A0 ~ A5 page width and height config:
+
 	'A0': [2383.94, 3370.39],
 	'A1': [1683.78, 2383.94],
 	'A2': [1190.55, 1683.78],
 	'A3': [841.89, 1190.55],
 	'A4': [595.28, 841.89],
 	'A5': [419.53, 595.28],
-***************************************/
+
+**************************************
+*/
 func init() {
 	defaultConfigs = make(map[string]*Config)
 

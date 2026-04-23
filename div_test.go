@@ -1,28 +1,14 @@
 package gopdf
 
 import (
-	"testing"
 	"strings"
+	"testing"
 
 	"github.com/tiechui1994/gopdf/core"
 )
 
-const (
-	DIV_IG = "IPAexG"
-	DIV_MD = "MPBOLD"
-)
-
 func DivReport() {
 	r := core.CreateReport()
-	font1 := core.FontMap{
-		FontName: DIV_IG,
-		FileName: "example//ttf/ipaexg.ttf",
-	}
-	font2 := core.FontMap{
-		FontName: DIV_MD,
-		FileName: "example//ttf/mplus-1p-bold.ttf",
-	}
-	r.SetFonts([]*core.FontMap{&font1, &font2})
 	r.SetPage("A4", "P")
 
 	r.RegisterExecutor(core.Executor(DivReportExecutor), core.Detail)
@@ -31,10 +17,10 @@ func DivReport() {
 	r.SaveAtomicCellText("div_test.txt")
 }
 func DivReportExecutor(report *core.Report) {
-	font := core.Font{Family: DIV_MD, Size: 10}
+	font := core.Font{Family: core.FontSansBold, Size: 10}
 
-	report.Font(DIV_MD, 10, "")
-	report.SetFont(DIV_MD, 10)
+	report.Font(core.FontSansBold, 10, "")
+	report.SetFont(core.FontSansBold, 10)
 
 	lineSpace := 1.0
 	lineHeight := report.MeasureTextWidth("中")
@@ -98,15 +84,6 @@ For information about how the optimizer handles subqueries, see Section 8.2.2, �
 
 func ComplexDivReport() {
 	r := core.CreateReport()
-	font1 := core.FontMap{
-		FontName: DIV_IG,
-		FileName: "example//ttf/ipaexg.ttf",
-	}
-	font2 := core.FontMap{
-		FontName: DIV_MD,
-		FileName: "example//ttf/mplus-1p-bold.ttf",
-	}
-	r.SetFonts([]*core.FontMap{&font1, &font2})
 	r.SetPage("A4", "P")
 
 	r.RegisterExecutor(core.Executor(ComplexDivReportExecutor), core.Detail)
@@ -115,10 +92,10 @@ func ComplexDivReport() {
 	r.SaveAtomicCellText("complex_div_test.txt")
 }
 func ComplexDivReportExecutor(report *core.Report) {
-	font := core.Font{Family: DIV_MD, Size: 10}
+	font := core.Font{Family: core.FontSansBold, Size: 10}
 
-	report.Font(DIV_MD, 10, "")
-	report.SetFont(DIV_MD, 10)
+	report.Font(core.FontSansBold, 10, "")
+	report.SetFont(core.FontSansBold, 10)
 
 	lineSpace := 1.0
 	lineHeight := report.MeasureTextWidth("中")

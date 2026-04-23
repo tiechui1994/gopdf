@@ -8,15 +8,6 @@ import (
 
 func SimpleLink() {
 	r := core.CreateReport()
-	font1 := core.FontMap{
-		FontName: FONT_MY,
-		FileName: "ttf//microsoft.ttf",
-	}
-	font2 := core.FontMap{
-		FontName: FONT_MD,
-		FileName: "ttf//mplus-1p-bold.ttf",
-	}
-	r.SetFonts([]*core.FontMap{&font1, &font2})
 	r.SetPage("A4", "P")
 	r.FisrtPageNeedHeader = true
 	r.FisrtPageNeedFooter = true
@@ -31,7 +22,7 @@ func SimpleLinkExecutor(report *core.Report) {
 	var (
 		lineHight = 16.0
 	)
-	report.SetFont(FONT_MY, 12)
+	report.SetFont(core.FontSans, 12)
 	report.SetMargin(10, 20)
 	x, y := report.GetXY()
 	report.ExternalLink(x, y, lineHight, "外部链接(百度)", "https://www.baidu.com")

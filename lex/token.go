@@ -1,11 +1,11 @@
 package lex
 
 import (
-	"strings"
-	"fmt"
-	"encoding/json"
 	"bytes"
-	"regexp"
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
 )
 
 type Token struct {
@@ -34,9 +34,9 @@ type Token struct {
 	Tokens []Token `json:"tokens,omitempty"`
 
 	// table
-	Header []string   `json:"header,omitempty"`
-	Align  []string   `json:"align,omitempty"`
-	Cells  [][]string `json:"cells,omitempty"`
+	Header   []string   `json:"header,omitempty"`
+	Align    []string   `json:"align,omitempty"`
+	Cells    [][]string `json:"cells,omitempty"`
 	Elements struct {
 		Header [][]Token   `json:"header,omitempty"`
 		Cells  [][][]Token `json:"cells,omitempty"`
@@ -54,19 +54,22 @@ func (t Token) String() string {
 var (
 	// block
 	block_newline = `^\n+`
-	block_code    = `^( {4}[^\n]+\n*)+`
+	// 4+ spaces = indented code, but not when the line is a list marker (nested ul/ol in list items).
+	// Reuses the same "marker" notion as list tokens (see block["bullet"]).
+	block_code = `^(?:(?: {4,})(?![*+-] |\d{1,9}[.)] )[^\n]+\n*)+`
 
 	//^ {0,3}(`{3,}(?=[^`\n]*\n)|~{3,})([^\n]*)\n(?:|([\s\S]*?)\n)(?: {0,3}\1[~`]* *(?:\n+|$)|$)
 	block_fences = `^ {0,3}($1{3,}(?=[^$1\n]*\n)|~{3,})([^\n]*)\n(?:|([\s\S]*?)\n)(?: {0,3}\1[~$1]* *(?:\n+|$)|$)`
 
-	block_hr         = `^ {0,3}((?:- *){3,}|(?:_ *){3,}|(?:\* *){3,})(?:\n+|$)`
-	block_heading    = `^ {0,3}(#{1,6}) +([^\n]*?)(?: +#+)? *(?:\n+|$)`
-	block_blockquote = `^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+`
-	block_list       = `^( {0,3})(bull) [\s\S]+?(?:hr|def|\n{2,}(?! )(?!\1bull )\n*|\s*$)`
-	block_def        = `^ {0,3}\[(label)\]: *\n? *<?([^\s>]+)>?(?:(?: +\n? *| *\n *)(title))? *(?:\n+|$)`
-	block_lheading   = `^([^\n]+)\n {0,3}(=+|-+) *(?:\n+|$)`
-	block__paragraph = `^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list)[^\n]+)*)`
-	block_text       = `^[^\n]+`
+	block_hr           = `^ {0,3}((?:- *){3,}|(?:_ *){3,}|(?:\* *){3,})(?:\n+|$)`
+	block_heading      = `^ {0,3}(#{1,6}) +([^\n]*?)(?: +#+)? *(?:\n+|$)`
+	block_blockquote   = `^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+`
+	block_list         = `^( {0,3})(bull) [\s\S]+?(?:hr|def|\n{2,}(?! )(?!\1bull )\n*|\s*$)`
+	block_list_in_item = `^( {1,7})(bull) [\s\S]+?(?:hr|def|\n{2,}(?! )(?!\1bull )\n*|\s*$)`
+	block_def          = `^ {0,3}\[(label)\]: *\n? *<?([^\s>]+)>?(?:(?: +\n? *| *\n *)(title))? *(?:\n+|$)`
+	block_lheading     = `^([^\n]+)\n {0,3}(=+|-+) *(?:\n+|$)`
+	block__paragraph   = `^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list)[^\n]+)*)`
+	block_text         = `^[^\n]+`
 
 	block__label = `(?!\s*\])(?:\\[\[\]]|[^\[\]])+`
 	block__title = `(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))`
@@ -187,6 +190,13 @@ func initBlock() {
 
 	block["list"] = MustCompile(block_list, option)
 	block["list"] = edit(block["list"]).
+		replace("bull", block["bullet"].String()).
+		replace("hr", "\\n+(?=\\1?(?:(?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$))").
+		replace("def", "\\n+(?="+block["def"].String()+")").
+		getRegex()
+
+	block["listInItem"] = MustCompile(block_list_in_item, option)
+	block["listInItem"] = edit(block["listInItem"]).
 		replace("bull", block["bullet"].String()).
 		replace("hr", "\\n+(?=\\1?(?:(?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$))").
 		replace("def", "\\n+(?="+block["def"].String()+")").
@@ -330,7 +340,7 @@ func initBlockGfm() map[string]*Regex {
 		replace("hr", block["hr"].String()).
 		replace("heading", " {0,3}#{1,6} ").
 		replace("blockquote", " {0,3}>").
-		replace("code", " {4}[^\n]").
+		replace("code", " {4}[^\\n]").
 		replace("fences", " {0,3}(?:`{3,}(?=[^`\n]*\n)|~{3,})[^\n]*\n").
 		replace("list", " {0,3}(?:[*+-]|1[.)]) ").
 		getRegex()
@@ -339,7 +349,7 @@ func initBlockGfm() map[string]*Regex {
 		replace("hr", block["hr"].String()).
 		replace("heading", " {0,3}#{1,6} ").
 		replace("blockquote", " {0,3}>").
-		replace("code", " {4}[^\n]").
+		replace("code", " {4}[^\\n]").
 		replace("fences", " {0,3}(?:`{3,}(?=[^`\n]*\n)|~{3,})[^\n]*\n").
 		replace("list", " {0,3}(?:[*+-]|1[.)]) ").
 		getRegex()
@@ -472,9 +482,9 @@ func nptable(src []rune) (token Token, err error) {
 	}
 
 	first := matched.GroupByNumber(1).Runes()
-	header := str(first).replace(MustCompile(`^ *| *\| *$`, Global), "").string()
+	header := TrimGFMTableRow(string(first))
 	second := matched.GroupByNumber(2).Runes()
-	align := str(second).replace(MustCompile(`^ *|\| *$`, Global), "").string()
+	alignParts := SplitGFMAlignRow(string(second))
 	third := matched.GroupByNumber(3).Runes()
 	var celles = make([]string, 0)
 	if len(third) > 0 {
@@ -484,12 +494,12 @@ func nptable(src []rune) (token Token, err error) {
 	item := Token{
 		Type:   "table",
 		Header: splitCells(header, 0),
-		Align:  regexp.MustCompile(` *\| *`).Split(align, -1),
 		Cells:  make([][]string, len(celles)),
 		Raw:    matched.GroupByNumber(0).String(),
 	}
+	item.Align = PadAlignTo(alignParts, len(item.Header))
 
-	if len(item.Header) == len(item.Align) {
+	if len(item.Header) > 0 && len(item.Header) == len(item.Align) {
 		n := len(item.Align)
 		for i := 0; i < n; i++ {
 			if MustCompile(`^ *-+: *$`, RE2).Test([]rune(item.Align[i])) {
@@ -503,10 +513,11 @@ func nptable(src []rune) (token Token, err error) {
 			}
 		}
 
+		nh := len(item.Header)
 		n = len(item.Cells)
 		for i := 0; i < n; i++ {
-			cell := celles[i]
-			item.Cells[i] = splitCells(cell, len(item.Header))
+			cell := TrimGFMTableRow(celles[i])
+			item.Cells[i] = splitCells(cell, nh)
 		}
 		return item, nil
 	}
@@ -554,7 +565,7 @@ func list(src []rune) (token Token, err error) {
 
 	var start string
 	if isordered {
-		start = string(bull[0:len(bull)-1])
+		start = string(bull[0 : len(bull)-1])
 	}
 
 	list := Token{
@@ -586,7 +597,7 @@ func list(src []rune) (token Token, err error) {
 		index := str(item).indexOf("\n ")
 		if index != -1 {
 			space -= len(item)
-			item = MustCompile(`'^ {1,`+string(space)+`}`, Multiline|Global).
+			item = MustCompile(`'^ {1,`+strconv.Itoa(space)+`}`, Multiline|Global).
 				ReplaceRune(item, "", 0, -1)
 		}
 
@@ -609,7 +620,7 @@ func list(src []rune) (token Token, err error) {
 				}
 				addBack := []rune(strings.Join(strs, "\n"))
 				rawrune := []rune(list.Raw)
-				list.Raw = string(rawrune[0:len(rawrune)-len(addBack)])
+				list.Raw = string(rawrune[0 : len(rawrune)-len(addBack)])
 				i = length - 1
 			}
 		}
@@ -654,6 +665,118 @@ func list(src []rune) (token Token, err error) {
 	return list, nil
 }
 
+// listInItem matches a list block that starts with 1–7 spaces of indent (inside a list item body).
+func listInItem(src []rune) (token Token, err error) {
+	match, err := block["listInItem"].Exec(src)
+	if err != nil || match == nil {
+		return token, err
+	}
+	var raw = match.GroupByNumber(0).Runes()
+	var bull = match.GroupByNumber(2).Runes()
+	isordered := len(bull) > 1
+	isparen := bull[len(bull)-1] == ')'
+
+	var start string
+	if isordered {
+		start = string(bull[0 : len(bull)-1])
+	}
+
+	list := Token{
+		Type:    "list",
+		Raw:     string(raw),
+		Ordered: isordered,
+		Start:   string(start),
+		Loose:   false,
+		Tokens:  []Token{},
+		Items:   []Token{},
+	}
+
+	itemmatch, err := str(raw).match(block["item"])
+	if err != nil {
+		return token, err
+	}
+
+	var next bool
+	length := len(itemmatch)
+	replace := MustCompile(`^ *([*+-]|\d+[.)]) *`, RE2)
+	reloose := MustCompile(`\n\n(?!\s*$)`, RE2)
+	retask := MustCompile(`^\[[ xX]\] `, RE2)
+	for i := 0; i < length; i++ {
+		item := itemmatch[i].Runes()
+		raw := item
+		space := len(item)
+		item = replace.ReplaceRune(item, "", 0, 1)
+
+		index := str(item).indexOf("\n ")
+		if index != -1 {
+			space -= len(item)
+			item = MustCompile(`'^ {1,`+strconv.Itoa(space)+`}`, Multiline|Global).
+				ReplaceRune(item, "", 0, -1)
+		}
+
+		if i != length-1 {
+			t, _ := block["bullet"].Exec(itemmatch[i+1].Runes())
+			b := t.GroupByNumber(0).Runes()
+
+			var condiotion bool
+			if isordered {
+				condiotion = len(b) == 1 || (!isparen && b[len(b)-1] == ')')
+			} else {
+				condiotion = len(b) > 1
+			}
+
+			if condiotion {
+				strs := make([]string, 0)
+				for k := i + 1; k < length; k++ {
+					strs = append(strs, itemmatch[k].String())
+				}
+				addBack := []rune(strings.Join(strs, "\n"))
+				rawrune := []rune(list.Raw)
+				list.Raw = string(rawrune[0 : len(rawrune)-len(addBack)])
+				i = length - 1
+			}
+		}
+
+		loose := next || reloose.Test(item)
+		if i != length-1 {
+			next = item[len(item)-1] == '\n'
+			if !loose {
+				loose = next
+			}
+		}
+
+		if loose {
+			list.Loose = true
+		}
+
+		ischecked := "undefined"
+		istask := retask.Test(item)
+		if istask {
+			ischecked = fmt.Sprintf("%v", item[1] != ' ')
+			item = MustCompile(`^\[[ xX]\] +`, RE2).ReplaceRune(item, "", 0, -1)
+		}
+
+		it := Token{
+			Type:   "list_item",
+			Raw:    string(raw),
+			Text:   string(item),
+			Task:   istask,
+			Loose:  loose,
+			Tokens: []Token{},
+		}
+
+		if ischecked != "undefined" {
+			it.Checked = "null"
+		} else {
+			it.Checked = fmt.Sprintf("%v", ischecked)
+		}
+
+		list.Items = append(list.Items, it)
+	}
+
+	return list, nil
+}
+
 func def(src []rune) (token Token, err error) {
 	match, err := block["def"].Exec(src)
 	if err != nil || match == nil {
@@ -683,9 +806,9 @@ func table(src []rune) (token Token, err error) {
 	}
 
 	first := matched.GroupByNumber(1).Runes()
-	header := str(first).replace(MustCompile(`^ *| *\| *$`, Global), "").string()
+	header := TrimGFMTableRow(string(first))
 	second := matched.GroupByNumber(2).Runes()
-	align := str(second).replace(MustCompile(`^ *|\| *$`, Global), "").string()
+	alignParts := SplitGFMAlignRow(string(second))
 
 	third := matched.GroupByNumber(3).Runes()
 	var celles = make([]string, 0)
@@ -696,10 +819,10 @@ func table(src []rune) (token Token, err error) {
 	item := Token{
 		Type:   "table",
 		Header: splitCells(header, 0),
-		Align:  regexp.MustCompile(` *\| *`).Split(align, -1),
 		Cells:  make([][]string, len(celles)),
 	}
-	if len(item.Header) == len(item.Align) {
+	item.Align = PadAlignTo(alignParts, len(item.Header))
+	if len(item.Header) > 0 && len(item.Header) == len(item.Align) {
 		item.Raw = matched.GroupByNumber(0).String()
 
 		n := len(item.Align)
@@ -715,11 +838,11 @@ func table(src []rune) (token Token, err error) {
 			}
 		}
 
+		nh := len(item.Header)
 		n = len(item.Cells)
 		for i := 0; i < n; i++ {
-			cell := celles[i]
-			cell = str(cell).replace(MustCompile(`^ *\| *| *\| *$`, Global), "").string()
-			item.Cells[i] = splitCells(cell, len(item.Header))
+			cell := TrimGFMTableRow(celles[i])
+			item.Cells[i] = splitCells(cell, nh)
 		}
 		return item, nil
 	}
@@ -754,7 +877,7 @@ func paragraph(src []rune) (token Token, err error) {
 
 	text := match.GroupByNumber(1).Runes()
 	if text[len(text)-1] == '\n' {
-		text = text[0:len(text)-1]
+		text = text[0 : len(text)-1]
 	}
 
 	return Token{
@@ -951,7 +1074,7 @@ func em(src []rune, markedSrc []rune, preChar string) (token Token, err error) {
 		endReg.LastIndex = 0
 		match, err = endReg.Exec(markedSrc)
 		for match != nil {
-			text := markedSrc[0:match.Index+2]
+			text := markedSrc[0 : match.Index+2]
 			strongMatch, _ := inline["em_middle"].Exec(text)
 			if strongMatch != nil {
 				zero := strongMatch.GroupByNumber(0).Runes()
@@ -987,7 +1110,7 @@ func codespan(src []rune) (token Token, err error) {
 	hasSpaceCharsOnBothEnds := strings.HasPrefix(text, " ") && strings.HasSuffix(text, " ")
 
 	if hasNonSpaceChars && hasSpaceCharsOnBothEnds {
-		text = text[1:len(text)-1]
+		text = text[1 : len(text)-1]
 	}
 
 	return Token{

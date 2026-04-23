@@ -180,6 +180,13 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 	cell.pdf.Font(cell.font.Family, cell.font.Size, cell.font.Style)
 	cell.pdf.SetFontWithStyle(cell.font.Family, cell.font.Style, cell.font.Size)
 
+	// Cell() uses baseline Y; sy is cell top. Vertically center glyph em-box in each line slot.
+	asc, desc := cell.pdf.GetFontMetrics(cell.font.Family, float64(cell.font.Size))
+	em := asc - desc
+	if em < 1 {
+		em = float64(cell.font.Size) * 1.15
+	}
+
 	// 计算需要打印的行数
 	if maxheight > cell.height || math.Abs(maxheight-cell.height) < 0.01 {
 		lines = len(cell.contents)
@@ -211,7 +218,12 @@ func (cell *TextCell) GenerateAtomicCell(maxheight float64) (int, int, error) {
 			x = sx + (cell.width-width)/2
 		}
 
-		y = sy + float64(i)*(cell.lineHeight+cell.lineSpace) + cell.border.Top
+		lineBoxTop := sy + float64(i)*(cell.lineHeight+cell.lineSpace) + cell.border.Top
+		gap := (cell.lineHeight - em) / 2
+		if gap < 0 {
+			gap = 0
+		}
+		y = lineBoxTop + gap + asc
 
 		// 字体颜色控制
 		if !util.IsEmpty(cell.fontColor) {

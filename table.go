@@ -379,11 +379,13 @@ func (table *Table) GenerateAtomicCell() error {
 	// 最后一个页面的最后部分
 	table.drawLastPageLines(sx, sy)
 
-	// 重置当前的坐标(非常重要)
-	height := table.getLastPageHeight()
-	_, y1, _, y2 = table.getVLinePosition(sx, sy, 0, 0)
+	// 表底用 cachedRow+minheight，避免个别路径下 cell.height 与行盒不一致导致后续块重叠
+	last := table.rows - 1
+	bottomY := table.cachedRow[last] + table.cells[last][0].minheight
 	x1, _ = table.pdf.GetPageStartXY()
-	table.pdf.SetXY(x1, y1+height+table.margin.Top+table.margin.Bottom)
+	// 段后留白：表格与后续正文之间再松一档，避免贴底
+	post := mdLineHeight*1.72 + mdBreakGap
+	table.pdf.SetXY(x1, bottomY+table.margin.Bottom+post)
 
 	return nil
 }

@@ -1,5 +1,5 @@
-Markdown Quick Reference
-========================
+Markdown Quick Reference Example
+================================
 
 This guide is a very brief overview, with examples, of the syntax that [Markdown] supports. It is itself written in Markdown and you can copy the samples over to the left-hand pane for experimentation. It is shown as *text* and not *rendered HTML*.
 
@@ -172,6 +172,37 @@ Images work exactly like links, but they have exclamation points in front. They 
 
 [Happy]: /home/quinn/Pictures/logo_sm.png ("Smiley face")
 
+
+Tables
+------
+
+| Name  | Age | City     |
+|-------|-----|----------|
+| Alice | 24  | Beijing  |
+| Bob   | 30  | Shanghai |
+| Carol | 28  | Shenzhen |
+
+| Product | Price | Count |
+|:--------|:-----:|------:|
+| Apple   | 5.0   | 10    |
+| Banana  | 3.5   | 20    |
+| Cherry  | 12.0  | 5     |
+
+Strikethrough
+-------------
+
+This is ~~deleted text~~ and this is **bold**.
+
+You can ~~cross out an entire sentence~~ if you want.
+
+Horizontal Rule
+---------------
+
+Some text before the rule.
+
+---
+
+Some text after the rule.
 
 Inline HTML
 -----------

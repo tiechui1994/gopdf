@@ -67,6 +67,7 @@ type Report struct {
 func CreateReport() *Report {
 	report := new(Report)
 	report.converter = new(Converter)
+	report.converter.fonts = cloneFontMaps(DefaultFontMaps())
 
 	report.Vars = make(map[string]string)
 	report.executors = make(map[string]*Executor)
@@ -325,7 +326,7 @@ func (report *Report) SetMargin(dx, dy float64) {
 	report.SetXY(x+dx, y+dy)
 }
 
-// 设置页面的尺寸, unit: mm pt in  size: A4 LTR, 目前支持常用的两种方式
+// SetPage configures page size. All coordinates and dimensions use PDF points (pt) only.
 func (report *Report) SetPage(size string, orientation string) {
 	unit := "pt"
 	config, ok := defaultConfigs[size]
@@ -388,6 +389,14 @@ func (report *Report) SaveAtomicCellText(filepath string) {
 // 计算文本宽度, 必须先调用 SetFontWithStyle() 或者 SetFont()
 func (report *Report) MeasureTextWidth(text string) float64 {
 	return report.converter.MeasureTextWidth(text)
+}
+
+func (report *Report) GetFontMetrics(family string, size float64) (ascender, descender float64) {
+	return report.converter.GetFontMetrics(family, size)
+}
+
+func (report *Report) GetSpaceWidth(family string, size float64) float64 {
+	return report.converter.GetSpaceWidth(family, size)
 }
 
 // 设置当前文本字体, 先注册,后设置

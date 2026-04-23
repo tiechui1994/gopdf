@@ -101,12 +101,26 @@ func (l *Lexer) blockTokens(content string, tokens *[]Token, top bool) []Token {
 			continue
 		}
 
+		// list (1–7 space indent) inside a list item
+		if !top {
+			if token, _ := listInItem(src); !IsEmpty(token) {
+				src = src[len([]rune(token.Raw)):]
+				n := len(token.Items)
+				for i := 0; i < n; i++ {
+					tex := splitListItemForIndentedSublist(token.Items[i].Text)
+					token.Items[i].Tokens = l.blockTokens(tex, &[]Token{}, false)
+				}
+				*tokens = append(*tokens, token)
+				continue
+			}
+		}
 		// list
 		if token, _ := list(src); !IsEmpty(token) {
 			src = src[len([]rune(token.Raw)):]
 			n := len(token.Items)
 			for i := 0; i < n; i++ {
-				token.Items[i].Tokens = l.blockTokens(token.Items[i].Text, &[]Token{}, false)
+				tex := splitListItemForIndentedSublist(token.Items[i].Text)
+				token.Items[i].Tokens = l.blockTokens(tex, &[]Token{}, false)
 			}
 			*tokens = append(*tokens, token)
 			continue
@@ -172,6 +186,18 @@ func (l *Lexer) blockTokens(content string, tokens *[]Token, top bool) []Token {
 	}
 
 	return *tokens
+}
+
+// splitListItemForIndentedSublist inserts a paragraph break before a sublist line (2+ spaces + marker)
+// so the item body is split into paragraph + nested list blocks.
+func splitListItemForIndentedSublist(s string) string {
+	re := MustCompile(`\n(?= {2,7}(?:[*+-]|\d{1,9}[.)]) )`, RE2)
+	m, err := re.Exec([]rune(s))
+	if m == nil || err != nil {
+		return s
+	}
+	idx := m.Index
+	return s[:idx] + "\n\n" + s[idx+1:]
 }
 
 func (l *Lexer) inline(tokens *[]Token) []Token {

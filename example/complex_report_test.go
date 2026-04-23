@@ -12,28 +12,17 @@ import (
 
 const (
 	ErrFile    = 1
-	FONT_MY    = "微软雅黑"
-	FONT_MD    = "MPBOLD"
 	DateFormat = "2006-01-02 15:04:05"
 )
 
 var (
-	largeFont = core.Font{Family: FONT_MY, Size: 15}
-	headFont  = core.Font{Family: FONT_MY, Size: 12}
-	textFont  = core.Font{Family: FONT_MY, Size: 10}
+	largeFont = core.Font{Family: core.FontSans, Size: 15}
+	headFont  = core.Font{Family: core.FontSans, Size: 12}
+	textFont  = core.Font{Family: core.FontSans, Size: 10}
 )
 
 func ComplexReport() {
 	r := core.CreateReport()
-	font1 := core.FontMap{
-		FontName: FONT_MY,
-		FileName: "ttf//microsoft.ttf",
-	}
-	font2 := core.FontMap{
-		FontName: FONT_MD,
-		FileName: "ttf//mplus-1p-bold.ttf",
-	}
-	r.SetFonts([]*core.FontMap{&font1, &font2})
 	r.SetPage("A4", "P")
 	r.FisrtPageNeedHeader = true
 	r.FisrtPageNeedFooter = true

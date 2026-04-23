@@ -1,12 +1,12 @@
 package gopdf
 
 import (
-	"testing"
-	"io/ioutil"
-	"encoding/json"
-	"log"
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"testing"
 
 	"github.com/tiechui1994/gopdf/core"
 	"github.com/tiechui1994/gopdf/lex"
@@ -16,27 +16,8 @@ func init() {
 	log.SetFlags(log.Lshortfile | log.Ltime)
 }
 
-const (
-	MD_IG = "IPAexG"
-	MD_MC = "Microsoft"
-	MD_MB = "Microsoft Bold"
-)
-
 func MarkdownReport() {
 	r := core.CreateReport()
-	font1 := core.FontMap{
-		FontName: MD_IG,
-		FileName: "example//ttf/ipaexg.ttf",
-	}
-	font2 := core.FontMap{
-		FontName: MD_MC,
-		FileName: "example//ttf/microsoft.ttf",
-	}
-	font3 := core.FontMap{
-		FontName: MD_MB,
-		FileName: "example//ttf/microsoft-bold.ttf",
-	}
-	r.SetFonts([]*core.FontMap{&font1, &font2, &font3})
 	r.SetPage("A4", "P")
 
 	r.RegisterExecutor(core.Executor(MarkdownReportExecutor), core.Detail)
@@ -50,9 +31,34 @@ func MarkdownReportExecutor(report *core.Report) {
 	var lexer = lex.NewLex()
 	tokens := lexer.Lex(string(data))
 	var fonts = map[string]string{
-		FONT_BOLD:   MD_MB,
-		FONT_NORMAL: MD_MC,
-		FONT_IALIC:  MD_MC,
+		FONT_BOLD:   core.FontSansBold,
+		FONT_NORMAL: core.FontSans,
+		FONT_IALIC:  core.FontSans,
+		FONT_MONO:   core.FontSans,
+	}
+	md, _ := NewMarkdownText(report, 0, fonts)
+	md.SetTokens(tokens)
+	md.GenerateAtomicCell()
+}
+
+// MarkdownReportComplex renders markdown_complex.md to markdown_complex_test.{pdf,txt}
+func MarkdownReportComplex() {
+	r := core.CreateReport()
+	r.SetPage("A4", "P")
+	r.RegisterExecutor(core.Executor(MarkdownReportExecutorComplex), core.Detail)
+	r.Execute("markdown_complex_test.pdf")
+	r.SaveAtomicCellText("markdown_complex_test.txt")
+}
+
+func MarkdownReportExecutorComplex(report *core.Report) {
+	data, _ := ioutil.ReadFile("./markdown_complex.md")
+	var lexer = lex.NewLex()
+	tokens := lexer.Lex(string(data))
+	var fonts = map[string]string{
+		FONT_BOLD:   core.FontSansBold,
+		FONT_NORMAL: core.FontSans,
+		FONT_IALIC:  core.FontSans,
+		FONT_MONO:   core.FontSans,
 	}
 	md, _ := NewMarkdownText(report, 0, fonts)
 	md.SetTokens(tokens)
@@ -61,6 +67,10 @@ func MarkdownReportExecutor(report *core.Report) {
 
 func TestMarkdown(t *testing.T) {
 	MarkdownReport()
+}
+
+func TestMarkdownComplex(t *testing.T) {
+	MarkdownReportComplex()
 }
 
 func TestTokens(t *testing.T) {

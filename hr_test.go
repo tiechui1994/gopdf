@@ -16,9 +16,10 @@ func ComplexHLineReport() {
 	r.SaveAtomicCellText("hr_test.txt")
 }
 func ComplexHLineReportExecutor(report *core.Report) {
-	unit := 2.83
+	// Line width in pt (≈5 mm).
+	const widthPt = 5 * 2.834645669
 	hr := NewHLine(report)
-	hr.SetColor(0.7).SetWidth(5 * unit)
+	hr.SetColor(0.7).SetWidth(widthPt)
 	hr.GenerateAtomicCell()
 }
 

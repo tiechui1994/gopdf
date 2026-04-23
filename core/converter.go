@@ -8,7 +8,14 @@ import (
 	"strings"
 
 	"github.com/signintech/gopdf"
+	fontcore "github.com/signintech/gopdf/fontmaker/core"
 )
+
+type fontMetrics struct {
+	ascenderPerEm   float64 // ascender / unitsPerEm
+	descenderPerEm  float64 // descender / unitsPerEm (negative)
+	spaceWidthPerEm float64 // space glyph width / unitsPerEm
+}
 
 type FontMap struct {
 	FontName string
@@ -26,20 +33,16 @@ type Converter struct {
 	// Atomic unit, multiple cells are finally combined into a PDF file
 	atomicCells []string
 
-	// Basic uint
-	// Users can use millimeters, pixels, and inches as the units of pdf files,
-	// but ultimately all need to be converted to pixels.
-	// The uint here is the conversion unit of millimeters, pixels, and inches
-	// to pixels. eg, 1mm = 2.834px
+	// unit is the scale from user-facing numeric cells to PDF points. Only pt is supported (1:1).
 	unit  float64
 	fonts []*FontMap // fonts
 
 	linew     float64  // line width
 	lastFont  string   // last used font name
 	tempFonts []string // temporary font files created from bytes data, used for cleanup
-}
 
-// var convert.unit float64 = 2.834645669
+	fontMetrics map[string]*fontMetrics // key: font family name
+}
 
 // GetAtomicCells, get atomicCells
 func (convert *Converter) GetAutomicCells() []string {
@@ -131,6 +134,9 @@ func (convert *Converter) Execute() {
 
 // add fonts
 func (convert *Converter) AddFont() {
+	if convert.fontMetrics == nil {
+		convert.fontMetrics = make(map[string]*fontMetrics)
+	}
 	for _, font := range convert.fonts {
 		fileName := font.FileName
 		// If Data is provided, create a temporary file
@@ -154,13 +160,59 @@ func (convert *Converter) AddFont() {
 		if err != nil {
 			panic("font file:" + fileName + " not found, err:" + err.Error())
 		}
+
+		// parse font metrics
+		var parser fontcore.TTFParser
+		if err := parser.Parse(fileName); err == nil {
+			units := float64(parser.UnitsPerEm())
+			if units == 0 {
+				units = 1000
+			}
+			m := &fontMetrics{
+				ascenderPerEm:   float64(parser.Ascender()) / units,
+				descenderPerEm:  float64(parser.Descender()) / units,
+				spaceWidthPerEm: convert.parseSpaceWidth(&parser) / units,
+			}
+			convert.fontMetrics[font.FontName] = m
+		}
 	}
 }
 
+func (convert *Converter) parseSpaceWidth(parser *fontcore.TTFParser) float64 {
+	chars := parser.Chars()
+	glyphID, ok := chars[32]
+	if !ok {
+		return 250 // typical default space width in font units
+	}
+	widths := parser.Widths()
+	idx := int(glyphID)
+	if idx < len(widths) {
+		return float64(widths[idx])
+	}
+	if len(widths) > 0 {
+		return float64(widths[len(widths)-1])
+	}
+	return 250
+}
+
+func (convert *Converter) GetFontMetrics(family string, size float64) (ascender, descender float64) {
+	if m, ok := convert.fontMetrics[family]; ok {
+		return m.ascenderPerEm * size, m.descenderPerEm * size
+	}
+	// fallback: typical proportions
+	return size * 0.8, size * -0.2
+}
+
+func (convert *Converter) GetSpaceWidth(family string, size float64) float64 {
+	if m, ok := convert.fontMetrics[family]; ok {
+		return m.spaceWidthPerEm * size
+	}
+	return size * 0.25
+}
+
 // Page
-// [P, mm|pt|in, A4, P|L]
-// mm|pt|in, Indicates the unit of size, respectively representing millimeters, pixels, and feet
-// P|L, Page layout, namely Portait, Landscape
+// [P, pt, A4, P|L]
+// Only "pt" (PDF points) is accepted for elements[1]. P|L is portrait or landscape.
 func (convert *Converter) Page(line string, elements []string) {
 	convert.pdf = new(gopdf.GoPdf)
 
@@ -211,18 +263,13 @@ func (convert *Converter) Page(line string, elements []string) {
 	convert.pdf.AddPage()
 }
 
-// set uint, uint is "mm", "pt", "in"
+// setunit accepts only "pt" (PDF points). Raw cell streams must not use mm or in.
 func (convert *Converter) setunit(unit string) {
-	// 1mm ~ 2.8pt 1in ~ 72pt
 	switch unit {
-	case "mm":
-		convert.unit = 2.834645669
 	case "pt":
 		convert.unit = 1
-	case "in":
-		convert.unit = 72
 	default:
-		panic("This unit is not specified :" + unit)
+		panic("only pt (PDF points) is supported, got: " + unit)
 	}
 }
 
