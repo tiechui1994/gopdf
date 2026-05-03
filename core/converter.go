@@ -44,19 +44,29 @@ type Converter struct {
 	fontMetrics map[string]*fontMetrics // key: font family name
 }
 
-// GetAtomicCells, get atomicCells
-func (convert *Converter) GetAutomicCells() []string {
+// GetAtomicCells returns a copy of the atomic instruction lines.
+func (convert *Converter) GetAtomicCells() []string {
 	cells := make([]string, len(convert.atomicCells))
 	copy(cells, convert.atomicCells)
 	return cells
 }
 
-// SetAtomicCells, set atomicCells (use caution)
-func (convert *Converter) SetAutomicCells(cells []string) {
+// Deprecated: typo; use GetAtomicCells.
+func (convert *Converter) GetAutomicCells() []string {
+	return convert.GetAtomicCells()
+}
+
+// SetAtomicCells replaces the atomic instruction stream (use with caution).
+func (convert *Converter) SetAtomicCells(cells []string) {
 	convert.atomicCells = cells
 }
 
-// Add a atomicCell to atomicCells
+// Deprecated: typo; use SetAtomicCells.
+func (convert *Converter) SetAutomicCells(cells []string) {
+	convert.SetAtomicCells(cells)
+}
+
+// AddAtomicCell appends one atomic Cell line.
 func (convert *Converter) AddAtomicCell(cell string) {
 	if strings.HasPrefix(cell, "F|") {
 		if cell == convert.lastFont {
@@ -69,99 +79,107 @@ func (convert *Converter) AddAtomicCell(cell string) {
 	convert.atomicCells = append(convert.atomicCells, cell)
 }
 
-// ReadFile parse file content to  atomicCells
-// Generate pdf files for text content from already saved atomicCells,
-// generally used for debugging.
+// ReadFile parses file content into atomicCells (for debugging or replay).
 func (convert *Converter) ReadFile(fileName string) error {
 	buf, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return err
 	}
 	text := strings.Replace(string(buf), "\r", "", -1)
-	var UTF8_BOM = []byte{239, 187, 191}
-	if text[0:3] == string(UTF8_BOM) {
+	var utf8bom = []byte{239, 187, 191}
+	if len(text) >= 3 && text[0:3] == string(utf8bom) {
 		text = text[3:]
 	}
 	convert.atomicCells = strings.Split(text, "\n")
 	return nil
 }
 
-// Generate a pdf file of the content recorded in atomicCells.
-func (convert *Converter) Execute() {
+// Execute renders the accumulated atomic Cells into convert.pdf.
+func (convert *Converter) Execute() error {
 	lines := convert.atomicCells
 	for _, line := range lines {
 		elements := strings.Split(line, "|")
+		var err error
+		if len(elements) == 0 {
+			continue
+		}
 		switch elements[0] {
 		case "P":
-			convert.Page(line, elements) // pdf start
+			err = convert.Page(line, elements)
 		case "NP":
-			convert.NewPage(line, elements) // new page
+			err = convert.NewPage(line, elements)
 		case "F":
-			convert.Font(line, elements) // font
+			err = convert.Font(line, elements)
 		case "TC":
-			convert.TextColor(line, elements) // text color
+			err = convert.TextColor(line, elements)
 		case "LC":
-			convert.LineColor(line, elements) // line color
+			err = convert.LineColor(line, elements)
 		case "BC":
-			convert.BackgroundColor(line, elements) // backgroup color
+			err = convert.BackgroundColor(line, elements)
 		case "GF", "GS":
-			convert.Grey(line, elements) //
+			err = convert.Grey(line, elements)
 		case "C", "CL", "CR":
-			convert.Cell(line, elements) // cell contens. third lib basic content
+			err = convert.Cell(line, elements)
 		case "L", "LV", "LH", "LT":
-			convert.Line(line, elements) // one row
+			err = convert.Line(line, elements)
 		case "R":
-			convert.Rect(line, elements) // rectangle
+			err = convert.Rect(line, elements)
 		case "O":
-			convert.Oval(line, elements) // oval
+			err = convert.Oval(line, elements)
 		case "I":
-			convert.Image(line, elements) // image
+			err = convert.Image(line, elements)
 		case "M":
-			convert.Margin(line, elements) // margin, can adjust content postion
+			err = convert.Margin(line, elements)
 		case "EL":
-			convert.ExternalLink(line, elements) // outer link
+			err = convert.ExternalLink(line, elements)
 		case "ILA":
-			convert.InternalLinkAnchor(line, elements) // inner link anchor
+			err = convert.InternalLinkAnchor(line, elements)
 		case "ILL":
-			convert.InternalLinkLink(line, elements) // inner link linker
+			err = convert.InternalLinkLink(line, elements)
 		default:
 			if len(line) > 0 && line[0:1] != "v" {
 				fmt.Println("skip:" + line + ":")
 			}
 		}
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-// add fonts
-func (convert *Converter) AddFont() {
+func (convert *Converter) AddFont() error {
 	if convert.fontMetrics == nil {
 		convert.fontMetrics = make(map[string]*fontMetrics)
 	}
 	for _, font := range convert.fonts {
 		fileName := font.FileName
-		// If Data is provided, create a temporary file
 		if len(font.Data) > 0 {
 			tempFile, err := ioutil.TempFile("", "gopdf_font_*.ttf")
 			if err != nil {
-				panic("failed to create temp font file: " + err.Error())
+				return fmt.Errorf("create temp font file: %w", err)
 			}
-			defer tempFile.Close()
-
 			_, err = tempFile.Write(font.Data)
-			if err != nil {
-				panic("failed to write temp font file: " + err.Error())
+			fn := tempFile.Name()
+			if cerr := tempFile.Close(); cerr != nil {
+				os.Remove(fn)
+				if err != nil {
+					return fmt.Errorf("write temp font file: %w", err)
+				}
+				return fmt.Errorf("close temp font file: %w", cerr)
 			}
-
-			fileName = tempFile.Name()
+			if err != nil {
+				os.Remove(fn)
+				return fmt.Errorf("write temp font file: %w", err)
+			}
+			fileName = fn
 			convert.tempFonts = append(convert.tempFonts, fileName)
 		}
 
-		err := convert.pdf.AddTTFFont(font.FontName, fileName)
-		if err != nil {
-			panic("font file:" + fileName + " not found, err:" + err.Error())
+		if err := convert.pdf.AddTTFFont(font.FontName, fileName); err != nil {
+			return fmt.Errorf("add TTF font %q from %s: %w", font.FontName, fileName, err)
 		}
 
-		// parse font metrics
 		var parser fontcore.TTFParser
 		if err := parser.Parse(fileName); err == nil {
 			units := float64(parser.UnitsPerEm())
@@ -176,13 +194,14 @@ func (convert *Converter) AddFont() {
 			convert.fontMetrics[font.FontName] = m
 		}
 	}
+	return nil
 }
 
 func (convert *Converter) parseSpaceWidth(parser *fontcore.TTFParser) float64 {
 	chars := parser.Chars()
 	glyphID, ok := chars[32]
 	if !ok {
-		return 250 // typical default space width in font units
+		return 250
 	}
 	widths := parser.Widths()
 	idx := int(glyphID)
@@ -199,7 +218,6 @@ func (convert *Converter) GetFontMetrics(family string, size float64) (ascender,
 	if m, ok := convert.fontMetrics[family]; ok {
 		return m.ascenderPerEm * size, m.descenderPerEm * size
 	}
-	// fallback: typical proportions
 	return size * 0.8, size * -0.2
 }
 
@@ -213,154 +231,214 @@ func (convert *Converter) GetSpaceWidth(family string, size float64) float64 {
 // Page
 // [P, pt, A4, P|L]
 // Only "pt" (PDF points) is accepted for elements[1]. P|L is portrait or landscape.
-func (convert *Converter) Page(line string, elements []string) {
+func (convert *Converter) Page(line string, elements []string) error {
 	convert.pdf = new(gopdf.GoPdf)
 
-	checkLength(line, elements, 4)
+	if err := checkLength(line, elements, 4); err != nil {
+		return err
+	}
 	switch elements[2] {
-	/* A0 ~ A5 Paper pixel representation:
-	'A0': [2383.94, 3370.39],
-	'A1': [1683.78, 2383.94],
-	'A2': [1190.55, 1683.78],
-	'A3': [841.89, 1190.55],
-	'A4': [595.28, 841.89],
-	'A5': [419.53, 595.28],
-	*/
 	case "A3":
 		config := defaultConfigs["A3"]
-		convert.setunit(elements[1])
+		if err := convert.setunit(elements[1]); err != nil {
+			return err
+		}
 		if elements[3] == "P" {
 			convert.start(config.width, config.height)
 		} else if elements[3] == "L" {
 			convert.start(config.height, config.width)
 		} else {
-			panic("Page Orientation accept P or L")
+			return fmt.Errorf("page orientation must be P or L: %s", line)
 		}
 	case "A4":
 		config := defaultConfigs["A4"]
-		convert.setunit(elements[1])
+		if err := convert.setunit(elements[1]); err != nil {
+			return err
+		}
 		if elements[3] == "P" {
 			convert.start(config.width, config.height)
 		} else if elements[3] == "L" {
 			convert.start(config.height, config.width)
 		} else {
-			panic("Page Orientation accept P or L")
+			return fmt.Errorf("page orientation must be P or L: %s", line)
 		}
 	case "LTR":
 		config := defaultConfigs["LTR"]
-		convert.setunit(elements[1])
+		if err := convert.setunit(elements[1]); err != nil {
+			return err
+		}
 		if elements[3] == "P" {
 			convert.start(config.width, config.height)
 		} else if elements[3] == "L" {
 			convert.start(config.height, config.width)
 		} else {
-			panic("Page Orientation accept P or L")
+			return fmt.Errorf("page orientation must be P or L: %s", line)
 		}
 	default:
-		panic("This size not supported yet:" + elements[2])
+		return fmt.Errorf("page size not supported: %s in %s", elements[2], line)
 	}
-	convert.AddFont()
+	if err := convert.AddFont(); err != nil {
+		return err
+	}
 	convert.pdf.AddPage()
+	return nil
 }
 
-// setunit accepts only "pt" (PDF points). Raw cell streams must not use mm or in.
-func (convert *Converter) setunit(unit string) {
+func (convert *Converter) setunit(unit string) error {
 	switch unit {
 	case "pt":
 		convert.unit = 1
+		return nil
 	default:
-		panic("only pt (PDF points) is supported, got: " + unit)
+		return fmt.Errorf("only pt (PDF points) is supported, got %q", unit)
 	}
 }
 
-// add new page
-func (convert *Converter) NewPage(line string, elements []string) {
+func (convert *Converter) NewPage(line string, elements []string) error {
 	convert.pdf.AddPage()
+	return nil
 }
 
-// Set PDF file configuration information (unit, page size)
 func (convert *Converter) start(w float64, h float64) {
 	convert.pdf.Start(gopdf.Config{
 		Unit:     gopdf.Unit_PT,
 		PageSize: gopdf.Rect{W: w, H: h},
-	}) // 595.28, 841.89 = A4
+	})
 }
 
-// Set Font used for the current text
-// ["", "family", "style", "size"]
-// style: "" or "U", ("B", "I")("B" means "Bold", "I" means "Italic", these font self support)
-func (convert *Converter) Font(line string, elements []string) {
-	checkLength(line, elements, 4)
-	size := parseIntPanic(elements[3], line)
-	err := convert.pdf.SetFont(elements[1], elements[2], size)
-	if err != nil {
-		panic(err.Error() + " line;" + line)
+// Font sets the current PDF font from a cell record.
+func (convert *Converter) Font(line string, elements []string) error {
+	if err := checkLength(line, elements, 4); err != nil {
+		return err
 	}
+	size, err := parseIntCell(elements[3], line)
+	if err != nil {
+		return err
+	}
+	if err := convert.pdf.SetFont(elements[1], elements[2], size); err != nil {
+		return fmt.Errorf("%w; line %s", err, line)
+	}
+	return nil
 }
 
-// Set the gray scale of the stroke Or Set the gray scale of the fill
-// ["GF|GS", grayScale]
-// grayScale: 0.0 到 1.0
-func (convert *Converter) Grey(line string, elements []string) {
-	checkLength(line, elements, 2)
+func (convert *Converter) Grey(line string, elements []string) error {
+	if err := checkLength(line, elements, 2); err != nil {
+		return err
+	}
+	g, err := parseFloatCell(elements[1], line)
+	if err != nil {
+		return err
+	}
 	if elements[0] == "GF" {
-		convert.pdf.SetGrayFill(parseFloatPanic(elements[1], line))
+		convert.pdf.SetGrayFill(g)
 	}
 	if elements[0] == "GS" {
-		convert.pdf.SetGrayStroke(parseFloatPanic(elements[1], line))
+		convert.pdf.SetGrayStroke(g)
 	}
+	return nil
 }
 
-// text color
-// ["", R, G, B]
-func (convert *Converter) TextColor(line string, elements []string) {
-	checkLength(line, elements, 4)
-	convert.pdf.SetTextColor(uint8(parseIntPanic(elements[1], line)),
-		uint8(parseIntPanic(elements[2], line)),
-		uint8(parseIntPanic(elements[3], line)))
+func (convert *Converter) TextColor(line string, elements []string) error {
+	if err := checkLength(line, elements, 4); err != nil {
+		return err
+	}
+	r1, err := parseIntCell(elements[1], line)
+	if err != nil {
+		return err
+	}
+	r2, err := parseIntCell(elements[2], line)
+	if err != nil {
+		return err
+	}
+	r3, err := parseIntCell(elements[3], line)
+	if err != nil {
+		return err
+	}
+	convert.pdf.SetTextColor(uint8(r1), uint8(r2), uint8(r3))
+	return nil
 }
 
-// line color
-// ["", R, G, B]
-func (convert *Converter) LineColor(line string, elements []string) {
-	checkLength(line, elements, 4)
-	convert.pdf.SetStrokeColor(uint8(parseIntPanic(elements[1], line)),
-		uint8(parseIntPanic(elements[2], line)),
-		uint8(parseIntPanic(elements[3], line)))
+func (convert *Converter) LineColor(line string, elements []string) error {
+	if err := checkLength(line, elements, 4); err != nil {
+		return err
+	}
+	r1, err := parseIntCell(elements[1], line)
+	if err != nil {
+		return err
+	}
+	r2, err := parseIntCell(elements[2], line)
+	if err != nil {
+		return err
+	}
+	r3, err := parseIntCell(elements[3], line)
+	if err != nil {
+		return err
+	}
+	convert.pdf.SetStrokeColor(uint8(r1), uint8(r2), uint8(r3))
+	return nil
 }
 
-// backgroup color
-func (convert *Converter) BackgroundColor(line string, elements []string) {
-	checkLength(line, elements, 12)
-
-	// white line
+func (convert *Converter) BackgroundColor(line string, elements []string) error {
+	if err := checkLength(line, elements, 12); err != nil {
+		return err
+	}
 	convert.pdf.SetStrokeColor(255, 255, 255)
 
-	// set fill backgroup color
-	convert.pdf.SetFillColor(uint8(parseIntPanic(elements[5], line)),
-		uint8(parseIntPanic(elements[6], line)),
-		uint8(parseIntPanic(elements[7], line)))
+	e5, err := parseIntCell(elements[5], line)
+	if err != nil {
+		return err
+	}
+	e6, err := parseIntCell(elements[6], line)
+	if err != nil {
+		return err
+	}
+	e7, err := parseIntCell(elements[7], line)
+	if err != nil {
+		return err
+	}
+	convert.pdf.SetFillColor(uint8(e5), uint8(e6), uint8(e7))
 
-	convert.pdf.RectFromUpperLeftWithStyle(parseFloatPanic(elements[1], line)*convert.unit,
-		parseFloatPanic(elements[2], line)*convert.unit,
-		parseFloatPanic(elements[3], line)*convert.unit,
-		parseFloatPanic(elements[4], line)*convert.unit, "F")
+	x1, err := parseFloatCell(elements[1], line)
+	if err != nil {
+		return err
+	}
+	x2, err := parseFloatCell(elements[2], line)
+	if err != nil {
+		return err
+	}
+	x3, err := parseFloatCell(elements[3], line)
+	if err != nil {
+		return err
+	}
+	x4, err := parseFloatCell(elements[4], line)
+	if err != nil {
+		return err
+	}
+	convert.pdf.RectFromUpperLeftWithStyle(x1*convert.unit, x2*convert.unit, x3*convert.unit, x4*convert.unit, "F")
 
-	// recover origin backgroup color and line color
+	e9, err := parseIntCell(elements[9], line)
+	if err != nil {
+		return err
+	}
+	e10, err := parseIntCell(elements[10], line)
+	if err != nil {
+		return err
+	}
+	e11, err := parseIntCell(elements[11], line)
+	if err != nil {
+		return err
+	}
 	convert.pdf.SetFillColor(1, 1, 1)
-	convert.pdf.SetStrokeColor(uint8(parseIntPanic(elements[9], line)),
-		uint8(parseIntPanic(elements[10], line)),
-		uint8(parseIntPanic(elements[11], line)))
+	convert.pdf.SetStrokeColor(uint8(e9), uint8(e10), uint8(e11))
 
 	convert.pdf.SetLineType("solid")
 	convert.pdf.SetLineWidth(convert.linew * convert.unit)
 
-	x := parseFloatPanic(elements[1], line) * convert.unit
-	y := parseFloatPanic(elements[2], line) * convert.unit
-	w := parseFloatPanic(elements[3], line) * convert.unit
-	h := parseFloatPanic(elements[4], line) * convert.unit
+	x := x1 * convert.unit
+	y := x2 * convert.unit
+	w := x3 * convert.unit
+	h := x4 * convert.unit
 
-	// Add lines, contains LEFT, TOP, RIGHT, BOTTOM
 	lines := elements[8]
 	if lines[0] == '1' {
 		convert.pdf.Line(x, y, x, y+h)
@@ -374,177 +452,260 @@ func (convert *Converter) BackgroundColor(line string, elements []string) {
 	if lines[3] == '1' {
 		convert.pdf.Line(x, y+h, x+w, y+h)
 	}
+	return nil
 }
 
-// oval
-// ["", x1, y1, x2, y2]
-func (convert *Converter) Oval(line string, elements []string) {
-	checkLength(line, elements, 5)
-	convert.pdf.Oval(parseFloatPanic(elements[1], line)*convert.unit,
-		parseFloatPanic(elements[2], line)*convert.unit,
-		parseFloatPanic(elements[3], line)*convert.unit,
-		parseFloatPanic(elements[4], line)*convert.unit)
-}
-
-// rectangle
-// ["R", x1, y1, x2, y2]
-func (convert *Converter) Rect(line string, eles []string) {
-	checkLength(line, eles, 5)
-	adj := convert.linew * convert.unit * 0.5
-	convert.pdf.Line(
-		parseFloatPanic(eles[1], line)*convert.unit,
-		parseFloatPanic(eles[2], line)*convert.unit+adj,
-		parseFloatPanic(eles[3], line)*convert.unit+adj*2,
-		parseFloatPanic(eles[2], line)*convert.unit+adj)
-
-	convert.pdf.Line(
-		parseFloatPanic(eles[1], line)*convert.unit+adj,
-		parseFloatPanic(eles[2], line)*convert.unit,
-		parseFloatPanic(eles[1], line)*convert.unit+adj,
-		parseFloatPanic(eles[4], line)*convert.unit+adj*2)
-
-	convert.pdf.Line(
-		parseFloatPanic(eles[1], line)*convert.unit,
-		parseFloatPanic(eles[4], line)*convert.unit+adj,
-		parseFloatPanic(eles[3], line)*convert.unit+adj*2,
-		parseFloatPanic(eles[4], line)*convert.unit+adj)
-
-	convert.pdf.Line(
-		parseFloatPanic(eles[3], line)*convert.unit+adj,
-		parseFloatPanic(eles[2], line)*convert.unit,
-		parseFloatPanic(eles[3], line)*convert.unit+adj,
-		parseFloatPanic(eles[4], line)*convert.unit+adj*2)
-}
-
-// image
-// ["I", path, x, y, x1, y2]
-func (convert *Converter) Image(line string, elements []string) {
-	checkLength(line, elements, 6)
-	r := new(gopdf.Rect)
-	r.W = parseFloatPanic(elements[4], line)*convert.unit - parseFloatPanic(elements[2], line)*convert.unit
-	r.H = parseFloatPanic(elements[5], line)*convert.unit - parseFloatPanic(elements[3], line)*convert.unit
-
-	err := convert.pdf.Image(
-		elements[1],
-		parseFloatPanic(elements[2], line)*convert.unit,
-		parseFloatPanic(elements[3], line)*convert.unit,
-		r,
-	)
-	if err != nil {
-		panic(err.Error() + " line;" + line)
+func (convert *Converter) Oval(line string, elements []string) error {
+	if err := checkLength(line, elements, 5); err != nil {
+		return err
 	}
+	fs := make([]float64, 4)
+	for i := 0; i < 4; i++ {
+		v, err := parseFloatCell(elements[1+i], line)
+		if err != nil {
+			return err
+		}
+		fs[i] = v * convert.unit
+	}
+	convert.pdf.Oval(fs[0], fs[1], fs[2], fs[3])
+	return nil
 }
 
-// line
-// ["L", x1, y1, x2, y2], Line between any two points
-// ["LH", x1, y1, x2], Horizontal line
-// ["LV", x1, y2, y2], Vertical line
-//
-// ["LT", "dashed|dotted|straight", w] Lines with a specific style(dashed,dotted,straight)
-// dashed: ----
-// dotted: ....
-// straight: ___
-func (convert *Converter) Line(line string, elements []string) {
+func (convert *Converter) Rect(line string, eles []string) error {
+	if err := checkLength(line, eles, 5); err != nil {
+		return err
+	}
+	adj := convert.linew * convert.unit * 0.5
+	x1, err := parseFloatCell(eles[1], line)
+	if err != nil {
+		return err
+	}
+	x2, err := parseFloatCell(eles[2], line)
+	if err != nil {
+		return err
+	}
+	x3, err := parseFloatCell(eles[3], line)
+	if err != nil {
+		return err
+	}
+	x4, err := parseFloatCell(eles[4], line)
+	if err != nil {
+		return err
+	}
+	a, b, c, d := x1*convert.unit, x2*convert.unit, x3*convert.unit, x4*convert.unit
+
+	convert.pdf.Line(a, b+adj, c+adj*2, b+adj)
+	convert.pdf.Line(a+adj, b, a+adj, d+adj*2)
+	convert.pdf.Line(a, d+adj, c+adj*2, d+adj)
+	convert.pdf.Line(c+adj, b, c+adj, d+adj*2)
+	return nil
+}
+
+func (convert *Converter) Image(line string, elements []string) error {
+	if err := checkLength(line, elements, 6); err != nil {
+		return err
+	}
+	x0, err := parseFloatCell(elements[2], line)
+	if err != nil {
+		return err
+	}
+	y0, err := parseFloatCell(elements[3], line)
+	if err != nil {
+		return err
+	}
+	x1, err := parseFloatCell(elements[4], line)
+	if err != nil {
+		return err
+	}
+	y1, err := parseFloatCell(elements[5], line)
+	if err != nil {
+		return err
+	}
+	r := new(gopdf.Rect)
+	r.W = x1*convert.unit - x0*convert.unit
+	r.H = y1*convert.unit - y0*convert.unit
+
+	if err := convert.pdf.Image(elements[1], x0*convert.unit, y0*convert.unit, r); err != nil {
+		return fmt.Errorf("%w; line %s", err, line)
+	}
+	return nil
+}
+
+func (convert *Converter) Line(line string, elements []string) error {
 	switch elements[0] {
 	case "L":
-		checkLength(line, elements, 5)
-		convert.pdf.Line(
-			parseFloatPanic(elements[1], line)*convert.unit,
-			parseFloatPanic(elements[2], line)*convert.unit,
-			parseFloatPanic(elements[3], line)*convert.unit,
-			parseFloatPanic(elements[4], line)*convert.unit,
-		)
+		if err := checkLength(line, elements, 5); err != nil {
+			return err
+		}
+		p := make([]float64, 4)
+		for i := 0; i < 4; i++ {
+			v, err := parseFloatCell(elements[1+i], line)
+			if err != nil {
+				return err
+			}
+			p[i] = v * convert.unit
+		}
+		convert.pdf.Line(p[0], p[1], p[2], p[3])
 	case "LH":
-		checkLength(line, elements, 4)
-		convert.pdf.Line(
-			parseFloatPanic(elements[1], line)*convert.unit,
-			parseFloatPanic(elements[2], line)*convert.unit,
-			parseFloatPanic(elements[3], line)*convert.unit,
-			parseFloatPanic(elements[2], line)*convert.unit,
-		)
+		if err := checkLength(line, elements, 4); err != nil {
+			return err
+		}
+		a, err := parseFloatCell(elements[1], line)
+		if err != nil {
+			return err
+		}
+		b, err := parseFloatCell(elements[2], line)
+		if err != nil {
+			return err
+		}
+		c, err := parseFloatCell(elements[3], line)
+		if err != nil {
+			return err
+		}
+		a, b, c = a*convert.unit, b*convert.unit, c*convert.unit
+		convert.pdf.Line(a, b, c, b)
 	case "LV":
-		checkLength(line, elements, 4)
-		convert.pdf.Line(
-			parseFloatPanic(elements[1], line)*convert.unit,
-			parseFloatPanic(elements[2], line)*convert.unit,
-			parseFloatPanic(elements[1], line)*convert.unit,
-			parseFloatPanic(elements[3], line)*convert.unit,
-		)
+		if err := checkLength(line, elements, 4); err != nil {
+			return err
+		}
+		a, err := parseFloatCell(elements[1], line)
+		if err != nil {
+			return err
+		}
+		b, err := parseFloatCell(elements[2], line)
+		if err != nil {
+			return err
+		}
+		d, err := parseFloatCell(elements[3], line)
+		if err != nil {
+			return err
+		}
+		a, b, d = a*convert.unit, b*convert.unit, d*convert.unit
+		convert.pdf.Line(a, b, a, d)
 	case "LT":
-		checkLength(line, elements, 3)
+		if err := checkLength(line, elements, 3); err != nil {
+			return err
+		}
 		lineType := elements[1]
 		if lineType == "" {
 			lineType = "straight"
 		}
 		convert.pdf.SetLineType(lineType)
-		convert.linew = parseFloatPanic(elements[2], line)
+		w, err := parseFloatCell(elements[2], line)
+		if err != nil {
+			return err
+		}
+		convert.linew = w
 		convert.pdf.SetLineWidth(convert.linew * convert.unit)
 	}
+	return nil
 }
 
-// Clell
-// ["C", family, size, x, y, content] // Start writing text from position (x,y)
-// ["CL", x, y, content] // Start writing text from position (x,y)
-// ["CR", x, y, w, content] // Write text of w length from right to left
-func (convert *Converter) Cell(line string, elements []string) {
+func (convert *Converter) Cell(line string, elements []string) error {
 	switch elements[0] {
 	case "C":
-		checkLength(line, elements, 6)
-		size := parseIntPanic(elements[2], line)
-		err := convert.pdf.SetFont(elements[1], "", size)
-		if err != nil {
-			panic(err.Error() + " line;" + line)
+		if err := checkLength(line, elements, 6); err != nil {
+			return err
 		}
-		convert.setPosition(elements[3], elements[4], line)
-		err = convert.pdf.Text(elements[5])
+		size, err := parseIntCell(elements[2], line)
 		if err != nil {
-			panic(err.Error() + " line;" + line)
+			return err
+		}
+		if err := convert.pdf.SetFont(elements[1], "", size); err != nil {
+			return fmt.Errorf("%w; line %s", err, line)
+		}
+		if err := convert.setPosition(elements[3], elements[4], line); err != nil {
+			return err
+		}
+		if err := convert.pdf.Text(elements[5]); err != nil {
+			return fmt.Errorf("%w; line %s", err, line)
 		}
 	case "CL":
-		checkLength(line, elements, 4)
-		convert.setPosition(elements[1], elements[2], line)
-		err := convert.pdf.Text(elements[3])
-		if err != nil {
-			panic(err.Error() + " line;" + line)
+		if err := checkLength(line, elements, 4); err != nil {
+			return err
+		}
+		if err := convert.setPosition(elements[1], elements[2], line); err != nil {
+			return err
+		}
+		if err := convert.pdf.Text(elements[3]); err != nil {
+			return fmt.Errorf("%w; line %s", err, line)
 		}
 	case "CR":
-		checkLength(line, elements, 5)
+		if err := checkLength(line, elements, 5); err != nil {
+			return err
+		}
 		tw, err := convert.pdf.MeasureTextWidth(elements[4])
 		if err != nil {
-			panic(err.Error() + " line;" + line)
+			return fmt.Errorf("%w; line %s", err, line)
 		}
-		x := parseFloatPanic(elements[1], line) * convert.unit
-		y := parseFloatPanic(elements[2], line) * convert.unit
-		w := parseFloatPanic(elements[3], line) * convert.unit
+		xv, err := parseFloatCell(elements[1], line)
+		if err != nil {
+			return err
+		}
+		yv, err := parseFloatCell(elements[2], line)
+		if err != nil {
+			return err
+		}
+		wv, err := parseFloatCell(elements[3], line)
+		if err != nil {
+			return err
+		}
+		x := xv * convert.unit
+		y := yv * convert.unit
+		w := wv * convert.unit
 		finalx := x + w - tw
 		convert.pdf.SetX(finalx)
 		convert.pdf.SetY(y)
-		err = convert.pdf.Text(elements[4])
-		if err != nil {
-			panic(err.Error() + " line;" + line)
+		if err := convert.pdf.Text(elements[4]); err != nil {
+			return fmt.Errorf("%w; line %s", err, line)
 		}
 	}
+	return nil
 }
 
-func (convert *Converter) setPosition(x string, y string, line string) {
-	convert.pdf.SetX(parseFloatPanic(x, line) * convert.unit)
-	convert.pdf.SetY(parseFloatPanic(y, line) * convert.unit)
+func (convert *Converter) setPosition(x string, y string, line string) error {
+	xv, err := parseFloatCell(x, line)
+	if err != nil {
+		return err
+	}
+	yv, err := parseFloatCell(y, line)
+	if err != nil {
+		return err
+	}
+	convert.pdf.SetX(xv * convert.unit)
+	convert.pdf.SetY(yv * convert.unit)
+	return nil
 }
 
-// external link
-// ["EL", x, y, w, h, content, link] // Start writing text from (x,y) and add external links
-func (convert *Converter) ExternalLink(line string, elements []string) {
-	checkLength(line, elements, 7)
+func (convert *Converter) ExternalLink(line string, elements []string) error {
+	if err := checkLength(line, elements, 7); err != nil {
+		return err
+	}
 
-	x, y := parseFloatPanic(elements[1], line), parseFloatPanic(elements[2], line)
-	w, h := parseFloatPanic(elements[3], line), parseFloatPanic(elements[4], line)
+	xv, err := parseFloatCell(elements[1], line)
+	if err != nil {
+		return err
+	}
+	yv, err := parseFloatCell(elements[2], line)
+	if err != nil {
+		return err
+	}
+	wv, err := parseFloatCell(elements[3], line)
+	if err != nil {
+		return err
+	}
+	hv, err := parseFloatCell(elements[4], line)
+	if err != nil {
+		return err
+	}
+	x, y := xv, yv
+	w, h := wv, hv
 
 	convert.pdf.SetX(x)
 	convert.pdf.SetY(y)
 
-	err := convert.pdf.Text(elements[5])
-	if err != nil {
-		panic(err.Error() + " line;" + line)
+	if err := convert.pdf.Text(elements[5]); err != nil {
+		return fmt.Errorf("%w; line %s", err, line)
 	}
 	y1 := y
 	if y-h > 0 {
@@ -554,21 +715,37 @@ func (convert *Converter) ExternalLink(line string, elements []string) {
 
 	convert.pdf.SetX(x + w)
 	convert.pdf.SetY(y)
+	return nil
 }
 
-// Internal link, anchor
-// ["ILA", x, y, w, h, content, anchor]
-func (convert *Converter) InternalLinkAnchor(line string, elements []string) {
-	checkLength(line, elements, 7)
+func (convert *Converter) InternalLinkAnchor(line string, elements []string) error {
+	if err := checkLength(line, elements, 7); err != nil {
+		return err
+	}
 
-	x, y := parseFloatPanic(elements[1], line), parseFloatPanic(elements[2], line)
-	w, h := parseFloatPanic(elements[3], line), parseFloatPanic(elements[4], line)
+	xv, err := parseFloatCell(elements[1], line)
+	if err != nil {
+		return err
+	}
+	yv, err := parseFloatCell(elements[2], line)
+	if err != nil {
+		return err
+	}
+	wv, err := parseFloatCell(elements[3], line)
+	if err != nil {
+		return err
+	}
+	hv, err := parseFloatCell(elements[4], line)
+	if err != nil {
+		return err
+	}
+	x, y := xv, yv
+	w, h := wv, hv
 	convert.pdf.SetX(x)
 	convert.pdf.SetY(y)
 
-	err := convert.pdf.Text(elements[5])
-	if err != nil {
-		panic(err.Error() + " line;" + line)
+	if err := convert.pdf.Text(elements[5]); err != nil {
+		return fmt.Errorf("%w; line %s", err, line)
 	}
 	y1 := y
 	if y-h > 0 {
@@ -578,30 +755,50 @@ func (convert *Converter) InternalLinkAnchor(line string, elements []string) {
 
 	convert.pdf.SetX(x + w)
 	convert.pdf.SetY(y)
+	return nil
 }
 
-// Internal link, link
-// ["ILL", x, y, w  content, anchor]
-func (convert *Converter) InternalLinkLink(line string, elements []string) {
-	checkLength(line, elements, 6)
-
-	convert.pdf.SetX(parseFloatPanic(elements[1], line))
-	convert.pdf.SetY(parseFloatPanic(elements[2], line))
-
-	err := convert.pdf.Text(elements[4])
+func (convert *Converter) InternalLinkLink(line string, elements []string) error {
+	if err := checkLength(line, elements, 6); err != nil {
+		return err
+	}
+	xv, err := parseFloatCell(elements[1], line)
 	if err != nil {
-		panic(err.Error() + " line;" + line)
+		return err
+	}
+	yv, err := parseFloatCell(elements[2], line)
+	if err != nil {
+		return err
+	}
+	wv, err := parseFloatCell(elements[3], line)
+	if err != nil {
+		return err
+	}
+	convert.pdf.SetX(xv)
+	convert.pdf.SetY(yv)
+
+	if err := convert.pdf.Text(elements[4]); err != nil {
+		return fmt.Errorf("%w; line %s", err, line)
 	}
 	convert.pdf.SetAnchor(elements[5])
 
-	convert.pdf.SetX(parseFloatPanic(elements[1], line) + parseFloatPanic(elements[3], line))
-	convert.pdf.SetY(parseFloatPanic(elements[2], line))
+	convert.pdf.SetX(xv + wv)
+	convert.pdf.SetY(yv)
+	return nil
 }
 
-func (convert *Converter) Margin(line string, eles []string) {
-	checkLength(line, eles, 3)
-	top := parseFloatPanic(eles[1], line)
-	left := parseFloatPanic(eles[2], line)
+func (convert *Converter) Margin(line string, eles []string) error {
+	if err := checkLength(line, eles, 3); err != nil {
+		return err
+	}
+	top, err := parseFloatCell(eles[1], line)
+	if err != nil {
+		return err
+	}
+	left, err := parseFloatCell(eles[2], line)
+	if err != nil {
+		return err
+	}
 	if top != 0.0 {
 		convert.pdf.SetTopMargin(top)
 	}
@@ -609,6 +806,7 @@ func (convert *Converter) Margin(line string, eles []string) {
 	if left != 0.0 {
 		convert.pdf.SetLeftMargin(left)
 	}
+	return nil
 }
 
 func (convert *Converter) GetXY() (x, y float64) {
@@ -635,11 +833,8 @@ func (convert *Converter) NoCompression() {
 	convert.pdf.SetNoCompression()
 }
 
-func (convert *Converter) WritePdf(filepath string) {
-	err := convert.pdf.WritePdf(filepath)
-	if err != nil {
-		panic(err.Error())
-	}
+func (convert *Converter) WritePdf(filepath string) error {
+	return convert.pdf.WritePdf(filepath)
 }
 
 func (convert *Converter) CompressLevel(level int) {
@@ -650,7 +845,6 @@ func (convert *Converter) GetBytesPdf() (ret []byte) {
 	return convert.pdf.GetBytesPdf()
 }
 
-// CleanupTempFonts removes all temporary font files created from bytes data
 func (convert *Converter) CleanupTempFonts() {
 	for _, filePath := range convert.tempFonts {
 		err := os.Remove(filePath)
@@ -661,27 +855,28 @@ func (convert *Converter) CleanupTempFonts() {
 	convert.tempFonts = nil
 }
 
-func checkLength(line string, eles []string, no int) {
+func checkLength(line string, eles []string, no int) error {
 	if len(eles) < no {
-		panic("Column short:" + line)
+		return fmt.Errorf("column short: %s", line)
 	}
+	return nil
 }
 
-func parseIntPanic(num string, line string) int {
+func parseIntCell(num string, line string) (int, error) {
 	i, err := strconv.Atoi(num)
 	if err != nil {
-		panic(num + " not Integer :" + line)
+		return 0, fmt.Errorf("%q not integer: %s", num, line)
 	}
-	return i
+	return i, nil
 }
 
-func parseFloatPanic(num string, line string) float64 {
+func parseFloatCell(num string, line string) (float64, error) {
 	if num == "" {
-		return 0
+		return 0, nil
 	}
 	f, err := strconv.ParseFloat(num, 64)
 	if err != nil {
-		panic(num + " not Numeric :" + line)
+		return 0, fmt.Errorf("%q not numeric: %s", num, line)
 	}
-	return f
+	return f, nil
 }

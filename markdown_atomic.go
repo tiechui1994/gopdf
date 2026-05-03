@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+// Horizontal tolerance when deciding if the caret is on the same logical column as
+// page edge, list hang, or blockquote body (floating PDF coordinates).
+const mdSpaceLineXEpsilon = 1.5
+
 // MdSpace 垂直留白（段间距、代码块后空隙等），可能绘制引用延续竖条。
 type MdSpace struct {
 	ElementBase
@@ -21,56 +25,20 @@ type MdSpace struct {
 // GenerateAtomicCell 下移光标并可能绘制引用条；页底放不下时触发分页。
 func (c *MdSpace) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	c.resetLayoutExtent()
-	var (
-		spaceX, spaceY float64
-		linehieght     = c.lineHeight
-	)
-	brk := c.theme.paraBreakGap()
-	bodyLH := c.theme.bodyLineHeight()
-
 	pageStartX, _ := c.pdf.GetPageStartXY()
 	_, pageEndY := c.pdf.GetPageEndXY()
 	x, y := c.pdf.GetXY()
 
-	atBqBody := c.blockquote > 0 && c.listHangIndent == 0 && c.FlowInset > 0 &&
-		math.Abs(x-(pageStartX+c.FlowInset)) < 1.5
-	atLineStart := x == pageStartX || (c.listHangIndent > 0 && math.Abs(x-(pageStartX+c.listHangIndent)) < 1.5) || atBqBody
-
-	if c.lineHeight > 0 {
-		if atLineStart {
-			linehieght = c.lineHeight
-		} else {
-			linehieght = c.lineHeight + brk
-		}
-	} else if atLineStart {
-		linehieght = brk
-	} else if linehieght == 0 {
-		linehieght = brk + bodyLH
-	} else {
-		linehieght += brk
-	}
-
-	spaceX = pageStartX
-	if c.listHangIndent > 0 {
-		spaceX = pageStartX + c.listHangIndent
-	}
-	spaceY = y + linehieght
+	atStart := mdSpaceLineStart(x, pageStartX, &c.ElementBase)
+	deltaY := mdSpaceVerticalDelta(&c.theme, c.lineHeight, atStart)
+	spaceX := mdSpaceAnchorX(pageStartX, c.hangingIndentPt)
+	spaceY := y + deltaY
 
 	c.noteLayoutStart(spaceX, y)
 	c.noteLayoutExtent(spaceX, spaceY)
+	c.paintBlockquoteBars(spaceX, pageStartX, y, deltaY)
 
-	if c.blockquote > 0 {
-		ext := mdLineHeight*0.72 + blockquoteBarVOverlap()*0.5
-		barH := linehieght + ext
-		barX := spaceX
-		if c.blockquoteBarLeft > 0 {
-			barX = pageStartX + c.blockquoteBarLeft
-		}
-		for i := 0; i < c.blockquote; i++ {
-			c.pdf.BackgroundColor(barX+blockquoteBarOffset(i), y-ext, blockLen, barH, color_gray, "0000")
-		}
-	}
-
+	bodyLH := c.theme.bodyLineHeight()
 	if pageEndY-spaceY < bodyLH {
 		return true, true, nil
 	}
@@ -79,8 +47,68 @@ func (c *MdSpace) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	return false, true, nil
 }
 
-func (c *MdSpace) String() string {
-	return fmt.Sprint("[type=space]")
+// mdSpaceLineStart mirrors legacy MdSpace “line start”: page content edge,
+// list hang column, or blockquote body column (no list hang overlay).
+//
+// Uses a single epsilon throughout so float drift from MdText.Cell is handled
+// consistently (the old mix of strict == and fuzzy checks was brittle).
+func mdSpaceLineStart(x, pageStartX float64, e *ElementBase) bool {
+	switch {
+	case nearMdX(x, pageStartX):
+		return true
+	case e.hangingIndentPt > 0 && nearMdX(x, pageStartX+e.hangingIndentPt):
+		return true
+	case e.blockquote > 0 && e.flowColumnOffsetPt > 0 && e.hangingIndentPt == 0 &&
+		nearMdX(x, pageStartX+e.flowColumnOffsetPt):
+		return true
+	default:
+		return false
+	}
+}
+
+func nearMdX(a, b float64) bool {
+	return math.Abs(a-b) < mdSpaceLineXEpsilon
+}
+
+func mdSpaceAnchorX(pageStartX, hangingIndentPt float64) float64 {
+	if hangingIndentPt > 0 {
+		return pageStartX + hangingIndentPt
+	}
+	return pageStartX
+}
+
+// mdSpaceVerticalDelta computes how far down to advance for this gap node:
+// explicit lineHeight (e.g. after fenced code); otherwise theme BreakGap-only
+// on a fresh block line, or BreakGap + one body line mid-block.
+func mdSpaceVerticalDelta(theme *MarkdownTheme, lineHeight float64, atStart bool) float64 {
+	brk := theme.paraBreakGap()
+	bodyLH := theme.bodyLineHeight()
+	switch {
+	case lineHeight > 0:
+		if atStart {
+			return lineHeight
+		}
+		return lineHeight + brk
+	case atStart:
+		return brk
+	default:
+		return brk + bodyLH
+	}
+}
+
+func (c *MdSpace) paintBlockquoteBars(spaceX, pageStartX, y, deltaY float64) {
+	if c.blockquote <= 0 {
+		return
+	}
+	ext := mdLineHeight*0.72 + blockquoteBarVOverlap()*0.5
+	barH := deltaY + ext
+	barX := spaceX
+	if c.quoteBarsLeftOffsetPt > 0 {
+		barX = pageStartX + c.quoteBarsLeftOffsetPt
+	}
+	for i := 0; i < c.blockquote; i++ {
+		c.pdf.BackgroundColor(barX+blockquoteBarOffset(i), y-ext, blockLen, barH, color_gray, "0000")
+	}
 }
 
 // MdHardBreak 强制换行（Markdown 硬换行 / <br>）；indentX 用于嵌套列表首行对齐到标记列。
@@ -113,13 +141,13 @@ func (m *MdHardBreak) GenerateAtomicCell() (pagebreak, over bool, err error) {
 		return true, true, nil
 	}
 	if m.blockquote > 0 {
-		ext := mdLineHeight * 0.3
+		ext := mdLineHeight * 0.1
 		vO := blockquoteBarVOverlap()
 		barH := lh + 2*ext + vO
 		barTop := y - ext - vO*0.5
 		barX := pageStartX
-		if m.blockquoteBarLeft > 0 {
-			barX = pageStartX + m.blockquoteBarLeft
+		if m.quoteBarsLeftOffsetPt > 0 {
+			barX = pageStartX + m.quoteBarsLeftOffsetPt
 		}
 		for i := 0; i < m.blockquote; i++ {
 			m.pdf.BackgroundColor(barX+blockquoteBarOffset(i), barTop, blockLen, barH, color_gray, "0000")

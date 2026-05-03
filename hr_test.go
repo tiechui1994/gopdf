@@ -8,12 +8,18 @@ import (
 
 func ComplexHLineReport() {
 	r := core.CreateReport()
-	r.SetPage("A4", "P")
+	if err := r.SetPage("A4", "P"); err != nil {
+		panic(err)
+	}
 
 	r.RegisterExecutor(core.Executor(ComplexHLineReportExecutor), core.Detail)
 
-	r.Execute("hr_test.pdf")
-	r.SaveAtomicCellText("hr_test.txt")
+	if err := r.Execute("hr_test.pdf"); err != nil {
+		panic(err)
+	}
+	if err := r.SaveAtomicCellText("hr_test.txt"); err != nil {
+		panic(err)
+	}
 }
 func ComplexHLineReportExecutor(report *core.Report) {
 	// Line width in pt (≈5 mm).

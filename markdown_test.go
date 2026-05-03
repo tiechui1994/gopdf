@@ -18,22 +18,39 @@ func init() {
 
 func MarkdownReport() {
 	r := core.CreateReport()
-	r.SetPage("A4", "P")
+	if err := r.SetPage("A4", "P"); err != nil {
+		panic(err)
+	}
 
 	r.RegisterExecutor(core.Executor(MarkdownReportExecutor), core.Detail)
 
-	r.Execute("markdown_test.pdf")
-	r.SaveAtomicCellText("markdown_test.txt")
+	if err := r.Execute("markdown_test.pdf"); err != nil {
+		panic(err)
+	}
+	if err := r.SaveAtomicCellText("markdown_test.txt"); err != nil {
+		panic(err)
+	}
+}
+
+func writeMarkdownParseTreeJSON(path string, tokens []Token) error {
+	b, err := FormatParseTreeJSON(tokens, "  ")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(path, b, 0644)
 }
 
 func MarkdownReportExecutor(report *core.Report) {
 	data, _ := ioutil.ReadFile("./markdown.md")
 	var lexer = lex.NewLex()
 	tokens := lexer.Lex(string(data))
+	if err := writeMarkdownParseTreeJSON("markdown_test_ast.json", tokens); err != nil {
+		panic(err)
+	}
 	var fonts = map[string]string{
 		FONT_BOLD:   core.FontSansBold,
 		FONT_NORMAL: core.FontSans,
-		FONT_IALIC:  core.FontSans,
+		FONT_ITALIC: core.FontSans,
 		FONT_MONO:   core.FontSans,
 	}
 	md, _ := NewMarkdownText(report, 0, fonts)
@@ -44,20 +61,29 @@ func MarkdownReportExecutor(report *core.Report) {
 // MarkdownReportComplex renders markdown_complex.md to markdown_complex_test.{pdf,txt}
 func MarkdownReportComplex() {
 	r := core.CreateReport()
-	r.SetPage("A4", "P")
+	if err := r.SetPage("A4", "P"); err != nil {
+		panic(err)
+	}
 	r.RegisterExecutor(core.Executor(MarkdownReportExecutorComplex), core.Detail)
-	r.Execute("markdown_complex_test.pdf")
-	r.SaveAtomicCellText("markdown_complex_test.txt")
+	if err := r.Execute("markdown_complex_test.pdf"); err != nil {
+		panic(err)
+	}
+	if err := r.SaveAtomicCellText("markdown_complex_test.txt"); err != nil {
+		panic(err)
+	}
 }
 
 func MarkdownReportExecutorComplex(report *core.Report) {
 	data, _ := ioutil.ReadFile("./markdown_complex.md")
 	var lexer = lex.NewLex()
 	tokens := lexer.Lex(string(data))
+	if err := writeMarkdownParseTreeJSON("markdown_complex_test_ast.json", tokens); err != nil {
+		panic(err)
+	}
 	var fonts = map[string]string{
 		FONT_BOLD:   core.FontSansBold,
 		FONT_NORMAL: core.FontSans,
-		FONT_IALIC:  core.FontSans,
+		FONT_ITALIC: core.FontSans,
 		FONT_MONO:   core.FontSans,
 	}
 	md, _ := NewMarkdownText(report, 0, fonts)

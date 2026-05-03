@@ -25,9 +25,6 @@ type markdownNode interface {
 	GenerateAtomicCell() (pagebreak, over bool, err error)
 }
 
-// mardown 为 markdownNode 的历史别名，见于 CommonGenerateAtomicCell 等签名。
-type mardown = markdownNode
-
 // MdBoxModel 按结点类型的外边距与内边距（pt）；块级由 GenerateAtomicCell 首尾统一施加，
 // 行内主要在 MdText 上参与行宽与首行前位移。
 type MdBoxModel struct {
@@ -41,19 +38,19 @@ type MarkdownTheme struct {
 	LineHeight   float64 // pt，单行步进
 	BreakGap     float64 // pt，类似段间距的垂直空隙
 
-	BoxParagraph   MdBoxModel
-	BoxHeading     MdBoxModel
-	BoxList        MdBoxModel
-	BoxBlockQuote  MdBoxModel
-	BoxCodeBlock   MdBoxModel
-	BoxTable       MdBoxModel
-	BoxHR          MdBoxModel
-	BoxInlineText  MdBoxModel
-	BoxLink        MdBoxModel
-	BoxCodespan    MdBoxModel
-	BoxStrong      MdBoxModel
-	BoxEm          MdBoxModel
-	BoxDel         MdBoxModel
+	BoxParagraph  MdBoxModel
+	BoxHeading    MdBoxModel
+	BoxList       MdBoxModel
+	BoxBlockQuote MdBoxModel
+	BoxCodeBlock  MdBoxModel
+	BoxTable      MdBoxModel
+	BoxHR         MdBoxModel
+	BoxInlineText MdBoxModel
+	BoxLink       MdBoxModel
+	BoxCodespan   MdBoxModel
+	BoxStrong     MdBoxModel
+	BoxEm         MdBoxModel
+	BoxDel        MdBoxModel
 }
 
 // DefaultMarkdownTheme 与历史 markdown.go 中的 mdBase / mdLineHeight / mdBreakGap 一致；
@@ -106,7 +103,7 @@ func (t MarkdownTheme) paraBreakGap() float64 {
 	return mdBreakGap
 }
 
-// MdInsets 为 CSS 语义的四边间距（pt）；默认 0。应用在 MdText 时位于 FlowInset / 列表 hang 之后。
+// MdInsets 为 CSS 语义的四边间距（pt）；默认 0。应用在 MdText 时位于 flowColumnOffsetPt / 列表 hang 之后。
 type MdInsets struct {
 	Top, Right, Bottom, Left float64
 }
@@ -116,33 +113,30 @@ type mdPoint struct {
 	X, Y float64
 }
 
-// ElementBase 嵌入各类渲染结点：core.Report、引用层级、列表 hang、流式水平偏移 FlowInset、
-// 可选 Margin/Padding（与 FlowInset 语义分离）、主题以及 StartPt/EndPt 布局记录。
+// ElementBase 各类 Markdown 渲染结点的几何与主题基类：输出目标、流式栏位、引用/列表缩进、
+// 盒模型与一次绘制趟的包围盒记录；具体绘制逻辑由 MdText、MdParagraph 等实现。
 type ElementBase struct {
-	pdf *core.Report
+	pdf *core.Report // 目标版面：页坐标、边距、写入原子单元等，与 core.Report 同一套 pt 坐标系
 
-	lineHeight float64
-	// blockquote is nesting depth for drawing vertical bars.
-	blockquote int
-	Type       string
+	lineHeight float64 // MdSpace/MdHardBreak 等用于垂直留白或硬性断行的目标高度（pt）；MdText 正文行距由 theme.bodyLineHeight() 统一给出，标题见 MdText.headingStepPt
+	blockquote int     // 引用嵌套深度（层数），>0 时在 MdSpace/MdHardBreak/MdText 等路径绘制左侧引用竖条
 
-	listHangIndent float64
-	// If >0, blockquote vertical bars are drawn at pageStartX+this (pt).
-	blockquoteBarLeft float64
+	Type string // 结点类型，与 lexer Token.Type 或常量 TYPE_* 对齐，用于主题盒模型与分支（如 "text"、"paragraph"）
 
-	// FlowInset is horizontal inset for the body column: blockquote tiers, root fenced-code
-	// offset, nested-list body offset — not CSS Padding (see Padding).
-	FlowInset float64
+	hangingIndentPt float64 // 列表挂起正文列相对页内容区左缘的水平偏移（pt），即 marker 后对齐正文栏的 X 基准
 
-	Margin  MdInsets
-	// Padding 在 MdText 中参与排版：水平收窄行宽、首行顶部位移、分页时抬高可视页底。
-	Padding MdInsets
+	quoteBarsLeftOffsetPt float64 // 引用左侧竖条纹样左缘相对页起点的偏移（pt）；>0 时竖条固定在 pageStartX+本值，用于列表嵌套引用等与正文列对齐
 
-	theme MarkdownTheme
+	flowColumnOffsetPt float64 // 流式正文列左缘相对页内容区起点的水平偏移（pt）：引用嵌套、根级围栏代码、嵌套列表正文列等累加；与 MdInsets 的 margin/padding 不同，参见 Padding
 
-	// StartPt/EndPt：一次 GenerateAtomicCell 过程中绘制范围的近似包围（叶子结点更新）。
+	Margin  MdInsets // 外边距（pt），常由 MarkdownTheme 按结点类型合并进 ElementBase，块级结点在顶部/底部排版时统一施加
+	Padding MdInsets // 内边距（pt）；在 MdText 中参与行可用宽度、首行前顶距、分页时下沿预留，与 flowColumnOffsetPt 分工不同
+
+	theme MarkdownTheme // 文档级主题：正文字号/行距/段间距及各类结点的默认盒模型
+
+	// StartPt/EndPt：本次 GenerateAtomicCell 调用中，本结点（或叶子）绘制范围的近似轴对齐矩形（左上角 StartPt，右下角 EndPt 含义为最大触及的 X/Y）
 	StartPt, EndPt      mdPoint
-	layoutExtentStarted bool
+	extentStartRecorded bool // 本轮 GenerateAtomicCell 是否已写入包围盒起点 StartPt（noteLayoutStart / noteLayoutExtent 使用）
 }
 
 // TextHorizontalInsets 返回左右 Margin+Padding 之和，用于计算可用行宽。
@@ -162,23 +156,23 @@ func (e *ElementBase) TextVerticalBottomInset() float64 {
 
 // resetLayoutExtent 在新的 GenerateAtomicCell 调用开始时清空布局包围盒记录。
 func (e *ElementBase) resetLayoutExtent() {
-	e.layoutExtentStarted = false
+	e.extentStartRecorded = false
 	e.StartPt = mdPoint{}
 	e.EndPt = mdPoint{}
 }
 
 // noteLayoutStart 首次绘制前记录 StartPt，并与 EndPt 对齐。
 func (e *ElementBase) noteLayoutStart(x, y float64) {
-	if !e.layoutExtentStarted {
+	if !e.extentStartRecorded {
 		e.StartPt = mdPoint{X: x, Y: y}
 		e.EndPt = e.StartPt
-		e.layoutExtentStarted = true
+		e.extentStartRecorded = true
 	}
 }
 
 // noteLayoutExtent 扩展 EndPt 至更大 X/Y（假定纵向向下书写时 Y 增大）。
 func (e *ElementBase) noteLayoutExtent(x, y float64) {
-	if !e.layoutExtentStarted {
+	if !e.extentStartRecorded {
 		e.noteLayoutStart(x, y)
 		return
 	}
@@ -190,15 +184,6 @@ func (e *ElementBase) noteLayoutExtent(x, y float64) {
 	}
 }
 
-// effectiveLineHeight 优先使用结点覆盖的 lineHeight，否则用主题的 body 行距。
-func (e *ElementBase) effectiveLineHeight() float64 {
-	if e.lineHeight > 0 {
-		return e.lineHeight
-	}
-	return e.theme.bodyLineHeight()
-}
-
-// SetText 默认空操作；GenerateAtomicCell 默认视作本轮已完成且不触发分页。
 func (e *ElementBase) SetText(interface{}, ...string) {}
 
 func (e *ElementBase) GenerateAtomicCell() (pagebreak, over bool, err error) {
@@ -223,12 +208,10 @@ const (
 
 // re 缓存 MdText 宽度估算与代码块尾部换行判断用到的正则。
 var re struct {
-	notwords  *regexp.Regexp
 	breakline *regexp.Regexp
 }
 
 func init() {
-	re.notwords = regexp.MustCompile(`[\n \t=#%@&"':<>,(){}_;/\?\.\+\-\=\^\$\[\]\!]`)
 	re.breakline = regexp.MustCompile(`\n{2,}$`)
 }
 
@@ -274,9 +257,6 @@ type LayoutContext struct {
 func NewLayoutContext(r *core.Report) *LayoutContext {
 	return &LayoutContext{pdf: r}
 }
-
-// Report 返回底层报表绘制对象。
-func (lc *LayoutContext) Report() *core.Report { return lc.pdf }
 
 // NeedTextPageBreak 与 MdText 尾部一致：换新行前须满足「已换行」或「光标贴近右缘」且纵向空间不足。
 func (lc *LayoutContext) NeedTextPageBreak(y, pageEndY, lh float64, newline bool, x1, pageEndX, precision float64) bool {

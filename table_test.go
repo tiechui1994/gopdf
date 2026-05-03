@@ -16,11 +16,15 @@ var (
 
 func SimpleTable() {
 	r := core.CreateReport()
-	r.SetPage("A4", "P")
+	if err := r.SetPage("A4", "P"); err != nil {
+		panic(err)
+	}
 
 	r.RegisterExecutor(core.Executor(SimpleTableExecutor), core.Detail)
 
-	r.Execute("simple_table.pdf")
+	if err := r.Execute("simple_table.pdf"); err != nil {
+		panic(err)
+	}
 	fmt.Println(r.GetCurrentPageNo())
 }
 func SimpleTableExecutor(report *core.Report) {
@@ -72,12 +76,18 @@ func SimpleTableExecutor(report *core.Report) {
 
 func ComplexTableReport() {
 	r := core.CreateReport()
-	r.SetPage("A4", "P")
+	if err := r.SetPage("A4", "P"); err != nil {
+		panic(err)
+	}
 
 	r.RegisterExecutor(core.Executor(ComplexTableReportExecutor), core.Detail)
 
-	r.Execute("complex_table_test.pdf")
-	r.SaveAtomicCellText("complex_table_test.txt")
+	if err := r.Execute("complex_table_test.pdf"); err != nil {
+		panic(err)
+	}
+	if err := r.SaveAtomicCellText("complex_table_test.txt"); err != nil {
+		panic(err)
+	}
 }
 func ComplexTableReportExecutor(report *core.Report) {
 	lineSpace := 1.0
@@ -126,11 +136,15 @@ func ComplexTableReportExecutor(report *core.Report) {
 
 func MutilTable() {
 	r := core.CreateReport()
-	r.SetPage("A4", "P")
+	if err := r.SetPage("A4", "P"); err != nil {
+		panic(err)
+	}
 
 	r.RegisterExecutor(core.Executor(MutilTableExecutor), core.Detail)
 
-	r.Execute("mutil_table.pdf")
+	if err := r.Execute("mutil_table.pdf"); err != nil {
+		panic(err)
+	}
 }
 func MutilTableExecutor(report *core.Report) {
 	lineSpace := 1.0

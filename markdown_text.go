@@ -12,11 +12,16 @@ import (
 )
 
 // MdText 表示一段不可分割排版单元的文字（段落碎片、代码行、行内代码、链接等），内部用 remain 跨页续画。
+// 正文片段行距一律用主题 bodyLineHeight()；标题片段由 MdHeader 设置 headingStepPt 按级别指定行距。
 type MdText struct {
 	ElementBase
 	font core.Font
 
+	// headingStepPt 仅用于标题行：>0 时作为该标题片段的行距（pt）；正文片段保持为 0。
+	headingStepPt float64
+
 	stoped    bool
+	// precision：SetText 中写入的版面测量容差（pt），用于换行二分、词界比较与 NeedTextPageBreak 的右缘贴近判断；由字体探测推算，非「单字平均宽度」。
 	precision float64
 	text      string
 	remain    string
@@ -56,15 +61,6 @@ func (c *MdText) SetText(font interface{}, texts ...string) {
 		panic(fmt.Sprintf("invalid type: %v", c.Type))
 	}
 
-	if c.lineHeight == 0 {
-		switch c.Type {
-		case TYPE_CODE, TYPE_CODESPAN:
-			c.lineHeight = c.theme.bodyLineHeight()
-		case TYPE_TEXT, TYPE_LINK, TYPE_STRONG, TYPE_EM, TYPE_DEL:
-			c.lineHeight = c.theme.bodyLineHeight()
-		}
-	}
-
 	text := strings.Replace(texts[0], "\t", "    ", -1)
 	c.text = repairText(c.Type, text)
 	c.remain = c.text
@@ -74,24 +70,43 @@ func (c *MdText) SetText(font interface{}, texts ...string) {
 	c.pdf.Font(c.font.Family, c.font.Size, c.font.Style)
 	c.pdf.SetFontWithStyle(c.font.Family, c.font.Style, c.font.Size)
 
-	subs := re.notwords.FindAllString(c.text, -1)
-	if len(subs) > 0 {
-		str := re.notwords.ReplaceAllString(c.text, "")
-		length := c.pdf.MeasureTextWidth(str)
-		c.precision = length / float64(len([]rune(str)))
-	} else {
-		length := c.pdf.MeasureTextWidth(c.text)
-		c.precision = length / float64(len([]rune(c.text)))
+	c.precision = c.layoutMeasurementTolerancePt()
+}
+
+// layoutMeasurementTolerancePt 用于宽度比较（换行二分、前缀拟合）；由空格、拉丁与典型全角字形测量推导，不用「去掉标点后的平均一字宽」（对 CJK 会严重偏小）。
+func (c *MdText) layoutMeasurementTolerancePt() float64 {
+	const floorPt = 0.035
+	sw := c.pdf.MeasureTextWidth(" ")
+	mi := math.Max(c.pdf.MeasureTextWidth("m"), c.pdf.MeasureTextWidth("W"))
+	id := math.Max(c.pdf.MeasureTextWidth("国"), c.pdf.MeasureTextWidth("ひ"))
+	em := mi
+	if id > em {
+		em = id
 	}
+	rel := math.Max(sw*0.08, em*0.012)
+	out := math.Max(floorPt, rel)
+	maxTol := math.Max(sw*0.45, float64(c.font.Size)*0.06)
+	if out > maxTol {
+		out = maxTol
+	}
+	return out
+}
+
+// lineAdvancePt 行距（pt）：正文统一为主题正文行距；标题由 MdHeader 写入 headingStepPt（按级别字阶推算）。
+func (c *MdText) lineAdvancePt() float64 {
+	if c.headingStepPt > 0 {
+		return c.headingStepPt
+	}
+	return c.theme.bodyLineHeight()
 }
 
 // GenerateAtomicCell 绘制本片段剩余内容直至分页或写完。
 //
-// 坐标约定：flowX 为「流式列」左缘（含 FlowInset、列表 hang）；笔画左缘为 flowX + 水平 Margin/Padding；
+// 坐标约定：flowX 为「流式列」左缘（含 flowColumnOffsetPt、列表 hang）；笔画左缘为 flowX + 水平 Margin/Padding；
 // 行宽右缘为 pageEndX 减去右侧 inset。引用竖条对齐使用 colLeft（flowX），避免把 CSS padding 当成栏位偏移。
 func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	c.resetLayoutExtent()
-	lineheight := c.effectiveLineHeight()
+	lineheight := c.lineAdvancePt()
 	lc := NewLayoutContext(c.pdf)
 	pageStartX, _ := c.pdf.GetPageStartXY()
 	pageEndX, pageEndY := c.pdf.GetPageEndXY()
@@ -102,8 +117,8 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 
 	flowX, y := c.pdf.GetXY()
 
-	if c.listHangIndent > 0 {
-		targetX := pageStartX + c.listHangIndent
+	if c.hangingIndentPt > 0 {
+		targetX := pageStartX + c.hangingIndentPt
 		if flowX <= pageStartX+0.5 {
 			flowX = targetX
 			c.pdf.SetXY(flowX, y)
@@ -117,9 +132,9 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 		}
 	}
 
-	if c.Type == TYPE_CODE && c.listHangIndent == 0 && c.FlowInset > 0 {
+	if c.Type == TYPE_CODE && c.hangingIndentPt == 0 && c.flowColumnOffsetPt > 0 {
 		if math.Abs(flowX-pageStartX) < 1.0 {
-			flowX = pageStartX + c.FlowInset
+			flowX = pageStartX + c.flowColumnOffsetPt
 			c.pdf.SetXY(flowX, y)
 		}
 	}
@@ -170,13 +185,13 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 		barH += vO
 		barTop -= vO * 0.5
 		atPage := math.Abs(colLeft-pageStartX) < 1.0
-		atListText := c.listHangIndent > 0 && math.Abs(colLeft-(pageStartX+c.listHangIndent)) < 2.0
-		atBqCode := c.Type == TYPE_CODE && c.blockquote > 0 && c.listHangIndent == 0 && c.FlowInset > 0 &&
-			math.Abs(colLeft-(pageStartX+c.FlowInset)) < 1.5
+		atListText := c.hangingIndentPt > 0 && math.Abs(colLeft-(pageStartX+c.hangingIndentPt)) < 2.0
+		atBqCode := c.Type == TYPE_CODE && c.blockquote > 0 && c.hangingIndentPt == 0 && c.flowColumnOffsetPt > 0 &&
+			math.Abs(colLeft-(pageStartX+c.flowColumnOffsetPt)) < 1.5
 		if c.blockquote > 0 && (atPage || atListText || atBqCode) {
 			barX := colLeft
-			if c.blockquoteBarLeft > 0 {
-				barX = pageStartX + c.blockquoteBarLeft
+			if c.quoteBarsLeftOffsetPt > 0 {
+				barX = pageStartX + c.quoteBarsLeftOffsetPt
 			} else if atBqCode {
 				barX = pageStartX
 			}
@@ -201,12 +216,12 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 			}
 			bgTop := y - asc - codePad
 			bgLeft := x1
-			if c.listHangIndent > 0 {
-				bgLeft = pageStartX + c.listHangIndent
+			if c.hangingIndentPt > 0 {
+				bgLeft = pageStartX + c.hangingIndentPt
 			} else if c.blockquote > 0 {
-				bgLeft = pageStartX + c.FlowInset
-			} else if c.FlowInset > 0 {
-				bgLeft = pageStartX + c.FlowInset
+				bgLeft = pageStartX + c.flowColumnOffsetPt
+			} else if c.flowColumnOffsetPt > 0 {
+				bgLeft = pageStartX + c.flowColumnOffsetPt
 			} else if math.Abs(colLeft-pageStartX) < 0.5 {
 				bgLeft = pageStartX
 			}
@@ -241,20 +256,20 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 		c.noteLayoutExtent(x1+width, y)
 
 		if newline {
-			if c.listHangIndent > 0 {
-				flowX = pageStartX + c.listHangIndent
-			} else if c.Type == TYPE_CODE && c.FlowInset > 0 {
-				flowX = pageStartX + c.FlowInset
+			if c.hangingIndentPt > 0 {
+				flowX = pageStartX + c.hangingIndentPt
+			} else if c.Type == TYPE_CODE && c.flowColumnOffsetPt > 0 {
+				flowX = pageStartX + c.flowColumnOffsetPt
 			} else {
 				flowX, _ = c.pdf.GetPageStartXY()
 			}
-			y += c.lineHeight
+			y += lineheight
 			c.noteLayoutExtent(flowX+hPadL, y)
 		} else {
 			flowX += width
 		}
 
-		lhCheck := c.theme.bodyLineHeight()
+		lhCheck := lineheight
 		cursorX := flowX + hPadL
 		if lc.NeedTextPageBreak(y, pageEndYEff, lhCheck, newline, cursorX, pageEndXEff, c.precision) {
 			return true, c.stoped, nil
@@ -275,7 +290,7 @@ func (c *MdText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 }
 
 // GetSubText 在 [x1,x2] 可用宽度内取下一段可见文本；必要时按词或按字折断；更新 remain。
-// x1/x2 已为扣除 Margin/Padding 后的内缘坐标；needpadding 分支仍按 FlowInset 在「逻辑行首」补空格。
+// x1/x2 已为扣除 Margin/Padding 后的内缘坐标；needpadding 分支仍按 flowColumnOffsetPt 在「逻辑行首」补空格。
 func (c *MdText) GetSubText(x1, x2 float64) (text string, width float64, newline bool) {
 	if len(c.remain) == 0 {
 		c.stoped = true
@@ -284,7 +299,7 @@ func (c *MdText) GetSubText(x1, x2 float64) (text string, width float64, newline
 
 	pageX, _ := c.pdf.GetPageStartXY()
 	hL, _ := c.TextHorizontalInsets()
-	needpadding := c.FlowInset > 0 && atMarkdownLineLeft(x1-hL, pageX, c.listHangIndent)
+	needpadding := c.flowColumnOffsetPt > 0 && atMarkdownLineLeft(x1-hL, pageX, c.hangingIndentPt)
 	if c.Type == TYPE_CODE {
 		needpadding = false
 	}
@@ -303,13 +318,13 @@ func (c *MdText) GetSubText(x1, x2 float64) (text string, width float64, newline
 	length := c.pdf.MeasureTextWidth(remainText)
 
 	if needpadding {
-		width -= c.FlowInset
+		width -= c.flowColumnOffsetPt
 	}
 	defer func() {
 		if needpadding {
 			space := c.pdf.MeasureTextWidth(" ")
-			text = strings.Repeat(" ", int(c.FlowInset/space)) + text
-			width += c.FlowInset
+			text = strings.Repeat(" ", int(c.flowColumnOffsetPt/space)) + text
+			width += c.flowColumnOffsetPt
 		}
 	}()
 
@@ -335,46 +350,24 @@ func (c *MdText) GetSubText(x1, x2 float64) (text string, width float64, newline
 		return line, wline, true
 	}
 
-	step := int(float64(len(runes)) * width / length)
-	for i, j := 0, step; i < len(runes) && j < len(runes); {
-		w := c.pdf.MeasureTextWidth(string(runes[i:j]))
-
-		if math.Abs(w-width) < c.precision {
-			if w-width > 0 {
-				line, wline, cut := c.applyWordAwareSlice(runes, 0, j-1, width)
-				c.remain = string(runes[cut:]) + suffix
-				c.newlines++
-				return line, wline, true
-			}
-
-			if j+1 < len(runes) {
-				w1 := c.pdf.MeasureTextWidth(string(runes[i : j+1]))
-				if math.Abs(w1-width) < c.precision {
-					j = j + 1
-					continue
-				}
-			}
-
-			line, wline, cut := c.applyWordAwareSlice(runes, 0, j, width)
-			c.remain = string(runes[cut:]) + suffix
-			c.newlines++
-			return line, wline, true
-		}
-
-		if w-width > 0 && w-width > c.precision {
-			j--
-		}
-		if width-w > 0 && width-w > c.precision {
-			j++
-		}
+	maxFit := c.fitPrefixRuneCount(runes, width, c.precision)
+	if maxFit < 1 {
+		maxFit = 1
 	}
-
-	return "", 0, false
-}
-
-func (c *MdText) String() string {
-	text := strings.Replace(c.remain, "\n", "|", -1)
-	return fmt.Sprintf("[type=%v,text=%v]", c.Type, text)
+	line, wline, cut := c.applyWordAwareSlice(runes, 0, maxFit, width)
+	if line == "" && len(runes) > 0 {
+		line = string(runes[:1])
+		wline = c.pdf.MeasureTextWidth(line)
+		cut = 1
+	}
+	if cut <= 0 && len(runes) > 0 {
+		line = string(runes[:1])
+		wline = c.pdf.MeasureTextWidth(line)
+		cut = 1
+	}
+	c.remain = string(runes[cut:]) + suffix
+	c.newlines++
+	return line, wline, true
 }
 
 // codeFittedRuneIndex 对 TYPE_CODE：按测量宽度二分，取最长前缀 rune 数（不按词断开）。
@@ -382,9 +375,13 @@ func (c *MdText) codeFittedRuneIndex(runes []rune, avail float64) int {
 	if len(runes) == 0 {
 		return 0
 	}
-	eps := c.precision
-	if eps < 0.02 {
-		eps = 0.02
+	return c.fitPrefixRuneCount(runes, avail, c.precision)
+}
+
+// fitPrefixRuneCount 返回最大 n，使 MeasureTextWidth(runes[:n]) <= avail+eps；整段可放入时返回 len(runes)。
+func (c *MdText) fitPrefixRuneCount(runes []rune, avail, eps float64) int {
+	if len(runes) == 0 {
+		return 0
 	}
 	if c.pdf.MeasureTextWidth(string(runes)) <= avail+eps {
 		return len(runes)
@@ -392,14 +389,13 @@ func (c *MdText) codeFittedRuneIndex(runes []rune, avail float64) int {
 	if c.pdf.MeasureTextWidth(string(runes[0:1])) > avail+eps {
 		return 1
 	}
-	lo, hi := 0, len(runes)
-	for lo+1 < hi {
+	lo, hi := 1, len(runes)
+	for lo < hi {
 		mid := (lo + hi + 1) / 2
-		wm := c.pdf.MeasureTextWidth(string(runes[0:mid]))
-		if wm <= avail+eps {
+		if c.pdf.MeasureTextWidth(string(runes[:mid])) <= avail+eps {
 			lo = mid
 		} else {
-			hi = mid
+			hi = mid - 1
 		}
 	}
 	if lo < 1 {

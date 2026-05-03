@@ -63,6 +63,10 @@ type Table struct {
 	tableCheck bool      // table 完整性检查
 	cachedRow  []float64 // 缓存行
 	cachedCol  []float64 // 缓存列
+
+	// Markdown 等在页内容区内缩进排版时：首趟记录光标相对页左的距离，跨页时用 pageStartX+dx 对齐，避免与 MdText 列表/引用列错位。
+	tableContentLeftDx float64 // sx - pageStartX，首次 GenerateAtomicCell 锁定
+	anchorLeftSet      bool
 }
 
 type TableCell struct {
@@ -307,15 +311,41 @@ func (table *Table) SetMargin(margin core.Scope) {
 /********************************************************************************************************************/
 
 func (table *Table) GenerateAtomicCell() error {
+	pageStartX, _ := table.pdf.GetPageStartXY()
+	sx, sy := table.pdf.GetXY()
 	var (
-		sx, sy        = table.pdf.GetXY() // 基准坐标
-		_, pageEndY   = table.pdf.GetPageEndXY()
-		x1, y1, _, y2 float64 // 当前位置
+		_, pageEndY = table.pdf.GetPageEndXY()
+		y1, y2      float64 // 当前位置
 	)
+	if !table.anchorLeftSet {
+		table.tableContentLeftDx = sx - pageStartX
+		table.anchorLeftSet = true
+	} else {
+		curY := sy
+		sx = pageStartX + table.tableContentLeftDx
+		sy = curY
+		table.pdf.SetXY(sx, sy)
+	}
 
 	// 重新计算行高, 并且缓存每个位置的开始坐标
 	table.resetCellHeight()
 	table.cachedPoints(sx, sy)
+
+	// 当前页剩余高度不足以容纳首行时，直接换页从新页开始写，避免页底渲染出“空框线”。
+	// 但如果首行本身就大于整页内容区高度，则允许继续走现有的“跨页写入”逻辑，避免死循环。
+	if table.rows > 0 {
+		_, pageStartY := table.pdf.GetPageStartXY()
+		_, contentH := table.pdf.GetContentWidthAndHeight()
+		firstTop := table.cachedRow[0]
+		firstH := table.cells[0][0].minheight
+		if firstH > 0 && firstH <= contentH && firstTop+firstH > pageEndY && firstTop >= pageStartY {
+			table.pdf.AddNewPage(false)
+			table.margin.Top = 0
+			psx, psy := table.pdf.GetPageStartXY()
+			table.pdf.SetXY(psx+table.tableContentLeftDx, psy)
+			return table.GenerateAtomicCell()
+		}
+	}
 
 	for i := 0; i < table.rows; i++ {
 		for j := 0; j < table.cols; j++ {
@@ -331,7 +361,8 @@ func (table *Table) GenerateAtomicCell() error {
 				if cell.row == 0 && cell.col == 0 && !table.checkFirstRowCanWrite(sx, sy) {
 					table.pdf.AddNewPage(false)
 					table.margin.Top = 0
-					table.pdf.SetXY(table.pdf.GetPageStartXY())
+					psx, psy := table.pdf.GetPageStartXY()
+					table.pdf.SetXY(psx+table.tableContentLeftDx, psy)
 					return table.GenerateAtomicCell()
 				}
 				// 写完剩余的内容
@@ -347,7 +378,8 @@ func (table *Table) GenerateAtomicCell() error {
 				table.pdf.AddNewPage(false)
 				table.margin.Top = 0
 				table.rows = len(table.cells)
-				table.pdf.SetXY(table.pdf.GetPageStartXY())
+				psx, psy := table.pdf.GetPageStartXY()
+				table.pdf.SetXY(psx+table.tableContentLeftDx, psy)
 
 				table.pdf.LineType("straight", 0.1)
 
@@ -362,7 +394,7 @@ func (table *Table) GenerateAtomicCell() error {
 				continue
 			}
 
-			x1, y1, _, y2 = table.getVLinePosition(sx, sy, j, i) // 真实的垂直线
+			_, y1, _, y2 = table.getVLinePosition(sx, sy, j, i) // 真实的垂直线
 
 			// 当前cell高度跨页
 			if y1 < pageEndY && y2 > pageEndY {
@@ -382,10 +414,10 @@ func (table *Table) GenerateAtomicCell() error {
 	// 表底用 cachedRow+minheight，避免个别路径下 cell.height 与行盒不一致导致后续块重叠
 	last := table.rows - 1
 	bottomY := table.cachedRow[last] + table.cells[last][0].minheight
-	x1, _ = table.pdf.GetPageStartXY()
+	pageStartX, _ = table.pdf.GetPageStartXY()
 	// 段后留白：表格与后续正文之间再松一档，避免贴底
 	post := mdLineHeight*1.72 + mdBreakGap
-	table.pdf.SetXY(x1, bottomY+table.margin.Bottom+post)
+	table.pdf.SetXY(pageStartX+table.tableContentLeftDx, bottomY+table.margin.Bottom+post)
 
 	return nil
 }
@@ -405,6 +437,9 @@ func (table *Table) checkFirstRowCanWrite(sx, sy float64) (ok bool) {
 		}
 
 		if cell.rowspan >= 1 {
+			if cell.element == nil {
+				continue
+			}
 			wn, _ := cell.element.TryGenerateAtomicCell(pageEndY - y)
 			if wn > 0 {
 				ok = true
@@ -529,13 +564,22 @@ func (table *Table) checkNextCellCanWrite(sx, sy float64, row, col int) bool {
 
 	// 当前cell的下一行
 	nextrow := cells[row][col].row + cells[row][col].rowspan - cells[0][0].row
+	if nextrow < 0 || nextrow >= len(cells) {
+		return false
+	}
 	for k := col; k < table.cols; k++ {
-		cell := cells[nextrow][col]
-		_, y, _, _ := table.getHLinePosition(sx, sy, col, nextrow)
+		cell := cells[nextrow][k]
+		_, y, _, _ := table.getHLinePosition(sx, sy, k, nextrow)
 
 		// 空格Cell -> 寻找非空格Cell
 		if cell.rowspan <= 0 {
 			i, j := -cell.rowspan-cells[0][0].row, -cell.colspan-cells[0][0].col
+			if i < 0 || i >= len(cells) || j < 0 || j >= len(cells[i]) {
+				continue
+			}
+			if cells[i][j].element == nil {
+				continue
+			}
 			wn, _ := cells[i][j].element.TryGenerateAtomicCell(pageEndY - y)
 			if wn > 0 {
 				canwrite = true
@@ -545,6 +589,9 @@ func (table *Table) checkNextCellCanWrite(sx, sy float64, row, col int) bool {
 
 		// 非空格Cell
 		if cell.rowspan >= 1 {
+			if cell.element == nil {
+				continue
+			}
 			wn, _ := cell.element.TryGenerateAtomicCell(pageEndY - y)
 			if wn > 0 {
 				canwrite = true
@@ -563,13 +610,6 @@ func (table *Table) drawPageLines(sx, sy float64) {
 		_, pageEndY         = table.pdf.GetPageEndXY()
 		x, y, x1, y1, _, y2 float64
 	)
-
-	// 计算当前页面最大的rows
-	_, y1 = table.pdf.GetPageStartXY()
-	_, y2 = table.pdf.GetPageEndXY()
-	if rows > int((y2-y1)/table.lineHeight)+1 {
-		rows = int((y2-y1)/table.lineHeight) + 1
-	}
 
 	table.pdf.LineType("straight", 0.1)
 
@@ -680,16 +720,25 @@ func (table *Table) checkNextCellWrited(row, col int) bool {
 
 	// row,col所定位的cell必须是非空白cell, 需要定位到下一个非空白cell
 	nextrow := (cells[row][col].row - cells[0][0].row) + cells[row][col].rowspan
+	if nextrow < 0 || nextrow >= len(cells) {
+		return false
+	}
 
 	// 如果nexrow行, 从col开始, 一直到col+colspan, 有内容写入, 则说明下一个单元格有内容写入,
 	// 否则, 没有内容写入
 	for k := col; k < col+cells[row][col].colspan; k++ {
-		cell := cells[nextrow][col]
+		if k < 0 || k >= table.cols {
+			continue
+		}
+		cell := cells[nextrow][k]
 
 		// 空白cell
 		if cell.rowspan <= 0 {
 			// rowspan = 1 和 rowsapn != 1 需要区别对待, 原因是rowsapn=1, 即使写入了, cellwrited还是可能为0
 			i, j := -cell.rowspan-cells[0][0].row, -cell.colspan-cells[0][0].col
+			if i < 0 || i >= len(cells) || j < 0 || j >= len(cells[i]) || cells[i][j].element == nil {
+				continue
+			}
 			if cells[i][j].rowspan == 1 {
 				height := cells[i][j].element.GetHeight()
 				lastheight := cells[i][j].element.GetLastHeight()
@@ -707,6 +756,9 @@ func (table *Table) checkNextCellWrited(row, col int) bool {
 
 		// 非空白cell
 		if cell.rowspan >= 1 {
+			if cell.element == nil {
+				continue
+			}
 			height := cell.element.GetHeight()
 			lastheight := cell.element.GetLastHeight()
 			if math.Abs(lastheight-height) > 0.1 {
@@ -765,13 +817,7 @@ func (table *Table) checkNeedVline(row, col int) bool {
 func (table *Table) resetCellHeight() {
 	table.checkTableConstraint()
 
-	// 计算当前页面最大的rows
-	_, y1 := table.pdf.GetPageStartXY()
-	_, y2 := table.pdf.GetPageEndXY()
 	rows := table.rows
-	if rows > int((y2-y1)/table.lineHeight)+1 {
-		rows = int((y2-y1)/table.lineHeight) + 1
-	}
 	cells := table.cells
 
 	// 对于cells的元素重新赋值height和minheight
@@ -859,12 +905,7 @@ func (table *Table) getMaxWriteLineNo() int {
 		writenum int
 	)
 
-	_, y1 := table.pdf.GetPageStartXY()
-	_, y2 := table.pdf.GetPageEndXY()
 	rows := table.rows
-	if rows > int((y2-y1)/table.lineHeight)+1 {
-		rows = int((y2-y1)/table.lineHeight) + 1
-	}
 
 	// todo: 计算当前的已经当前行全部写入的最大的行数.
 	for i := 0; i < rows; i++ {
@@ -904,9 +945,12 @@ func (table *Table) resetTableCells() {
 	)
 
 	writenum := table.getMaxWriteLineNo()
-	// TODO: fix writenum is out of table.cells
+	// 防御：writenum 可能因为跨页/合并单元格路径异常而越界
+	if writenum <= 0 {
+		return
+	}
 	if writenum >= len(table.cells) {
-		table.cells = table.cells[writenum:]
+		table.cells = nil
 		return
 	}
 
@@ -952,26 +996,17 @@ func (table *Table) resetTableCells() {
 }
 
 func (table *Table) cachedPoints(sx, sy float64) {
-	// 只计算当前页面最大的rows
-	_, y1 := table.pdf.GetPageStartXY()
-	_, y2 := table.pdf.GetPageEndXY()
 	rows := table.rows
-	if rows > int((y2-y1)/table.lineHeight)+1 {
-		rows = int((y2-y1)/table.lineHeight) + 1
-	}
 
 	var (
 		x, y = sx+table.margin.Left, sy+table.margin.Top
 	)
 
-	// 只会缓存一次
-	if table.cachedCol == nil {
-		table.cachedCol = make([]float64, table.cols)
-
-		for col := 0; col < table.cols; col++ {
-			table.cachedCol[col] = x
-			x += table.colwidths[col] * table.width
-		}
+	// 每次重新计算列起点，避免跨页/嵌套排版时复用旧的绝对坐标导致错位
+	table.cachedCol = make([]float64, table.cols)
+	for col := 0; col < table.cols; col++ {
+		table.cachedCol[col] = x
+		x += table.colwidths[col] * table.width
 	}
 	table.cachedRow = make([]float64, rows)
 

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -42,8 +43,8 @@ type Executor func(report *Report)
 type CallBack func(report *Report)
 
 type Report struct {
-	FisrtPageNeedHeader bool // Wheather the first page need to execute the header
-	FisrtPageNeedFooter bool // Wheather the first page need to execute the header
+	FirstPageNeedHeader bool // When false, skip drawing the header on the first execution pass.
+	FirstPageNeedFooter bool // When false, skip drawing the footer on the first execution pass.
 	Vars                map[string]string
 
 	converter    *Converter           // converter engine (connect with third-party libraries)
@@ -100,36 +101,41 @@ func (report *Report) CompressLevel(level int) {
 	report.converter.CompressLevel(level)
 }
 
-// Execute, execute Executors and generate PDF file
-func (report *Report) Execute(filepath string) {
+// Execute runs Header/Detail/Footer executors then writes the PDF to filepath.
+func (report *Report) Execute(filepath string) error {
 	if report.config == nil {
-		panic("please set page config")
+		return fmt.Errorf("please set page config")
 	}
 
-	report.execute(true)
-	report.converter.WritePdf(filepath)
+	if err := report.execute(true); err != nil {
+		return err
+	}
+	if err := report.converter.WritePdf(filepath); err != nil {
+		return err
+	}
 
-	// Clean up temporary font files
 	report.converter.CleanupTempFonts()
 
 	for i := range report.callbacks {
 		report.callbacks[i](report)
 	}
+	return nil
 }
 
-// GetBytesPdf, get PDF file content
-func (report *Report) GetBytesPdf() (ret []byte) {
+// GetBytesPdf returns rendered PDF bytes (same pipeline as Execute, without WritePdf).
+func (report *Report) GetBytesPdf() ([]byte, error) {
 	if report.config == nil {
-		panic("please set page config")
+		return nil, fmt.Errorf("please set page config")
 	}
 
-	report.execute(true)
-	ret = report.converter.GetBytesPdf()
+	if err := report.execute(true); err != nil {
+		return nil, err
+	}
+	ret := report.converter.GetBytesPdf()
 
-	// Clean up temporary font files
 	report.converter.CleanupTempFonts()
 
-	return
+	return ret, nil
 }
 
 // LoadCellsFromText, generate PDF file from cells file
@@ -137,27 +143,26 @@ func (report *Report) LoadCellsFromText(filepath string) error {
 	return report.converter.ReadFile(filepath)
 }
 
-func (report *Report) execute(exec bool) {
+func (report *Report) execute(exec bool) error {
 	if exec {
-		// execute the first page header
 		report.executePageHeader()
 
 		report.pageNo = 1
 		report.currX, report.currY = report.GetPageStartXY()
 		report.addAtomicCell("v|PAGE|" + strconv.Itoa(report.pageNo))
 		report.executeDetail()
-		// execute the last page footer
 		report.executePageFooter()
 
-		// pagination
-		report.pagination()
+		if err := report.pagination(); err != nil {
+			return err
+		}
 	}
 
-	report.converter.Execute()
+	return report.converter.Execute()
 }
 func (report *Report) executePageFooter() {
-	if !report.FisrtPageNeedFooter {
-		report.FisrtPageNeedFooter = true
+	if !report.FirstPageNeedFooter {
+		report.FirstPageNeedFooter = true
 		return
 	}
 
@@ -172,8 +177,8 @@ func (report *Report) executePageFooter() {
 	report.SetXY(curX, curY)
 }
 func (report *Report) executePageHeader() {
-	if !report.FisrtPageNeedHeader {
-		report.FisrtPageNeedHeader = true
+	if !report.FirstPageNeedHeader {
+		report.FirstPageNeedHeader = true
 		return
 	}
 
@@ -200,8 +205,8 @@ func (report *Report) executeDetail() {
 }
 
 // 分页, 只有一个页面的PDF没有此操作
-func (report *Report) pagination() {
-	lines := report.converter.GetAutomicCells()
+func (report *Report) pagination() error {
+	lines := report.converter.GetAtomicCells()
 	list := new(List)
 
 	// 第一次遍历单元格, 确定需要创建的PDF页
@@ -212,7 +217,11 @@ func (report *Report) pagination() {
 		if line[0:7] == "v|PAGE|" {
 			h := new(pageMark)
 			h.lineNo = i
-			h.pageNo = parseIntPanic(line[7:], line)
+			pn, err := strconv.Atoi(line[7:])
+			if err != nil {
+				return fmt.Errorf("parse page marker %q: %w", line, err)
+			}
+			h.pageNo = pn
 			list.Add(h)
 			//fmt.Printf("hist %v \n", h)
 		}
@@ -232,7 +241,8 @@ func (report *Report) pagination() {
 		cells = append(cells, line)
 	}
 
-	report.converter.SetAutomicCells(cells)
+	report.converter.SetAtomicCells(cells)
+	return nil
 }
 
 // 获取 lineNo 对应的 pageNo
@@ -327,11 +337,11 @@ func (report *Report) SetMargin(dx, dy float64) {
 }
 
 // SetPage configures page size. All coordinates and dimensions use PDF points (pt) only.
-func (report *Report) SetPage(size string, orientation string) {
+func (report *Report) SetPage(size string, orientation string) error {
 	unit := "pt"
 	config, ok := defaultConfigs[size]
 	if !ok {
-		panic("the config not exists, please add config")
+		return fmt.Errorf("page size not configured: %q", size)
 	}
 
 	switch size {
@@ -370,20 +380,20 @@ func (report *Report) SetPage(size string, orientation string) {
 	report.pageEndY = config.endY
 	report.config = config
 
-	report.execute(false)
+	return report.execute(false)
 }
 
 // 获取底层的所有的原子单元内容
 func (report *Report) GetAtomicCells() *[]string {
-	cells := report.converter.GetAutomicCells()
+	cells := report.converter.GetAtomicCells()
 	return &cells
 }
 
-// 保存原子操作单元
-func (report *Report) SaveAtomicCellText(filepath string) {
-	cells := report.converter.GetAutomicCells()
+// SaveAtomicCellText writes the current atomic instruction stream to a text file.
+func (report *Report) SaveAtomicCellText(filepath string) error {
+	cells := report.converter.GetAtomicCells()
 	text := strings.Join(cells, "\n")
-	ioutil.WriteFile(filepath, []byte(text), os.ModePerm)
+	return ioutil.WriteFile(filepath, []byte(text), os.ModePerm)
 }
 
 // 计算文本宽度, 必须先调用 SetFontWithStyle() 或者 SetFont()

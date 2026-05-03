@@ -23,16 +23,22 @@ var (
 
 func ComplexReport() {
 	r := core.CreateReport()
-	r.SetPage("A4", "P")
-	r.FisrtPageNeedHeader = true
-	r.FisrtPageNeedFooter = true
+	if err := r.SetPage("A4", "P"); err != nil {
+		panic(err)
+	}
+	r.FirstPageNeedHeader = true
+	r.FirstPageNeedFooter = true
 
 	r.RegisterExecutor(core.Executor(ComplexReportExecutor), core.Detail)
 	r.RegisterExecutor(core.Executor(ComplexReportFooterExecutor), core.Footer)
 	r.RegisterExecutor(core.Executor(ComplexReportHeaderExecutor), core.Header)
 
-	r.Execute(fmt.Sprintf("complex_report_test.pdf"))
-	r.SaveAtomicCellText("complex_report_test.txt")
+	if err := r.Execute(fmt.Sprintf("complex_report_test.pdf")); err != nil {
+		panic(err)
+	}
+	if err := r.SaveAtomicCellText("complex_report_test.txt"); err != nil {
+		panic(err)
+	}
 }
 
 func ComplexReportExecutor(report *core.Report) {

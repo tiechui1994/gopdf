@@ -9,12 +9,18 @@ import (
 
 func DivReport() {
 	r := core.CreateReport()
-	r.SetPage("A4", "P")
+	if err := r.SetPage("A4", "P"); err != nil {
+		panic(err)
+	}
 
 	r.RegisterExecutor(core.Executor(DivReportExecutor), core.Detail)
 
-	r.Execute("div_test.pdf")
-	r.SaveAtomicCellText("div_test.txt")
+	if err := r.Execute("div_test.pdf"); err != nil {
+		panic(err)
+	}
+	if err := r.SaveAtomicCellText("div_test.txt"); err != nil {
+		panic(err)
+	}
 }
 func DivReportExecutor(report *core.Report) {
 	font := core.Font{Family: core.FontSansBold, Size: 10}
@@ -84,12 +90,18 @@ For information about how the optimizer handles subqueries, see Section 8.2.2, â
 
 func ComplexDivReport() {
 	r := core.CreateReport()
-	r.SetPage("A4", "P")
+	if err := r.SetPage("A4", "P"); err != nil {
+		panic(err)
+	}
 
 	r.RegisterExecutor(core.Executor(ComplexDivReportExecutor), core.Detail)
 
-	r.Execute("complex_div_test.pdf")
-	r.SaveAtomicCellText("complex_div_test.txt")
+	if err := r.Execute("complex_div_test.pdf"); err != nil {
+		panic(err)
+	}
+	if err := r.SaveAtomicCellText("complex_div_test.txt"); err != nil {
+		panic(err)
+	}
 }
 func ComplexDivReportExecutor(report *core.Report) {
 	font := core.Font{Family: core.FontSansBold, Size: 10}

@@ -16,11 +16,15 @@ var (
 
 func MutilTable() {
 	r := core.CreateReport()
-	r.SetPage("A4", "P")
+	if err := r.SetPage("A4", "P"); err != nil {
+		panic(err)
+	}
 
 	r.RegisterExecutor(core.Executor(MutilTableExecutor), core.Detail)
 
-	r.Execute("mutil_table.pdf")
+	if err := r.Execute("mutil_table.pdf"); err != nil {
+		panic(err)
+	}
 }
 func MutilTableExecutor(report *core.Report) {
 	lineSpace := 1.0

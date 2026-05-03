@@ -41,7 +41,7 @@ func NewConfig(width, height float64, padingH, padingV float64) (*Config, error)
 }
 
 func (config *Config) GetWidthAndHeight() (width, height float64) {
-	return config.width, config.width
+	return config.width, config.height
 }
 
 // Get pdf page start position, from the position you can write the pdf body content.

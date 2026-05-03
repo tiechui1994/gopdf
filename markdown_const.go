@@ -6,16 +6,17 @@ package gopdf
 import (
 	"math"
 	"strings"
-
-	"github.com/tiechui1994/gopdf/lex"
 )
 
 // 字体映射字典（NewMarkdownText 的 fonts 参数）使用的键名。
 const (
 	FONT_NORMAL = "normal"
 	FONT_BOLD   = "bold"
-	FONT_IALIC  = "italic"
+	FONT_ITALIC = "italic"
 	FONT_MONO   = "mono"
+
+	// Deprecated: typo; use FONT_ITALIC.
+	FONT_IALIC = FONT_ITALIC
 )
 
 // lex.Token.Type 取值，与 lexer 输出一致（渲染侧据此分支）。
@@ -37,7 +38,7 @@ const (
 	TYPE_BLOCKQUOTE = "blockquote"
 	TYPE_TABLE      = "table"
 	TYPE_HR         = "hr"
-	
+
 	TYPE_BR = "br"
 )
 
@@ -64,12 +65,12 @@ func blockquoteIndentWidth() float64 { return float64(markdownBlockquoteIndentSt
 // blockquoteBarOffset 绘制第 level 条竖向引用线时的左偏移。
 func blockquoteBarOffset(level int) float64 { return float64(level) * blockquoteIndentWidth() }
 
-// atMarkdownLineLeft 判断当前 x 是否处于「正文行首」：页左边距或列表 hang 列对齐位置。
-func atMarkdownLineLeft(x1, pageStartX, listHangIndent float64) bool {
+// atMarkdownLineLeft 判断当前 x 是否处于「正文行首」：页左边距或列表挂起列对齐位置。
+func atMarkdownLineLeft(x1, pageStartX, hangingIndentPt float64) bool {
 	if math.Abs(x1-pageStartX) < 0.5 {
 		return true
 	}
-	if listHangIndent > 0 && math.Abs(x1-(pageStartX+listHangIndent)) < 0.5 {
+	if hangingIndentPt > 0 && math.Abs(x1-(pageStartX+hangingIndentPt)) < 0.5 {
 		return true
 	}
 	return false
@@ -96,13 +97,6 @@ func mdScale(frac float64) float64 { return mdLineHeight * frac }
 
 // codeBlockPad 代码灰底内侧与等宽字形之间的水平 padding（非 ElementBase.Padding）。
 func codeBlockPad() float64 { return mdLineHeight * (4.0 / 18.0) }
-
-func listNestBreakBefore() float64 { return mdLineHeight * 0.30 }
-
-func listCodeBreakBefore() float64 { return mdLineHeight * 0.42 }
-
-// codeBlockAfterGap 代码块绘制结束后追加的垂直空隙，避免多块紧贴。
-func codeBlockAfterGap() float64 { return mdLineHeight * 0.5 }
 
 // blockquoteBarVOverlap 竖条略加长，避免 MdText/MdSpace 衔接处露缝。
 func blockquoteBarVOverlap() float64 { return mdLineHeight * 0.1 }

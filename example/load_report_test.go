@@ -10,13 +10,17 @@ import (
 
 func LoadReport() {
 	r := core.CreateReport()
-	r.SetPage("A4", "P")
+	if err := r.SetPage("A4", "P"); err != nil {
+		panic(err)
+	}
 
 	dir, _ := filepath.Abs("pictures")
 	txtpath := fmt.Sprintf("%v/load.txt", dir)
 
 	r.LoadCellsFromText(txtpath)
-	r.Execute("load_report_test.pdf")
+	if err := r.Execute("load_report_test.pdf"); err != nil {
+		panic(err)
+	}
 }
 
 func TestLoadReport(t *testing.T) {

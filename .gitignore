@@ -1,5 +1,7 @@
 *.pdf
 *.txt
+*.json
+*.png
 .idea/
 
 

@@ -8,14 +8,20 @@ import (
 
 func SimpleLink() {
 	r := core.CreateReport()
-	r.SetPage("A4", "P")
-	r.FisrtPageNeedHeader = true
-	r.FisrtPageNeedFooter = true
+	if err := r.SetPage("A4", "P"); err != nil {
+		panic(err)
+	}
+	r.FirstPageNeedHeader = true
+	r.FirstPageNeedFooter = true
 
 	r.RegisterExecutor(core.Executor(SimpleLinkExecutor), core.Detail)
 
-	r.Execute(fmt.Sprintf("simple_link_test.pdf"))
-	r.SaveAtomicCellText("simple_link_test.txt")
+	if err := r.Execute(fmt.Sprintf("simple_link_test.pdf")); err != nil {
+		panic(err)
+	}
+	if err := r.SaveAtomicCellText("simple_link_test.txt"); err != nil {
+		panic(err)
+	}
 }
 
 func SimpleLinkExecutor(report *core.Report) {

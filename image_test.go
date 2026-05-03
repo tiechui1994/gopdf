@@ -9,12 +9,18 @@ import (
 
 func ComplexImageReport() {
 	r := core.CreateReport()
-	r.SetPage("A4", "P")
+	if err := r.SetPage("A4", "P"); err != nil {
+		panic(err)
+	}
 
 	r.RegisterExecutor(core.Executor(ImageReportExecutor), core.Detail)
 
-	r.Execute("image_test.pdf")
-	r.SaveAtomicCellText("image_test.txt")
+	if err := r.Execute("image_test.pdf"); err != nil {
+		panic(err)
+	}
+	if err := r.SaveAtomicCellText("image_test.txt"); err != nil {
+		panic(err)
+	}
 }
 func ImageReportExecutor(report *core.Report) {
 	report.Font(core.FontSansBold, 10, "")

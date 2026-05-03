@@ -14,12 +14,12 @@ type MarkdownText struct {
 	pdf         *core.Report
 	fonts       map[string]string
 	theme       MarkdownTheme
-	children    []mardown
+	children    []markdownNode
 	x           float64
 	writedLines int
 }
 
-// NewMarkdownText 创建渲染器：fonts 须包含 FONT_NORMAL / FONT_BOLD / FONT_IALIC；默认主题为 DefaultMarkdownTheme。
+// NewMarkdownText 创建渲染器：fonts 须包含 FONT_NORMAL / FONT_BOLD / FONT_ITALIC；默认主题为 DefaultMarkdownTheme。
 // x 为允许的左侧起始坐标下界（小于页左边距时会被抬升到页起点）。
 func NewMarkdownText(pdf *core.Report, x float64, fonts map[string]string) (*MarkdownText, error) {
 	px, _ := pdf.GetPageStartXY()
@@ -27,7 +27,7 @@ func NewMarkdownText(pdf *core.Report, x float64, fonts map[string]string) (*Mar
 		x = px
 	}
 
-	if fonts == nil || fonts[FONT_BOLD] == "" || fonts[FONT_IALIC] == "" || fonts[FONT_NORMAL] == "" {
+	if fonts == nil || fonts[FONT_BOLD] == "" || fonts[FONT_ITALIC] == "" || fonts[FONT_NORMAL] == "" {
 		return nil, fmt.Errorf("invalid fonts")
 	}
 
@@ -73,7 +73,7 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 			mt.children = append(mt.children, paragraph)
 		case TYPE_LIST:
 			la := abs
-			la.listHangIndent = 0
+			la.hangingIndentPt = 0
 			list := &MdList{ElementBase: la, fonts: mt.fonts, nestLevel: 0, blockBox: mt.theme.BoxList}
 			list.SetToken(token)
 			mt.children = append(mt.children, list)
@@ -83,7 +83,7 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 			mt.children = append(mt.children, header)
 		case TYPE_BLOCKQUOTE:
 			abs.blockquote = 1
-			abs.FlowInset += blockquoteIndentWidth()
+			abs.flowColumnOffsetPt += blockquoteIndentWidth()
 			blockquote := &MdBlockQuote{ElementBase: abs, fonts: mt.fonts, blockBox: mt.theme.BoxBlockQuote}
 			blockquote.SetToken(token)
 			mt.children = append(mt.children, blockquote)
@@ -101,14 +101,14 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 			mt.children = append(mt.children, link)
 		case TYPE_CODE:
 			abs.Type = TYPE_CODE
-			abs.FlowInset = mdScale(15.0 / 18.0)
+			abs.flowColumnOffsetPt = mdScale(15.0 / 18.0)
 			mergeBlockHorizontalInsets(mt.theme.BoxCodeBlock, &abs)
 			fc := &MdFencedCode{ElementBase: abs, blockBox: mt.theme.BoxCodeBlock}
 			code := &MdText{ElementBase: fc.getabstract(TYPE_CODE)}
 			code.SetText(monoFamilyFrom(mt.fonts), token.Text+"\n")
 			fc.children = append(fc.children, code)
 			spAbs := fc.getabstract(TYPE_SPACE)
-			spAbs.lineHeight = codeBlockAfterGap()
+			spAbs.lineHeight = mt.theme.bodyLineHeight()
 			space := &MdSpace{ElementBase: spAbs}
 			fc.children = append(fc.children, space)
 			mt.children = append(mt.children, fc)
@@ -119,7 +119,7 @@ func (mt *MarkdownText) SetTokens(tokens []Token) {
 		case TYPE_EM:
 			em := &MdText{ElementBase: abs}
 			mergeInlineBoxModel(mt.theme.BoxForInlineToken(TYPE_EM), &em.ElementBase)
-			em.SetText(mt.fonts[FONT_IALIC], token.Text)
+			em.SetText(mt.fonts[FONT_ITALIC], token.Text)
 			mt.children = append(mt.children, em)
 		case TYPE_CODESPAN:
 			codespan := &MdText{ElementBase: abs}

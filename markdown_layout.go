@@ -54,7 +54,7 @@ func mergeInlineBoxModel(ib MdBoxModel, e *ElementBase) {
 //   - 若第 i 个子结点返回 pagebreak==true 且 over==true，且后面仍有兄弟：剪掉 [0,i]（含当前结点），
 //     下一页从原 i+1 继续（典型：MdSpace 页底放不下时被丢弃）。
 //   - 其它 pagebreak：保留切片从 i 起；若 over==false，同一 MdText 等会在下一页从头结点继续。
-func CommonGenerateAtomicCell(children *[]mardown) (pagebreak, over bool, err error) {
+func CommonGenerateAtomicCell(children *[]markdownNode) (pagebreak, over bool, err error) {
 	for i, comment := range *children {
 		pagebreak, over, err = comment.GenerateAtomicCell()
 		if err != nil {

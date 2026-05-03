@@ -1,7 +1,6 @@
 package gopdf
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
@@ -16,20 +15,20 @@ type MdFencedCode struct {
 	ElementBase
 	blockBox        MdBoxModel
 	blockTopApplied bool
-	children        []mardown
+	children        []markdownNode
 }
 
 func (f *MdFencedCode) getabstract(typ string) ElementBase {
 	return ElementBase{
-		pdf:               f.pdf,
-		FlowInset:         f.FlowInset,
-		blockquote:        f.blockquote,
-		Type:              typ,
-		listHangIndent:    f.listHangIndent,
-		blockquoteBarLeft: f.blockquoteBarLeft,
-		Margin:            f.Margin,
-		Padding:           f.Padding,
-		theme:             f.theme,
+		pdf:                   f.pdf,
+		flowColumnOffsetPt:    f.flowColumnOffsetPt,
+		blockquote:            f.blockquote,
+		Type:                  typ,
+		hangingIndentPt:       f.hangingIndentPt,
+		quoteBarsLeftOffsetPt: f.quoteBarsLeftOffsetPt,
+		Margin:                f.Margin,
+		Padding:               f.Padding,
+		theme:                 f.theme,
 	}
 }
 
@@ -50,21 +49,21 @@ func (f *MdFencedCode) GenerateAtomicCell() (pagebreak, over bool, err error) {
 type MdMutiText struct {
 	ElementBase
 	fonts    map[string]string
-	children []mardown
+	children []markdownNode
 }
 
 // getabstract 拷贝宿主的几何与主题字段，生成子结点共用的 ElementBase（每种复合结点均有同名方法）。
 func (m *MdMutiText) getabstract(typ string) ElementBase {
 	return ElementBase{
-		pdf:               m.pdf,
-		FlowInset:         m.FlowInset,
-		blockquote:        m.blockquote,
-		Type:              typ,
-		listHangIndent:    m.listHangIndent,
-		blockquoteBarLeft: m.blockquoteBarLeft,
-		Margin:            m.Margin,
-		Padding:           m.Padding,
-		theme:             m.theme,
+		pdf:                   m.pdf,
+		flowColumnOffsetPt:    m.flowColumnOffsetPt,
+		blockquote:            m.blockquote,
+		Type:                  typ,
+		hangingIndentPt:       m.hangingIndentPt,
+		quoteBarsLeftOffsetPt: m.quoteBarsLeftOffsetPt,
+		Margin:                m.Margin,
+		Padding:               m.Padding,
+		theme:                 m.theme,
 	}
 }
 
@@ -85,7 +84,7 @@ func (m *MdMutiText) SetToken(t Token) error {
 			if len(token.Tokens) <= 1 {
 				text := &MdText{ElementBase: abs}
 				txt := token.Text
-				if abs.listHangIndent > 0 {
+				if abs.hangingIndentPt > 0 {
 					txt = stripListParagraphIndent(txt)
 				}
 				mergeInlineBoxModel(m.theme.BoxForInlineToken(TYPE_TEXT), &text.ElementBase)
@@ -105,7 +104,7 @@ func (m *MdMutiText) SetToken(t Token) error {
 		case TYPE_EM:
 			em := &MdText{ElementBase: abs}
 			mergeInlineBoxModel(m.theme.BoxForInlineToken(TYPE_EM), &em.ElementBase)
-			em.SetText(m.fonts[FONT_IALIC], token.Text)
+			em.SetText(m.fonts[FONT_ITALIC], token.Text)
 			m.children = append(m.children, em)
 		case TYPE_CODESPAN:
 			codespan := &MdText{ElementBase: abs}
@@ -140,7 +139,7 @@ func (m *MdMutiText) GenerateAtomicCell() (pagebreak, over bool, err error) {
 type MdHeader struct {
 	ElementBase
 	fonts           map[string]string
-	children        []mardown
+	children        []markdownNode
 	blockBox        MdBoxModel
 	blockTopApplied bool
 }
@@ -174,15 +173,15 @@ func (h *MdHeader) CalFontSizeAndLineHeight(size int) (fontsize int, lineheight 
 
 func (h *MdHeader) getabstract(typ string) ElementBase {
 	return ElementBase{
-		pdf:               h.pdf,
-		FlowInset:         h.FlowInset,
-		blockquote:        h.blockquote,
-		Type:              typ,
-		listHangIndent:    h.listHangIndent,
-		blockquoteBarLeft: h.blockquoteBarLeft,
-		Margin:            h.Margin,
-		Padding:           h.Padding,
-		theme:             h.theme,
+		pdf:                   h.pdf,
+		flowColumnOffsetPt:    h.flowColumnOffsetPt,
+		blockquote:            h.blockquote,
+		Type:                  typ,
+		hangingIndentPt:       h.hangingIndentPt,
+		quoteBarsLeftOffsetPt: h.quoteBarsLeftOffsetPt,
+		Margin:                h.Margin,
+		Padding:               h.Padding,
+		theme:                 h.theme,
 	}
 }
 
@@ -205,9 +204,8 @@ func (h *MdHeader) SetToken(t Token) (err error) {
 	// Block headings have no inline tokens; use t.Text directly.
 	if len(t.Tokens) == 0 && t.Text != "" {
 		abs := h.getabstract(TYPE_TEXT)
-		abs.lineHeight = lineheight
 		mergeBlockHorizontalInsets(h.blockBox, &abs)
-		text := &MdText{ElementBase: abs}
+		text := &MdText{ElementBase: abs, headingStepPt: lineheight}
 		mergeInlineBoxModel(h.theme.BoxForInlineToken(TYPE_TEXT), &text.ElementBase)
 		text.SetText(font, t.Text)
 		h.children = append(h.children, text)
@@ -217,13 +215,11 @@ func (h *MdHeader) SetToken(t Token) (err error) {
 			mergeBlockHorizontalInsets(h.blockBox, &abs)
 			switch token.Type {
 			case TYPE_TEXT:
-				abs.lineHeight = lineheight
-				text := &MdText{ElementBase: abs}
+				text := &MdText{ElementBase: abs, headingStepPt: lineheight}
 				mergeInlineBoxModel(h.theme.BoxForInlineToken(TYPE_TEXT), &text.ElementBase)
 				text.SetText(font, token.Text)
 				h.children = append(h.children, text)
 			case TYPE_IMAGE:
-				abs.lineHeight = lineheight
 				image := &MdImage{ElementBase: abs}
 				mergeInlineBoxModel(h.theme.BoxForInlineToken(TYPE_IMAGE), &image.ElementBase)
 				h.children = append(h.children, image)
@@ -256,22 +252,22 @@ func (h *MdHeader) GenerateAtomicCell() (pagebreak, over bool, err error) {
 type MdParagraph struct {
 	ElementBase
 	fonts           map[string]string
-	children        []mardown
+	children        []markdownNode
 	blockBox        MdBoxModel
 	blockTopApplied bool
 }
 
 func (p *MdParagraph) getabstract(typ string) ElementBase {
 	return ElementBase{
-		pdf:               p.pdf,
-		FlowInset:         p.FlowInset,
-		blockquote:        p.blockquote,
-		Type:              typ,
-		listHangIndent:    p.listHangIndent,
-		blockquoteBarLeft: p.blockquoteBarLeft,
-		Margin:            p.Margin,
-		Padding:           p.Padding,
-		theme:             p.theme,
+		pdf:                   p.pdf,
+		flowColumnOffsetPt:    p.flowColumnOffsetPt,
+		blockquote:            p.blockquote,
+		Type:                  typ,
+		hangingIndentPt:       p.hangingIndentPt,
+		quoteBarsLeftOffsetPt: p.quoteBarsLeftOffsetPt,
+		Margin:                p.Margin,
+		Padding:               p.Padding,
+		theme:                 p.theme,
 	}
 }
 
@@ -310,7 +306,7 @@ func (p *MdParagraph) SetToken(t Token) error {
 		case TYPE_EM:
 			em := &MdText{ElementBase: abs}
 			mergeInlineBoxModel(p.theme.BoxForInlineToken(TYPE_EM), &em.ElementBase)
-			em.SetText(p.fonts[FONT_IALIC], token.Text)
+			em.SetText(p.fonts[FONT_ITALIC], token.Text)
 			p.children = append(p.children, em)
 		case TYPE_CODESPAN:
 			codespan := &MdText{ElementBase: abs}
@@ -362,11 +358,11 @@ func (p *MdParagraph) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	return false, true, nil
 }
 
-// MdList 列表：维护 nestLevel、listHangIndent、markers，以及嵌套块（子列表、引用、代码）的特殊断裂结点。
+// MdList 列表：维护 nestLevel、hangingIndentPt、markers，以及嵌套块（子列表、引用、代码）的特殊断裂结点。
 type MdList struct {
 	ElementBase
 	fonts           map[string]string
-	children        []mardown
+	children        []markdownNode
 	nestLevel       int
 	blockBox        MdBoxModel
 	blockTopApplied bool
@@ -374,15 +370,15 @@ type MdList struct {
 
 func (l *MdList) getabstract(typ string) ElementBase {
 	return ElementBase{
-		pdf:               l.pdf,
-		FlowInset:         0, // list block offset is in listHangIndent only; non-zero FlowInset here adds fake leading spaces in GetSubText
-		blockquote:        l.blockquote,
-		Type:              typ,
-		listHangIndent:    l.listHangIndent,
-		blockquoteBarLeft: l.blockquoteBarLeft,
-		Margin:            l.Margin,
-		Padding:           l.Padding,
-		theme:             l.theme,
+		pdf:                   l.pdf,
+		flowColumnOffsetPt:    0, // list block offset is in hangingIndentPt only; non-zero flowColumnOffsetPt here adds fake leading spaces in GetSubText
+		blockquote:            l.blockquote,
+		Type:                  typ,
+		hangingIndentPt:       l.hangingIndentPt,
+		quoteBarsLeftOffsetPt: l.quoteBarsLeftOffsetPt,
+		Margin:                l.Margin,
+		Padding:               l.Padding,
+		theme:                 l.theme,
 	}
 }
 
@@ -408,23 +404,23 @@ func (l *MdList) SetToken(t Token) error {
 		} else {
 			marker = unorderedListBulletPrefix(l.nestLevel)
 		}
-		// listHangIndent is the x-offset of the list block (e.g. inside a blockquote in a list).
-		itemHang := l.listHangIndent + l.FlowInset + l.pdf.MeasureTextWidth(marker)
+		// hangingIndentPt is the x-offset of the list block (e.g. inside a blockquote in a list).
+		itemHang := l.hangingIndentPt + l.flowColumnOffsetPt + l.pdf.MeasureTextWidth(marker)
 
 		for i, token := range item.Tokens {
 			abs := l.getabstract(token.Type)
 			mergeBlockHorizontalInsets(l.blockBox, &abs)
-			abs.listHangIndent = itemHang
+			abs.hangingIndentPt = itemHang
 
 			if !drewMarker && listMarkerLeaderType(token.Type) {
 				if t.Ordered {
 					mabs := l.getabstract(TYPE_TEXT)
 					mergeBlockHorizontalInsets(l.blockBox, &mabs)
-					// Marker column = list block origin + indent padding. Use listHangIndent only
+					// Marker column = list block origin + indent padding. Use hangingIndentPt only
 					// (no extra offsetx): MdSpace already places the cursor on this column for item 2+,
 					// and offsetx+padding was double-counting indent after inter-item space.
-					mabs.listHangIndent = l.listHangIndent + l.FlowInset
-					mabs.FlowInset = 0
+					mabs.hangingIndentPt = l.hangingIndentPt + l.flowColumnOffsetPt
+					mabs.flowColumnOffsetPt = 0
 					text := &MdText{ElementBase: mabs, offsetx: 0, offsety: mdScale(-0.45 / 18.0)}
 					mergeInlineBoxModel(l.theme.BoxForInlineToken(TYPE_TEXT), &text.ElementBase)
 					text.SetText(core.Font{Family: l.fonts[FONT_NORMAL], Size: int(l.theme.bodyFontSize())}, marker)
@@ -433,9 +429,9 @@ func (l *MdList) SetToken(t Token) error {
 				if !t.Ordered {
 					mabs := l.getabstract(TYPE_TEXT)
 					mergeBlockHorizontalInsets(l.blockBox, &mabs)
-					mabs.listHangIndent = l.listHangIndent + l.FlowInset
-					mabs.FlowInset = 0
-					text := &MdText{ElementBase: mabs, offsetx: 0, offsety: mdScale(-0.28 / 18.0)}
+					mabs.hangingIndentPt = l.hangingIndentPt + l.flowColumnOffsetPt
+					mabs.flowColumnOffsetPt = 0
+					text := &MdText{ElementBase: mabs, offsetx: 0, offsety: mdScale(-0.45 / 18.0)}
 					mergeInlineBoxModel(l.theme.BoxForInlineToken(TYPE_TEXT), &text.ElementBase)
 					text.SetText(core.Font{Family: l.fonts[FONT_NORMAL], Size: int(l.theme.bodyFontSize())}, marker)
 					l.children = append(l.children, text)
@@ -447,15 +443,15 @@ func (l *MdList) SetToken(t Token) error {
 			case TYPE_LIST:
 				nestAbs := l.getabstract(token.Type)
 				mergeBlockHorizontalInsets(l.blockBox, &nestAbs)
-				nestAbs.listHangIndent = l.listHangIndent
+				nestAbs.hangingIndentPt = l.hangingIndentPt
 				// Align nested list with the parent item’s body column, then add one logical nest step.
-				nestAbs.FlowInset = itemHang - l.listHangIndent + listNestIndentWidth()
+				nestAbs.flowColumnOffsetPt = itemHang - l.hangingIndentPt + listNestIndentWidth()
 
 				nest := &MdHardBreak{ElementBase: l.getabstract(TYPE_BR)}
-				nest.lineHeight = listNestBreakBefore()
+				nest.lineHeight = l.theme.bodyLineHeight()
 				// First line of nested list: X must be the nested marker column (not raw page margin),
-				// since list markers no longer apply FlowInset via offsetx.
-				nest.indentX = l.listHangIndent + nestAbs.FlowInset
+				// since list markers no longer apply flowColumnOffsetPt via offsetx.
+				nest.indentX = l.hangingIndentPt + nestAbs.flowColumnOffsetPt
 				l.children = append(l.children, nest)
 
 				sub := &MdList{ElementBase: nestAbs, fonts: l.fonts, nestLevel: l.nestLevel + 1, blockBox: l.theme.BoxList}
@@ -465,7 +461,7 @@ func (l *MdList) SetToken(t Token) error {
 
 			case TYPE_SPACE:
 				gap := &MdHardBreak{ElementBase: l.getabstract(TYPE_BR)}
-				gap.lineHeight = l.theme.paraBreakGap() + mdLineHeight*0.48
+				gap.lineHeight = l.theme.bodyLineHeight()
 				l.children = append(l.children, gap)
 				continue
 
@@ -477,18 +473,18 @@ func (l *MdList) SetToken(t Token) error {
 
 			case TYPE_BLOCKQUOTE:
 				bq := &MdHardBreak{ElementBase: l.getabstract(TYPE_BR)}
-				bq.lineHeight = l.theme.bodyLineHeight() * 0.82
+				bq.lineHeight = l.theme.bodyLineHeight()
 				l.children = append(l.children, bq)
 
 				bqa := l.getabstract(TYPE_BLOCKQUOTE)
 				mergeBlockHorizontalInsets(l.blockBox, &bqa)
-				bqa.listHangIndent = itemHang
+				bqa.hangingIndentPt = itemHang
 				bqa.blockquote += 1
-				bqa.FlowInset += blockquoteIndentWidth()
+				bqa.flowColumnOffsetPt += blockquoteIndentWidth()
 				gut := mdLineHeight * (3.5 / 18.0)
-				bqa.blockquoteBarLeft = itemHang - gut
-				if bqa.blockquoteBarLeft < 0 {
-					bqa.blockquoteBarLeft = 0
+				bqa.quoteBarsLeftOffsetPt = itemHang - gut
+				if bqa.quoteBarsLeftOffsetPt < 0 {
+					bqa.quoteBarsLeftOffsetPt = 0
 				}
 				blockquote := &MdBlockQuote{ElementBase: bqa, fonts: l.fonts, blockBox: l.theme.BoxBlockQuote}
 				blockquote.SetToken(token)
@@ -506,24 +502,24 @@ func (l *MdList) SetToken(t Token) error {
 
 			case TYPE_CODE:
 				cb := &MdHardBreak{ElementBase: l.getabstract(TYPE_BR)}
-				cb.lineHeight = listCodeBreakBefore()
+				cb.lineHeight = l.theme.bodyLineHeight()
 				l.children = append(l.children, cb)
 
 				cabs := l.getabstract(TYPE_CODE)
 				mergeBlockHorizontalInsets(l.blockBox, &cabs)
-				cabs.listHangIndent = itemHang
+				cabs.hangingIndentPt = itemHang
 				fc := &MdFencedCode{ElementBase: cabs, blockBox: l.theme.BoxCodeBlock}
 				code := &MdText{ElementBase: fc.getabstract(TYPE_CODE)}
 				code.SetText(monoFamilyFrom(l.fonts), token.Text+"\n")
 				fc.children = append(fc.children, code)
 				ag := &MdSpace{ElementBase: fc.getabstract(TYPE_SPACE)}
-				ag.lineHeight = codeBlockAfterGap()
+				ag.lineHeight = l.theme.bodyLineHeight()
 				fc.children = append(fc.children, ag)
 				l.children = append(l.children, fc)
 				continue
 			}
 
-			abs.listHangIndent = itemHang
+			abs.hangingIndentPt = itemHang
 			switch token.Type {
 			case TYPE_TEXT:
 				mutiltext := &MdMutiText{ElementBase: abs, fonts: l.fonts}
@@ -555,9 +551,9 @@ func (l *MdList) SetToken(t Token) error {
 
 		// After an item, place the cursor on the *marker* start column for this list, not the body
 		// column (itemHang). If we use itemHang here, the next item’s marker is too far right and
-		// the hang-indent snap logic never runs (listHangIndent for marker ≠ itemHang).
+		// the hang-indent snap logic never runs (hangingIndentPt for marker ≠ itemHang).
 		abs := l.getabstract(TYPE_SPACE)
-		abs.listHangIndent = l.listHangIndent + l.FlowInset
+		abs.hangingIndentPt = l.hangingIndentPt + l.flowColumnOffsetPt
 		abs.blockquote -= 1
 		space := &MdSpace{ElementBase: abs}
 		l.children = append(l.children, space)
@@ -579,37 +575,26 @@ func (l *MdList) GenerateAtomicCell() (pagebreak, over bool, err error) {
 	return false, true, nil
 }
 
-func (l *MdList) String() string {
-	var buf bytes.Buffer
-	fmt.Fprint(&buf, "(list")
-	for _, child := range l.children {
-		fmt.Fprintf(&buf, "%v", child)
-	}
-	fmt.Fprint(&buf, ")")
-
-	return buf.String()
-}
-
-// MdBlockQuote 引用块：复合子结点（段落/列表/标题等）整块参与分页；blockquote 深度与 FlowInset 参与子结点几何。
+// MdBlockQuote 引用块：复合子结点（段落/列表/标题等）整块参与分页；blockquote 深度与 flowColumnOffsetPt 参与子结点几何。
 type MdBlockQuote struct {
 	ElementBase
 	fonts           map[string]string
-	children        []mardown
+	children        []markdownNode
 	blockBox        MdBoxModel
 	blockTopApplied bool
 }
 
 func (b *MdBlockQuote) getabstract(typ string) ElementBase {
 	return ElementBase{
-		pdf:               b.pdf,
-		FlowInset:         b.FlowInset,
-		blockquote:        b.blockquote,
-		Type:              typ,
-		listHangIndent:    b.listHangIndent,
-		blockquoteBarLeft: b.blockquoteBarLeft,
-		Margin:            b.Margin,
-		Padding:           b.Padding,
-		theme:             b.theme,
+		pdf:                   b.pdf,
+		flowColumnOffsetPt:    b.flowColumnOffsetPt,
+		blockquote:            b.blockquote,
+		Type:                  typ,
+		hangingIndentPt:       b.hangingIndentPt,
+		quoteBarsLeftOffsetPt: b.quoteBarsLeftOffsetPt,
+		Margin:                b.Margin,
+		Padding:               b.Padding,
+		theme:                 b.theme,
 	}
 }
 
@@ -641,44 +626,20 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 				b.children = append(b.children, space)
 			}
 
-			if i < n-1 {
-				pg := &MdHardBreak{ElementBase: b.getabstract(TYPE_BR)}
-				pg.lineHeight = mdBreakGap + mdLineHeight*0.42
-				b.children = append(b.children, pg)
-				if t.Tokens[i+1].Type == TYPE_SPACE {
-					i++
-				}
-			}
-
 		case TYPE_LIST:
-			if i > 0 {
-				g := &MdHardBreak{ElementBase: b.getabstract(TYPE_BR)}
-				g.lineHeight = b.theme.bodyLineHeight() * 0.75
-				b.children = append(b.children, g)
-			}
 			la := abs
 			// Keep the same body column as blockquote text so nested list markers and lines align.
-			la.listHangIndent = b.listHangIndent
+			la.hangingIndentPt = b.hangingIndentPt
 			list := &MdList{ElementBase: la, fonts: b.fonts, nestLevel: 0, blockBox: b.theme.BoxList}
 			list.SetToken(token)
 			b.children = append(b.children, list)
 		case TYPE_HEADING:
-			if i > 0 {
-				g := &MdHardBreak{ElementBase: b.getabstract(TYPE_BR)}
-				g.lineHeight = mdLineHeight * 0.48
-				b.children = append(b.children, g)
-			}
 			header := &MdHeader{ElementBase: abs, fonts: b.fonts, blockBox: b.theme.BoxHeading}
 			header.SetToken(token)
 			b.children = append(b.children, header)
 		case TYPE_BLOCKQUOTE:
-			if i > 0 {
-				g := &MdHardBreak{ElementBase: b.getabstract(TYPE_BR)}
-				g.lineHeight = mdLineHeight * 0.48
-				b.children = append(b.children, g)
-			}
 			abs.blockquote += 1
-			abs.FlowInset += blockquoteIndentWidth()
+			abs.flowColumnOffsetPt += blockquoteIndentWidth()
 			blockquote := &MdBlockQuote{ElementBase: abs, fonts: b.fonts, blockBox: b.theme.BoxBlockQuote}
 			blockquote.SetToken(token)
 			b.children = append(b.children, blockquote)
@@ -698,11 +659,6 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 			link.SetText(b.fonts[FONT_NORMAL], token.Text, token.Href)
 			b.children = append(b.children, link)
 		case TYPE_CODE:
-			if i > 0 {
-				g := &MdHardBreak{ElementBase: b.getabstract(TYPE_BR)}
-				g.lineHeight = mdLineHeight * 0.52
-				b.children = append(b.children, g)
-			}
 			fc := &MdFencedCode{ElementBase: abs, blockBox: b.theme.BoxCodeBlock}
 			code := &MdText{ElementBase: fc.getabstract(TYPE_CODE)}
 			code.SetText(monoFamilyFrom(b.fonts), token.Text+"\n")
@@ -711,18 +667,18 @@ func (b *MdBlockQuote) SetToken(t Token) error {
 			if hasBreakLine(token) {
 				spa := fc.getabstract(TYPE_TEXT)
 				br := &MdSpace{ElementBase: spa}
-				br.lineHeight = codeBlockAfterGap()
+				br.lineHeight = b.theme.bodyLineHeight()
 				fc.children = append(fc.children, br)
 			} else {
 				gap := &MdSpace{ElementBase: fc.getabstract(TYPE_SPACE)}
-				gap.lineHeight = codeBlockAfterGap()
+				gap.lineHeight = b.theme.bodyLineHeight()
 				fc.children = append(fc.children, gap)
 			}
 			b.children = append(b.children, fc)
 		case TYPE_EM:
 			em := &MdText{ElementBase: abs}
 			mergeInlineBoxModel(b.theme.BoxForInlineToken(TYPE_EM), &em.ElementBase)
-			em.SetText(b.fonts[FONT_IALIC], token.Text)
+			em.SetText(b.fonts[FONT_ITALIC], token.Text)
 			b.children = append(b.children, em)
 		case TYPE_CODESPAN:
 			codespan := &MdText{ElementBase: abs}
@@ -778,22 +734,22 @@ func (b *MdBlockQuote) GenerateAtomicCell() (pagebreak, over bool, err error) {
 type MdTable struct {
 	ElementBase
 	fonts           map[string]string
-	children        []mardown
+	children        []markdownNode
 	blockBox        MdBoxModel
 	blockTopApplied bool
 }
 
 func (tb *MdTable) getabstract(typ string) ElementBase {
 	return ElementBase{
-		pdf:               tb.pdf,
-		FlowInset:         tb.FlowInset,
-		blockquote:        tb.blockquote,
-		Type:              typ,
-		listHangIndent:    tb.listHangIndent,
-		blockquoteBarLeft: tb.blockquoteBarLeft,
-		Margin:            tb.Margin,
-		Padding:           tb.Padding,
-		theme:             tb.theme,
+		pdf:                   tb.pdf,
+		flowColumnOffsetPt:    tb.flowColumnOffsetPt,
+		blockquote:            tb.blockquote,
+		Type:                  typ,
+		hangingIndentPt:       tb.hangingIndentPt,
+		quoteBarsLeftOffsetPt: tb.quoteBarsLeftOffsetPt,
+		Margin:                tb.Margin,
+		Padding:               tb.Padding,
+		theme:                 tb.theme,
 	}
 }
 

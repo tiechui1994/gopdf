@@ -9,11 +9,15 @@ import (
 
 func SimpleTable() {
 	r := core.CreateReport()
-	r.SetPage("A4", "P")
+	if err := r.SetPage("A4", "P"); err != nil {
+		panic(err)
+	}
 
 	r.RegisterExecutor(core.Executor(SimpleTableExecutor), core.Detail)
 
-	r.Execute("simple_table.pdf")
+	if err := r.Execute("simple_table.pdf"); err != nil {
+		panic(err)
+	}
 	fmt.Println(r.GetCurrentPageNo())
 }
 func SimpleTableExecutor(report *core.Report) {
